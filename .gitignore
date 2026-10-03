@@ -1,0 +1,21 @@
+# dependencies / build output
+node_modules/
+dist/
+.next/
+build/
+coverage/
+.dart_tool/
+
+# env files and secrets (keep the examples)
+.env
+.env.*
+!.env.example
+
+# generated code
+backend/src/generated/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.log
