@@ -50,12 +50,12 @@ Student registration, profile, contact details, academic details, course/batch, 
 
 ## Progress
 - [x] DB migrations (all tables are in `backend/prisma/schema.prisma`)
-- [ ] Students CRUD API
-- [ ] Courses & batches API
-- [ ] Student–batch assignment
+- [x] Students CRUD API (compiled; not yet run against DB)
+- [x] Courses & batches API (compiled; not yet run against DB)
+- [x] Student–batch assignment (compiled; not yet run against DB)
 - [ ] Documents upload/view
-- [ ] Enquiries API + convert to student
-- [ ] Search / filter / pagination
+- [x] Enquiries API + convert to student (compiled; not yet run against DB)
+- [x] Search / filter / pagination
 - [ ] CSV export
 - [ ] Admin web: list + add/edit
 - [ ] Admin web: student detail page

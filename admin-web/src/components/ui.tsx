@@ -1,0 +1,138 @@
+"use client";
+
+import { X } from "lucide-react";
+import { useEffect, useId, type ReactNode } from "react";
+
+export const inputCls =
+  "h-10 w-full rounded-[10px] border border-line bg-surface px-3 text-[13.5px] outline-none focus:border-primary";
+export const btnPrimary =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-[13px] font-bold text-white hover:bg-primary-dark disabled:opacity-60";
+export const btnGhost =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-[13px] font-semibold hover:bg-bg disabled:opacity-60";
+
+export function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="text-[23px] font-bold">{title}</h1>
+        {subtitle && <p className="mt-1 text-[13px] text-sub">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: (id: string) => ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[12px] font-semibold text-sub">
+        {label}
+      </label>
+      {children(id)}
+      {error && <p className="text-[12px] text-danger">{error}</p>}
+    </div>
+  );
+}
+
+export function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 sm:p-10">
+      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[17px] font-bold">{title}</h2>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 hover:bg-bg">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const TONES = {
+  green: "bg-success-tint text-success",
+  amber: "bg-accent-tint text-accent-ink",
+  red: "bg-danger-tint text-danger",
+  blue: "bg-primary-tint text-primary",
+  gray: "bg-bg text-sub",
+} as const;
+
+export function Badge({ tone, children }: { tone: keyof typeof TONES; children: ReactNode }) {
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${TONES[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+export function Pager({
+  page,
+  limit,
+  total,
+  onPage,
+}: {
+  page: number;
+  limit: number;
+  total: number;
+  onPage: (p: number) => void;
+}) {
+  const pages = Math.max(1, Math.ceil(total / limit));
+  return (
+    <div className="flex items-center justify-between text-[12.5px] text-sub">
+      <span>{total} total</span>
+      <div className="flex items-center gap-2">
+        <button className={btnGhost + " !h-8 !px-3"} disabled={page <= 1} onClick={() => onPage(page - 1)}>
+          Prev
+        </button>
+        <span>
+          {page} / {pages}
+        </span>
+        <button className={btnGhost + " !h-8 !px-3"} disabled={page >= pages} onClick={() => onPage(page + 1)}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function ErrorNote({ error }: { error: unknown }) {
+  if (!error) return null;
+  const msg = error instanceof Error ? error.message : "Something went wrong";
+  return (
+    <p role="alert" className="rounded-[10px] bg-danger-tint px-3 py-2 text-[12.5px] text-danger">
+      {msg}
+    </p>
+  );
+}

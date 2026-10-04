@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { FacultyController } from './faculty.controller.js';
+import { FacultyService } from './faculty.service.js';
 
-// TODO: Faculty CRUD, subject/batch scope (ownership checks)
 // Plan + checklist: docs/06-role-based-access.md
-@Module({})
+@Module({
+  controllers: [FacultyController],
+  providers: [FacultyService],
+  exports: [FacultyService],
+})
 export class FacultyModule {}
-

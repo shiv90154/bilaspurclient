@@ -1,8 +1,10 @@
-﻿import type { Metadata } from "next";
-import { ModulePage } from "@/components/module-page";
+import type { Metadata } from "next";
+import { StudentsView } from "@/components/admin/students-view";
+import { requireUser } from "@/lib/server/session";
 
 export const metadata: Metadata = { title: "Students" };
 
-export default function Page() {
-  return <ModulePage module="students" />;
+export default async function Page() {
+  const user = await requireUser(["ADMIN", "FACULTY"]);
+  return <StudentsView canEdit={user.role === "ADMIN"} />;
 }

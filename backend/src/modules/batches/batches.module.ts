@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { BatchesController } from './batches.controller.js';
+import { BatchesService } from './batches.service.js';
 
-// TODO: Batches CRUD, student/faculty assignment
 // Plan + checklist: docs/01-student-management.md
-@Module({})
+@Module({
+  controllers: [BatchesController],
+  providers: [BatchesService],
+  exports: [BatchesService],
+})
 export class BatchesModule {}
-

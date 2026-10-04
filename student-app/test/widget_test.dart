@@ -1,30 +1,47 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_app/core/secure_store.dart';
+import 'package:student_app/features/auth/auth_controller.dart';
+import 'package:student_app/features/auth/login_screen.dart';
+import 'package:student_app/widgets/watermark.dart';
 
-import 'package:student_app/main.dart';
+class _EmptyStore extends SecureStore {
+  @override
+  Future<Tokens?> readTokens() async => null;
+  @override
+  Future<void> clearTokens() async {}
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('login screen validates empty input', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [secureStoreProvider.overrideWithValue(_EmptyStore())],
+        child: const MaterialApp(home: LoginScreen()),
+      ),
+    );
+    await tester.tap(find.text('Log in'));
     await tester.pump();
+    expect(find.text('Enter your phone or email'), findsOneWidget);
+    expect(find.text('Password is at least 6 characters'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('watermark does not block taps', (tester) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Watermark(
+          text: 'Demo · 9999999997',
+          child: Scaffold(
+            body: Center(
+              child: ElevatedButton(onPressed: () => taps++, child: const Text('Tap')),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Tap'));
+    expect(taps, 1);
   });
 }

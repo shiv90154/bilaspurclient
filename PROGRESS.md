@@ -12,8 +12,9 @@ Is file mein sirf wahi hai jo **abhi tak bana aur chala kar check hua**. Jo nahi
 | Local Postgres 18 (Docker) | ✅ chal raha | `docker compose ps` healthy |
 | Database schema (saare modules, 39 tables) | ✅ migrate + seed ho gaya | `prisma migrate dev`, `db:seed` |
 | Backend: auth, roles, device rule, health | ✅ chal raha | unit tests 8/8, `smoke:auth` 27/27, `npm run build` |
-| Backend: baaki 15 feature modules | ⬜ khali stubs | sirf `@Module({})` + TODO |
-| Admin/Faculty web panel (Next.js) | 🟨 login + shell + sab pages ke placeholders | `smoke-web.mjs` 34/34, `npm run build`, `npm run lint` |
+| Backend Phase 1: courses, batches, students, enquiries, faculty, dashboard | 🟨 likha, build + lint pass | **DB par run nahi hua** (Docker band tha); documents upload + CSV export baaki |
+| Backend: baaki 9 modules (questions, tests, materials, videos, doubts, classes, fees, storage, notifications) | ⬜ khali stubs | sirf `@Module({})` + TODO |
+| Admin/Faculty web panel (Next.js) | 🟨 login + shell; **asli UI:** dashboard, students (list/filter/add), courses+batches, enquiries (+convert). Baaki pages placeholder | `npm run build`, `lint`, `tsc` pass; **browser/API se run nahi hua** |
 | Student web panel (iOS ke liye) | 🟨 login + shell + basic pages | same smoke test |
 | Android app (Flutter) | 🟨 sirf `flutter create` hua | **kuch run / analyze nahi hua**, app code abhi nahi likha |
 | CI, VPS deploy, Play Store | ⬜ | — |

@@ -45,16 +45,16 @@ Notes, tests aur live class ka content copy/record/leak na ho sake (jitna Androi
 7. QA matrix: alag Android versions (10–15), Samsung/Xiaomi, screen recorder apps, Cast, emulator.
 
 ## Progress
-- [ ] FLAG_SECURE service
+- [x] FLAG_SECURE service (code written; not tested on a real device)
 - [ ] Screenshot/recording test (real devices)
 - [x] Device binding (backend)
 - [x] Auto-logout on new device (token revoke + SESSION_REPLACED)
 - [x] Device change limit (3 / 30 days) + admin reset endpoint (backend)
-- [ ] Admin web: device history + reset screen
-- [ ] Root detection
-- [ ] Emulator detection
+- [x] Admin web: device history + reset screen (student detail page)
+- [x] Root detection (safe_device; untested on device)
+- [x] Emulator detection (release builds only; untested on device)
 - [ ] Play Integrity (optional)
-- [ ] Watermark widget
+- [x] Watermark widget (unit-tested, used on home screen)
 - [ ] Watermark on PDF viewer
 - [ ] Watermark on test screen
 - [ ] Secure in-app PDF viewer

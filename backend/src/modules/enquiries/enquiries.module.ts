@@ -1,7 +1,12 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { StudentsModule } from '../students/students.module.js';
+import { EnquiriesController } from './enquiries.controller.js';
+import { EnquiriesService } from './enquiries.service.js';
 
-// TODO: Enquiries, follow-ups, convert to student
 // Plan + checklist: docs/01-student-management.md
-@Module({})
+@Module({
+  imports: [StudentsModule],
+  controllers: [EnquiriesController],
+  providers: [EnquiriesService],
+})
 export class EnquiriesModule {}
-
