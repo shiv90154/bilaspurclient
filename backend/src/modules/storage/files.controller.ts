@@ -33,9 +33,9 @@ export class FilesController {
     } catch {
       throw new NotFoundException();
     }
-    const safeName = (name || 'file.pdf').replace(/[^\w.\- ]+/g, '_').slice(0, 120);
+    const safeName = (name || (key.endsWith('.apk') ? 'app.apk' : 'file.pdf')).replace(/[^\w.\- ]+/g, '_').slice(0, 120);
     res.set({
-      'Content-Type': 'application/pdf',
+      'Content-Type': key.endsWith('.apk') ? 'application/vnd.android.package-archive' : 'application/pdf',
       'Content-Length': String(file.size),
       'Content-Disposition': `${disposition}; filename="${safeName}"`,
       'Cache-Control': 'private, no-store',

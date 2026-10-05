@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 
 /** Keys we generate ourselves; anything else is rejected before touching the disk (no path traversal). */
-const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf)$/;
+const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|apk)$/;
 
 export type Disposition = 'inline' | 'attachment';
 
@@ -36,7 +36,7 @@ export class StorageService implements OnModuleInit {
   }
 
   /** Stores the bytes under a fresh random key and returns the key. */
-  async put(buffer: Buffer, ext: 'pdf'): Promise<string> {
+  async put(buffer: Buffer, ext: 'pdf' | 'apk'): Promise<string> {
     const key = `${randomUUID()}.${ext}`;
     await writeFile(this.pathOf(key), buffer, { flag: 'wx' });
     return key;

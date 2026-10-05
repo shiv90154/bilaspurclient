@@ -877,3 +877,19 @@ model ActivityLog {
   @@index([entity, entityId])
   @@map("activity_logs")
 }
+
+// ───────────── App releases: the Android APK admins download from the panel ─────────────
+
+model AppRelease {
+  id           String   @id @default(uuid())
+  version      String   @unique // e.g. "1.0.3"
+  fileKey      String
+  fileName     String
+  size         Int
+  notes        String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("app_releases")
+}

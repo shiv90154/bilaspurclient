@@ -9,6 +9,7 @@ import {
   MessageCircleQuestion,
   PlayCircle,
   ShieldCheck,
+  Smartphone,
   UserCircle,
   UserPlus,
   Users,
@@ -37,6 +38,7 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/classes", label: "Online Classes", icon: Video, roles: ["ADMIN", "FACULTY"] },
   { href: "/doubts", label: "Doubts", icon: MessageCircleQuestion, roles: ["ADMIN", "FACULTY"] },
   { href: "/fees", label: "Fees", icon: CircleDollarSign, roles: ["ADMIN"] },
+  { href: "/mobile-app", label: "Mobile App", icon: Smartphone, roles: ["ADMIN"] },
   { href: "/roles", label: "Roles & Access", icon: ShieldCheck, roles: ["ADMIN"] },
 ];
 

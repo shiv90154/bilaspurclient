@@ -28,6 +28,7 @@ import { FeesModule } from './modules/fees/fees.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { ReleasesModule } from './modules/releases/releases.module.js';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DashboardModule,
     StorageModule,
     NotificationsModule,
+    ReleasesModule,
   ],
   providers: [
     // Order matters: rate limit → authenticate → authorize by role.

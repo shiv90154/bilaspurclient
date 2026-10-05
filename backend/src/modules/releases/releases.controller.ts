@@ -1,0 +1,67 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import type { AuthUser } from '../../common/types/auth-user.js';
+import { Role } from '../../generated/prisma/enums.js';
+import { MAX_APK_BYTES, ReleasesService, type UploadedApk } from './releases.service.js';
+
+class CreateReleaseDto {
+  @ApiProperty({ example: '1.0.3' })
+  @IsString()
+  @Matches(/^\d+\.\d+\.\d+([-+][\w.]+)?$/, { message: 'version must look like 1.0.3' })
+  @MaxLength(30)
+  version!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+@ApiTags('app-releases')
+@ApiBearerAuth()
+@Roles(Role.ADMIN)
+@Controller('app-releases')
+export class ReleasesController {
+  constructor(private readonly releases: ReleasesService) {}
+
+  @Get()
+  list() {
+    return this.releases.list();
+  }
+
+  @Post()
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_APK_BYTES, files: 1 } }))
+  create(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: UploadedApk | undefined,
+    @Body() dto: CreateReleaseDto,
+  ) {
+    return this.releases.create(user, file, dto.version, dto.notes);
+  }
+
+  @Get(':id/download-url')
+  downloadUrl(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.releases.downloadUrl(user, id);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.releases.remove(user, id);
+  }
+}
