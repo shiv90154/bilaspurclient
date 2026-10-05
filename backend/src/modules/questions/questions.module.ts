@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { QuestionsController } from './questions.controller.js';
+import { QuestionsService } from './questions.service.js';
 
-// TODO: Subjects, topics, questions, options, CSV import
 // Plan + checklist: docs/02-question-bank.md
-@Module({})
+@Module({
+  controllers: [QuestionsController],
+  providers: [QuestionsService],
+  exports: [QuestionsService],
+})
 export class QuestionsModule {}
-

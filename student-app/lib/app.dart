@@ -3,9 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/security.dart';
+import 'data/models.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
+import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/notes/note_viewer_screen.dart';
+import 'features/notes/notes_screen.dart';
+import 'features/tests/result_screen.dart';
+import 'features/tests/take_test_screen.dart';
+import 'features/tests/tests_screen.dart';
+import 'widgets/watermark.dart';
 
 /// Null = device OK, otherwise the reason it is refused.
 final deviceProblemProvider = FutureProvider<String?>((_) => Security.deviceProblem());
@@ -28,13 +36,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         case AuthStatus.loggedOut:
           return at == '/login' ? null : '/login';
         case AuthStatus.loggedIn:
-          return at == '/home' ? null : '/home';
+          // Any in-app screen is fine; only the splash and login are off limits once signed in.
+          return at == '/' || at == '/login' ? '/home' : null;
       }
     },
     routes: [
       GoRoute(path: '/', builder: (_, _) => const _Splash()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+      GoRoute(path: '/notes', builder: (_, _) => const NotesScreen()),
+      GoRoute(
+        path: '/notes/:id',
+        builder: (_, state) => NoteViewerScreen(note: state.extra! as Note),
+      ),
+      GoRoute(path: '/tests', builder: (_, _) => const TestsScreen()),
+      GoRoute(
+        path: '/tests/take',
+        builder: (_, state) => TakeTestScreen(paper: state.extra! as Paper),
+      ),
+      GoRoute(
+        path: '/tests/result/:attemptId',
+        builder: (_, state) => ResultScreen(attemptId: state.pathParameters['attemptId']!),
+      ),
+      GoRoute(path: '/doubts', builder: (_, _) => const DoubtsScreen()),
+      GoRoute(
+        path: '/doubts/:id',
+        builder: (_, state) => DoubtThreadScreen(id: state.pathParameters['id']!),
+      ),
     ],
   );
 });
@@ -59,6 +87,15 @@ class EduManageApp extends ConsumerWidget {
       title: 'EduManage',
       theme: theme,
       routerConfig: ref.watch(routerProvider),
+      // One watermark over every screen once signed in (notes, tests, doubts, ...), so no screen
+      // can forget it. Student name + phone make a leaked photo traceable.
+      builder: (context, child) => Consumer(
+        builder: (context, ref, _) {
+          final user = ref.watch(authProvider.select((s) => s.user));
+          final content = child ?? const SizedBox.shrink();
+          return user == null ? content : Watermark(text: '${user.name} · ${user.phone}', child: content);
+        },
+      ),
     );
   }
 }

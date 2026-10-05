@@ -19,3 +19,6 @@ backend/src/generated/
 Thumbs.db
 .idea/
 *.log
+
+# uploaded files (local storage)
+backend/storage/

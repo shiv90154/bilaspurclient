@@ -41,6 +41,8 @@ dependencies:
   device_info_plus: ^13.3.0
   screen_protector: ^1.5.3
   safe_device: ^1.4.1
+  pdfrx: ^2.6.5
+  intl: ^0.20.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,7 +1,12 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { AttemptsService } from './attempts.service.js';
+import { AttemptsController, TestsController } from './tests.controller.js';
+import { TestsService } from './tests.service.js';
 
-// TODO: Test builder, attempts, server-side timer, evaluation, results
 // Plan + checklist: docs/02-question-bank.md
-@Module({})
+@Module({
+  controllers: [TestsController, AttemptsController],
+  providers: [TestsService, AttemptsService],
+  exports: [TestsService, AttemptsService],
+})
 export class TestsModule {}
-

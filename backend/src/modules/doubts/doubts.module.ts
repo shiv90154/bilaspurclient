@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { DoubtsController } from './doubts.controller.js';
+import { DoubtsService } from './doubts.service.js';
 
-// TODO: Doubt threads, assignment, status flow
 // Plan + checklist: docs/05-student-doubts.md
-@Module({})
+@Module({
+  controllers: [DoubtsController],
+  providers: [DoubtsService],
+  exports: [DoubtsService],
+})
 export class DoubtsModule {}
-

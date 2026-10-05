@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { ClassesController } from './classes.controller.js';
+import { ClassesService } from './classes.service.js';
 
-// TODO: Class scheduling (Zoom link / premiere), reminders, attendance
 // Plan + checklist: docs/03-online-classes.md
-@Module({})
+@Module({
+  controllers: [ClassesController],
+  providers: [ClassesService],
+  exports: [ClassesService],
+})
 export class ClassesModule {}
-

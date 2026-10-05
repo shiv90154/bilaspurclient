@@ -1,8 +1,10 @@
-﻿import type { Metadata } from "next";
-import { ModulePage } from "@/components/module-page";
+import type { Metadata } from "next";
+import { TestsView } from "@/components/admin/tests-view";
+import { requireUser } from "@/lib/server/session";
 
 export const metadata: Metadata = { title: "Tests" };
 
-export default function Page() {
-  return <ModulePage module="tests" />;
+export default async function Page() {
+  await requireUser(["ADMIN", "FACULTY"]);
+  return <TestsView />;
 }

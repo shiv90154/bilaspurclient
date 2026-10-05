@@ -117,3 +117,129 @@ export interface DashboardSummary {
     actor: { id: string; name: string } | null;
   }[];
 }
+
+/** Multipart upload (files). The browser sets the boundary; do not set content-type. */
+export async function apiForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`/api/backend${path}`, { method: "POST", body: form });
+  if (res.status === 401 && typeof window !== "undefined") {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/login");
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+    const message = Array.isArray(body.message)
+      ? body.message.join(", ")
+      : (body.message ?? `Upload failed (${res.status})`);
+    throw new ApiError(res.status, undefined, message);
+  }
+  return (await res.json()) as T;
+}
+
+/** Signed file links come back as /api/files/...; browsers reach them through the proxy. */
+export const fileHref = (url: string) => url.replace(/^\/api\//, "/api/backend/");
+
+export interface Topic {
+  id: string;
+  subjectId: string;
+  name: string;
+}
+export interface Subject {
+  id: string;
+  courseId: string;
+  name: string;
+  course?: { id: string; name: string };
+  topics: Topic[];
+}
+
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
+export type QuestionType = "SINGLE" | "MULTIPLE";
+export interface Question {
+  id: string;
+  text: string;
+  type: QuestionType;
+  difficulty: Difficulty;
+  explanation: string | null;
+  active: boolean;
+  topic: { id: string; name: string; subject: { id: string; name: string } };
+  options: { id: string; text: string; isCorrect: boolean; position: number }[];
+}
+
+export type TestStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
+export interface TestRow {
+  id: string;
+  title: string;
+  durationMin: number;
+  totalMarks: string | number;
+  negativeMark: string | number;
+  startAt: string | null;
+  endAt: string | null;
+  status: TestStatus;
+  course: { id: string; name: string } | null;
+  _count: { questions: number; attempts: number; batches: number };
+}
+export interface TestDetail extends Omit<TestRow, "_count"> {
+  _count: { attempts: number };
+  batches: { batch: { id: string; name: string } }[];
+  questions: {
+    questionId: string;
+    marks: string | number;
+    position: number;
+    question: { id: string; text: string; type: QuestionType; difficulty: Difficulty; topic: { id: string; name: string } };
+  }[];
+}
+export interface TestResults {
+  test: { id: string; title: string; totalMarks: number };
+  summary: { attempts: number; average: number; highest: number; lowest: number };
+  rows: {
+    rank: number;
+    attemptId: string;
+    name: string;
+    phone: string;
+    score: number;
+    percentage: number;
+    correct: number;
+    incorrect: number;
+    unanswered: number;
+    backgroundHits: number;
+    status: string;
+    timeTakenSec: number | null;
+  }[];
+}
+
+export type ContentStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export interface Material {
+  id: string;
+  title: string;
+  description: string | null;
+  fileName: string;
+  size: number;
+  allowDownload: boolean;
+  version: number;
+  status: ContentStatus;
+  updatedAt: string;
+  subject: { id: string; name: string } | null;
+  topic: { id: string; name: string } | null;
+  batches: { batch: { id: string; name: string } }[];
+}
+
+export type DoubtStatus = "OPEN" | "ASSIGNED" | "ANSWERED" | "RESOLVED";
+export interface DoubtRow {
+  id: string;
+  title: string;
+  status: DoubtStatus;
+  updatedAt: string;
+  classTimestamp: number | null;
+  student: { id: string; user: { name: string; phone: string } };
+  subject: { id: string; name: string } | null;
+  topic: { id: string; name: string } | null;
+  assignedTo: { id: string; name: string } | null;
+  _count: { messages: number };
+}
+export interface DoubtDetail extends DoubtRow {
+  messages: { id: string; text: string | null; createdAt: string; sender: { id: string; name: string; role: string } }[];
+}
+export interface FacultyRow {
+  id: string;
+  userId: string;
+  user: { name: string; phone: string };
+}

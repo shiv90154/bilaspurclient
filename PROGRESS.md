@@ -1,4 +1,4 @@
-# EduManage — Progress (2026-10-02)
+# EduManage — Progress (2026-10-05)
 
 Plan: [PLAN.md](PLAN.md) · Module docs: [docs/](docs/) · Requirement: [requrment.md](requrment.md)
 
@@ -12,12 +12,28 @@ Is file mein sirf wahi hai jo **abhi tak bana aur chala kar check hua**. Jo nahi
 | Local Postgres 18 (Docker) | ✅ chal raha | `docker compose ps` healthy |
 | Database schema (saare modules, 39 tables) | ✅ migrate + seed ho gaya | `prisma migrate dev`, `db:seed` |
 | Backend: auth, roles, device rule, health | ✅ chal raha | unit tests 8/8, `smoke:auth` 27/27, `npm run build` |
-| Backend Phase 1: courses, batches, students, enquiries, faculty, dashboard | 🟨 likha, build + lint pass | **DB par run nahi hua** (Docker band tha); documents upload + CSV export baaki |
-| Backend: baaki 9 modules (questions, tests, materials, videos, doubts, classes, fees, storage, notifications) | ⬜ khali stubs | sirf `@Module({})` + TODO |
-| Admin/Faculty web panel (Next.js) | 🟨 login + shell; **asli UI:** dashboard, students (list/filter/add), courses+batches, enquiries (+convert). Baaki pages placeholder | `npm run build`, `lint`, `tsc` pass; **browser/API se run nahi hua** |
-| Student web panel (iOS ke liye) | 🟨 login + shell + basic pages | same smoke test |
-| Android app (Flutter) | 🟨 sirf `flutter create` hua | **kuch run / analyze nahi hua**, app code abhi nahi likha |
+| Backend Phase 1: courses, batches, students, enquiries, faculty, dashboard | ✅ DB par run + check hua (2026-10-05) | endpoints 200; documents upload + CSV export baaki |
+| Backend Phase 2: subjects/topics, **doubts**, **questions**, **tests + attempts**, **materials + storage** | ✅ chal rahe | `smoke:tests` 26/26, `smoke:materials` 23/23 + doubt flow manual check |
+| Backend Phase 3: **classes** (Zoom link + premiere, weekly series, clash check, join window, attendance) | ✅ `smoke:classes` 27/27 | join link student ko sirf `join` se, class se 15 min pehle se |
+| Backend: baaki stubs (videos, fees, notifications) | ⬜ khali | sirf `@Module({})` |
+| Admin/Faculty web panel (Next.js) | 🟨 asli UI: dashboard, students, courses+batches, enquiries, **question bank (+subjects/topics), tests (builder + results), study material (upload/replace/view), doubts (thread/assign/resolve)**. Baaki placeholder: videos, classes, fees, roles | build/lint/tsc pass; `node scripts/smoke-phase2.mjs` 13/13 (proxy ke through) |
+| Student web panel (iOS ke liye) | 🟨 login + shell + basic pages + **doubts (ask/thread/resolve)** | smoke pass; notes/tests jaan-boojh kar Android-only |
+| Android app (Flutter) | 🟨 login, token refresh, watermark (har screen par), **notes list + PDF viewer (memory-only), tests (timer, autosave, background report, result/review), doubts (ask/thread/resolve)** | `flutter analyze` clean. **`flutter test` Application Control policy se block (dartaotruntime.exe); app device/emulator par run nahi hua** |
 | CI, VPS deploy, Play Store | ⬜ | — |
+
+## Phase 2 backend (2026-10-05)
+
+| Module | Endpoints | Rules |
+|---|---|---|
+| Subjects/topics | `/subjects`, `/topics` (admin; faculty topics bana sakta hai) | course → subject → topic |
+| Doubts | `/doubts` list/get/create (student), `:id/messages`, `:id/assign` (admin), `:id/resolve`, `:id/reopen` | student sirf apne; faculty: assigned ya apne batch ke unassigned; reply par status auto-badalta hai |
+| Questions | `/questions` CRUD + `/questions/bulk` (200 tak) | sirf staff; SINGLE = exactly 1 correct; jis question par student answers hain uske options edit nahi (409) |
+| Tests | `/tests` builder, `:id/questions`, `:id/batches`, `publish`, `close`, `results` | attempt shuru hone ke baad edit band; faculty sirf apne tests |
+| Attempts (student) | `/my/tests`, `/my/tests/:id/start`, `/attempts/:id` (paper), `PUT /attempts/:id/answers` (autosave), `background`, `submit`, `result` | server-side timer; ek attempt per student; paper mein `isCorrect` kabhi nahi; negative marking; cron har minute expired attempts auto-submit; answers ka review test close / window khatam hone ke baad hi |
+| Materials | `/materials` upload (multipart PDF, 25 MB), `:id/replace`, `view-url`, `download-url`, `:id/views` | PDF magic-bytes check; batch-wise access; download flag; version history; archive (hard delete nahi) |
+| Files | `GET /api/files/:key?exp&d&n&sig` | HMAC-signed 3 min link; tamper/expiry/path traversal reject; files `backend/storage/` mein (git-ignored, `STORAGE_DIR`) |
+
+Tests: `npm run smoke:tests` (26 checks), `npm run smoke:materials` (23 checks) — server chalu ho, demo seed users use hote hain.
 
 ## Kya bana hai
 
@@ -120,9 +136,9 @@ Smoke tests demo seed ke users use karte hain aur sessions/devices ki rows banat
 
 ## Baaki hai (is order mein)
 
-1. **Android app code** — `student-app/` mein sirf khali Flutter project hai (`com.edumanage.student_app`). Abhi tak koi package add nahi hua. Plan: dio, flutter_riverpod, go_router, flutter_secure_storage, device_info_plus, screen_protector (FLAG_SECURE), safe_device (root/emulator), google_fonts; login screen, token refresh (single-flight), SESSION_REPLACED handling, watermark widget. Details: [docs/10-android-protection.md](docs/10-android-protection.md).
-2. **Phase 1 backend modules** — students, courses, batches, enquiries, faculty CRUD (+ ownership checks), dashboard summary, activity log events. Phir admin-web ke placeholder pages asli UI se badlo. Admin web mein **device history + reset screen** (API ready hai).
-3. Phase 2/3 modules (docs ke hisaab se): notes, tests, doubts, videos, classes, fees/Razorpay.
+1. **Admin web:** device history + reset screen (API ready), student documents + CSV export, roles page; videos/classes/fees screens backend ke saath.
+2. **Android app:** tests likhe hue hain (`test/attempt_session_test.dart`) par policy allow hone ke baad chalane hain; phir emulator/phone par run (Android SDK cmdline-tools + licenses). Baaki screens: live classes, recorded lectures.
+3. Baaki backend: videos (upload + HLS), fees/Razorpay, notifications (class reminders FCM); classes ke admin web + Flutter screens; Phase 1 ke documents upload + CSV export.
 4. Infra: CI, VPS + Nginx + HTTPS, backups, Play Store ([docs/13-play-store-compliance.md](docs/13-play-store-compliance.md)).
 
 ## Dhyan dene wali baatein

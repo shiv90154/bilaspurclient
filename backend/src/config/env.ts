@@ -14,6 +14,9 @@ export const envSchema = z.object({
 
   CORS_ORIGINS: z.string().default('http://localhost:3001'),
 
+  // Private uploads (notes PDFs). Keep outside the web root; back it up with the DB.
+  STORAGE_DIR: z.string().default('./storage'),
+
   DEVICE_CHANGE_LIMIT_30D: z.coerce.number().int().positive().default(3),
   LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),

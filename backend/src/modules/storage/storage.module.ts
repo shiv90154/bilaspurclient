@@ -1,7 +1,12 @@
-﻿import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { FilesController } from './files.controller.js';
+import { StorageService } from './storage.service.js';
 
-// TODO: File storage service (local / S3-compatible) + signed URLs
 // Plan + checklist: docs/04-notes-study-material.md
-@Module({})
+@Global()
+@Module({
+  controllers: [FilesController],
+  providers: [StorageService],
+  exports: [StorageService],
+})
 export class StorageModule {}
-

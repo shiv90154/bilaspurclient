@@ -1,7 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { MaterialsController } from './materials.controller.js';
+import { MaterialsService } from './materials.service.js';
 
-// TODO: Notes upload, versions, batch access, signed view/download URLs
 // Plan + checklist: docs/04-notes-study-material.md
-@Module({})
+@Module({
+  controllers: [MaterialsController],
+  providers: [MaterialsService],
+  exports: [MaterialsService],
+})
 export class MaterialsModule {}
-
