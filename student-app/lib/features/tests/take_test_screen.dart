@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../data/content_api.dart';
 import '../../data/models.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/question_image.dart';
 import 'attempt_session.dart';
 
 /// The exam screen. The server owns the clock: the countdown is only a display, and the server
@@ -177,6 +178,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> with WidgetsBin
                   ),
                   const SizedBox(height: 12),
                   Text(q.text, style: Theme.of(context).textTheme.titleMedium),
+                  if (q.imageUrl != null) QuestionImage(path: q.imageUrl!),
                   if (q.multiple)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),

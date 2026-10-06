@@ -321,11 +321,12 @@ model Course {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  batches   Batch[]
-  subjects  Subject[]
-  tests     Test[]
-  feePlans  FeePlan[]
-  enquiries Enquiry[]
+  batches    Batch[]
+  subjects   Subject[]
+  tests      Test[]
+  testSeries TestSeries[]
+  feePlans   FeePlan[]
+  enquiries  Enquiry[]
 
   @@map("courses")
 }
@@ -479,6 +480,7 @@ model Test {
   id               String     @id @default(uuid())
   title            String
   courseId         String?
+  seriesId         String?
   durationMin      Int
   totalMarks       Decimal    @default(0) @db.Decimal(7, 2)
   negativeMark     Decimal    @default(0) @db.Decimal(4, 2)
@@ -492,11 +494,13 @@ model Test {
   updatedAt        DateTime   @updatedAt
 
   course    Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  series    TestSeries?    @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   questions TestQuestion[]
   batches   TestBatch[]
   attempts  Attempt[]
 
   @@index([status, startAt])
+  @@index([seriesId])
   @@map("tests")
 }
 
@@ -892,4 +896,20 @@ model AppRelease {
 
   @@index([createdAt])
   @@map("app_releases")
+}
+
+// A named bundle of tests, e.g. "NEET Mock Series 2027". Students see their tests grouped by series.
+model TestSeries {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  courseId    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  tests  Test[]
+
+  @@unique([name])
+  @@map("test_series")
 }

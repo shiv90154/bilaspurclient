@@ -21,6 +21,11 @@ import { PaginationQueryDto } from '../../../common/dto/pagination.dto.js';
 import { TestStatus } from '../../../generated/prisma/enums.js';
 
 export class CreateTestDto {
+  @ApiPropertyOptional({ description: "Test series this test belongs to (null removes it)" })
+  @IsOptional()
+  @IsUUID()
+  seriesId?: string | null;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -67,6 +72,11 @@ export class CreateTestDto {
 }
 
 export class UpdateTestDto {
+  @ApiPropertyOptional({ description: "Test series this test belongs to (null removes it)" })
+  @IsOptional()
+  @IsUUID()
+  seriesId?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -140,6 +150,11 @@ export class SetTestBatchesDto {
 }
 
 export class ListTestsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  seriesId?: string;
+
   @ApiPropertyOptional({ enum: TestStatus })
   @IsOptional()
   @IsEnum(TestStatus)

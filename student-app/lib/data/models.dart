@@ -57,6 +57,7 @@ class TestSummary {
     required this.state,
     required this.attemptId,
     required this.score,
+    this.seriesName,
   });
 
   factory TestSummary.fromJson(Map<String, dynamic> j) {
@@ -79,6 +80,7 @@ class TestSummary {
       },
       attemptId: attempt?['id'] as String?,
       score: attempt?['score'] == null ? null : _num(attempt!['score']),
+      seriesName: (j['series'] as Map?)?['name'] as String?,
     );
   }
 
@@ -93,6 +95,9 @@ class TestSummary {
   final TestState state;
   final String? attemptId;
   final double? score;
+
+  /// The test series it belongs to ("NEET Mock Series 2027"), or null for a stand-alone test.
+  final String? seriesName;
 }
 
 class PaperOption {
@@ -110,6 +115,7 @@ class PaperQuestion {
     required this.options,
     required this.selected,
     required this.marked,
+    this.imageUrl,
   });
 
   factory PaperQuestion.fromJson(Map<String, dynamic> j) => PaperQuestion(
@@ -122,8 +128,11 @@ class PaperQuestion {
         ],
         selected: {for (final id in j['selectedOptionIds'] as List) id as String},
         marked: j['markedForReview'] as bool,
+        imageUrl: j['imageUrl'] as String?,
       );
 
+  /// Server-relative signed link to the question's figure (needs [absoluteUrl]), or null.
+  final String? imageUrl;
   final String id;
   final String text;
   final bool multiple;
@@ -184,12 +193,14 @@ class ReviewQuestion {
     required this.explanation,
     required this.selected,
     required this.options,
+    this.imageUrl,
   });
 
   factory ReviewQuestion.fromJson(Map<String, dynamic> j) => ReviewQuestion(
         text: j['text'] as String,
         marks: _num(j['marks']),
         explanation: j['explanation'] as String?,
+        imageUrl: j['imageUrl'] as String?,
         selected: {for (final id in j['selectedOptionIds'] as List) id as String},
         options: [
           for (final o in j['options'] as List)
@@ -200,6 +211,7 @@ class ReviewQuestion {
   final String text;
   final double marks;
   final String? explanation;
+  final String? imageUrl;
   final Set<String> selected;
   final List<ReviewOption> options;
 
@@ -220,6 +232,11 @@ class TestResult {
     required this.unanswered,
     required this.autoSubmitted,
     required this.review,
+    this.rank,
+    this.participants,
+    this.average,
+    this.highest,
+    this.subjects = const [],
   });
 
   factory TestResult.fromJson(Map<String, dynamic> j) {
@@ -234,6 +251,13 @@ class TestResult {
       incorrect: j['incorrect'] as int,
       unanswered: j['unanswered'] as int,
       autoSubmitted: j['status'] == 'AUTO_SUBMITTED',
+      rank: j['rank'] as int?,
+      participants: j['participants'] as int?,
+      average: j['average'] == null ? null : _num(j['average']),
+      highest: j['highest'] == null ? null : _num(j['highest']),
+      subjects: [
+        for (final s in (j['subjects'] as List? ?? const [])) SubjectResult.fromJson(s as Map<String, dynamic>),
+      ],
       review: review == null
           ? null
           : [for (final r in review) ReviewQuestion.fromJson(r as Map<String, dynamic>)],
@@ -251,6 +275,45 @@ class TestResult {
 
   /// Null until the test window is over (answers must not leak to other students).
   final List<ReviewQuestion>? review;
+
+  /// Standing among everyone who finished the test (equal scores share a rank).
+  final int? rank;
+  final int? participants;
+  final double? average;
+  final double? highest;
+
+  /// Per-subject split: where the student is strong or weak.
+  final List<SubjectResult> subjects;
+}
+
+class SubjectResult {
+  const SubjectResult({
+    required this.name,
+    required this.correct,
+    required this.incorrect,
+    required this.skipped,
+    required this.score,
+    required this.total,
+  });
+
+  factory SubjectResult.fromJson(Map<String, dynamic> j) => SubjectResult(
+        name: j['name'] as String,
+        correct: j['correct'] as int,
+        incorrect: j['incorrect'] as int,
+        skipped: j['skipped'] as int,
+        score: _num(j['score']),
+        total: _num(j['total']),
+      );
+
+  final String name;
+  final int correct;
+  final int incorrect;
+  final int skipped;
+  final double score;
+  final double total;
+
+  int get questions => correct + incorrect + skipped;
+  double get accuracy => questions == 0 ? 0 : correct / questions;
 }
 
 // ───────────── doubts ─────────────

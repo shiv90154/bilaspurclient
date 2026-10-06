@@ -1,10 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { Check, FileUp, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { QuestionImport } from "./question-import";
 import {
   api,
+  apiForm,
+  fileHref,
   qs,
   type Course,
   type Difficulty,
@@ -38,7 +41,8 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
   const [topicId, setTopicId] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [search, setSearch] = useState("");
-  const [dialog, setDialog] = useState<"question" | "curriculum" | null>(null);
+  const [dialog, setDialog] = useState<"question" | "curriculum" | "import" | null>(null);
+  const [editing, setEditing] = useState<Question | null>(null);
   const qc = useQueryClient();
 
   const subjects = useSubjects();
@@ -68,8 +72,9 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
         title="Question bank"
         subtitle="Reusable questions, organised by subject and topic. Tests are built from here."
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className={btnGhost} onClick={() => setDialog("curriculum")}>Subjects &amp; topics</button>
+            <button className={btnGhost} onClick={() => setDialog("import")}><FileUp size={15} /> Import CSV</button>
             <button className={btnPrimary} onClick={() => setDialog("question")}>
               <Plus size={16} /> Question
             </button>
@@ -117,6 +122,9 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={TONE[q.difficulty]}>{q.difficulty}</Badge>
                 {q.type === "MULTIPLE" && <Badge tone="blue">Multi</Badge>}
+                <button aria-label="Edit question" className="rounded-lg p-1.5 text-sub hover:bg-bg" onClick={() => setEditing(q)}>
+                  <Pencil size={15} />
+                </button>
                 <button aria-label="Archive question" className="rounded-lg p-1.5 text-danger hover:bg-bg"
                   onClick={() => window.confirm("Archive this question? Existing tests keep it.") && archive.mutate(q.id)}>
                   <Trash2 size={15} />
@@ -124,6 +132,10 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
             <p className="mt-0.5 text-[12px] text-sub">{q.topic.subject.name} › {q.topic.name}</p>
+            {q.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fileHref(q.imageUrl)} alt="Question figure" className="mt-2.5 max-h-48 rounded-[10px] border border-line" />
+            )}
             <ul className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
               {q.options.map((o) => (
                 <li key={o.id} className={`flex items-start gap-2 rounded-[10px] border px-3 py-2 text-[13px] ${
@@ -141,25 +153,53 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
       {list.data && <Pager page={page} limit={LIMIT} total={list.data.total} onPage={setPage} />}
 
       {dialog === "question" && <QuestionForm subjects={subjects.data ?? []} onClose={() => setDialog(null)} />}
+      {editing && <QuestionForm subjects={subjects.data ?? []} question={editing} onClose={() => setEditing(null)} />}
+      {dialog === "import" && <QuestionImport subjects={subjects.data ?? []} onClose={() => setDialog(null)} />}
       {dialog === "curriculum" && <CurriculumDialog isAdmin={isAdmin} onClose={() => setDialog(null)} />}
     </div>
   );
 }
 
-function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () => void }) {
+const MAX_IMAGE_MB = 3;
+
+/** Add a question, or edit an existing one (pass `question`). */
+function QuestionForm({ subjects, question, onClose }: { subjects: Subject[]; question?: Question; onClose: () => void }) {
   const qc = useQueryClient();
-  const [subjectId, setSubjectId] = useState("");
-  const [type, setType] = useState<QuestionType>("SINGLE");
-  const [options, setOptions] = useState([
-    { text: "", isCorrect: true },
-    { text: "", isCorrect: false },
-    { text: "", isCorrect: false },
-    { text: "", isCorrect: false },
-  ]);
+  const editing = !!question;
+  const [subjectId, setSubjectId] = useState(question?.topic.subject.id ?? "");
+  const [type, setType] = useState<QuestionType>(question?.type ?? "SINGLE");
+  const [options, setOptions] = useState(
+    question
+      ? question.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
+      : [
+          { text: "", isCorrect: true },
+          { text: "", isCorrect: false },
+          { text: "", isCorrect: false },
+          { text: "", isCorrect: false },
+        ],
+  );
+  const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [localError, setLocalError] = useState("");
+  // One blob URL per chosen file, released when it changes or the dialog closes.
+  const previewUrl = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   const save = useMutation({
-    mutationFn: (body: unknown) => api("/questions", { method: "POST", body }),
+    mutationFn: async (body: unknown) => {
+      const saved = question
+        ? await api<Question>(`/questions/${question.id}`, { method: "PATCH", body })
+        : await api<Question>("/questions", { method: "POST", body });
+      // The picture is a separate upload: a failed picture must not lose the typed question.
+      if (image) {
+        const fd = new FormData();
+        fd.append("file", image);
+        await apiForm(`/questions/${saved.id}/image`, fd);
+      } else if (removeImage && question?.imageUrl) {
+        await api(`/questions/${saved.id}/image`, { method: "DELETE" });
+      }
+      return saved;
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["questions"] });
       onClose();
@@ -182,6 +222,21 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
     }
   };
 
+  const onPickImage = (file: File | undefined) => {
+    setLocalError("");
+    if (!file) return setImage(null);
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      setLocalError("Use a PNG, JPG or WebP picture.");
+      return setImage(null);
+    }
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      setLocalError(`The picture is larger than ${MAX_IMAGE_MB} MB.`);
+      return setImage(null);
+    }
+    setImage(file);
+    setRemoveImage(false);
+  };
+
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -200,9 +255,10 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
   };
 
   const topics = subjects.find((s) => s.id === subjectId)?.topics ?? [];
+  const shownImage = previewUrl ?? (!removeImage && question?.imageUrl ? fileHref(question.imageUrl) : null);
 
   return (
-    <Modal title="Add question" onClose={onClose}>
+    <Modal title={editing ? "Edit question" : "Add question"} onClose={onClose}>
       <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
         <div className="grid gap-3.5 sm:grid-cols-2">
           <Field label="Subject *">
@@ -215,7 +271,7 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
           </Field>
           <Field label="Topic *">
             {(id) => (
-              <select id={id} name="topicId" required defaultValue="" key={subjectId} className={inputCls}>
+              <select id={id} name="topicId" required defaultValue={question?.topic.id ?? ""} key={subjectId} className={inputCls}>
                 <option value="" disabled>Select</option>
                 {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
@@ -223,8 +279,29 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
           </Field>
         </div>
         <Field label="Question *">
-          {(id) => <textarea id={id} name="text" required rows={3} maxLength={4000} className={inputCls + " h-auto py-2"} />}
+          {(id) => <textarea id={id} name="text" required rows={3} maxLength={4000} defaultValue={question?.text} className={inputCls + " h-auto py-2"} />}
         </Field>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-[12px] font-semibold text-sub">Picture / diagram (optional)</span>
+          {shownImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={shownImage} alt="Question figure" className="max-h-44 self-start rounded-[10px] border border-line" />
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className={btnGhost + " cursor-pointer !h-9"}>
+              <ImagePlus size={15} /> {shownImage ? "Replace picture" : "Add a picture"}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => onPickImage(e.target.files?.[0])} />
+            </label>
+            {shownImage && (
+              <button type="button" className={btnGhost + " !h-9 text-danger"} onClick={() => { setImage(null); setRemoveImage(true); }}>
+                Remove
+              </button>
+            )}
+            <span className="text-[11.5px] text-sub">PNG, JPG or WebP, up to {MAX_IMAGE_MB} MB</span>
+          </div>
+        </div>
+
         <div className="grid gap-3.5 sm:grid-cols-2">
           <Field label="Type">
             {(id) => (
@@ -236,7 +313,7 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
           </Field>
           <Field label="Difficulty">
             {(id) => (
-              <select id={id} name="difficulty" defaultValue="MEDIUM" className={inputCls}>
+              <select id={id} name="difficulty" defaultValue={question?.difficulty ?? "MEDIUM"} className={inputCls}>
                 <option value="EASY">Easy</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HARD">Hard</option>
@@ -270,14 +347,21 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
             </div>
           ))}
         </fieldset>
+        {editing && (
+          <p className="text-[11.5px] text-sub">
+            If students have already answered this question you can fix the wording, but not which option is correct.
+          </p>
+        )}
 
         <Field label="Explanation (shown after the test)">
-          {(id) => <textarea id={id} name="explanation" rows={2} maxLength={4000} className={inputCls + " h-auto py-2"} />}
+          {(id) => <textarea id={id} name="explanation" rows={2} maxLength={4000} defaultValue={question?.explanation ?? ""} className={inputCls + " h-auto py-2"} />}
         </Field>
         <ErrorNote error={localError ? new Error(localError) : save.error} />
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
-          <button className={btnPrimary} disabled={save.isPending}>{save.isPending ? "Saving…" : "Add question"}</button>
+          <button className={btnPrimary} disabled={save.isPending}>
+            {save.isPending ? "Saving…" : editing ? "Save changes" : "Add question"}
+          </button>
         </div>
       </form>
     </Modal>

@@ -5,3 +5,6 @@ const apiUrl = String.fromEnvironment(
   'API_URL',
   defaultValue: 'http://10.0.2.2:3000/api',
 );
+
+/// Turns a server-relative path ("/api/files/...") into a full URL on the API host.
+String absoluteUrl(String path) => Uri.parse(apiUrl).replace(path: path, query: null).toString();

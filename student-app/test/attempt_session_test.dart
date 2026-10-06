@@ -119,10 +119,12 @@ void main() {
   });
 
   group('Paper clock', () {
-    test('remaining time follows the server deadline, not the phone clock', () {
-      // Phone runs 10 minutes fast: the offset pulls the countdown back to server time.
+    test('remaining time ignores a wrong phone clock', () {
+      // The deadline is a server time. A phone 10 min fast (or 15 min slow) must still show ~30 min left.
       final fast = paperOf([q('1')], left: const Duration(minutes: 30), offset: const Duration(minutes: -10));
-      expect(fast.remaining.inMinutes, anyOf(19, 20));
+      expect(fast.remaining.inMinutes, anyOf(29, 30));
+      final slow = paperOf([q('1')], left: const Duration(minutes: 30), offset: const Duration(minutes: 15));
+      expect(slow.remaining.inMinutes, anyOf(29, 30));
     });
 
     test('never negative once the deadline has passed', () {

@@ -12,6 +12,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { AttemptStatus, EnrollmentStatus, QuestionType, TestStatus } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import type { SaveAnswersDto } from './dto/test.dto.js';
 
 /** Extra seconds accepted after the deadline so a last tap on a slow network is not lost. */
@@ -46,6 +47,12 @@ function shuffled<T>(items: T[], seed: string): T[] {
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
+/** One question, one verdict. Shared by grading and by the per-subject breakdown so they can never disagree. */
+function verdict(picked: string[], rightIds: string[]): 'correct' | 'incorrect' | 'skipped' {
+  if (picked.length === 0) return 'skipped';
+  return sameSet(picked, rightIds) ? 'correct' : 'incorrect';
+}
+
 type AttemptWithTest = Prisma.AttemptGetPayload<{ include: { test: true } }>;
 
 @Injectable()
@@ -55,6 +62,7 @@ export class AttemptsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly storage: StorageService,
   ) {}
 
   private async studentOf(user: AuthUser) {
@@ -90,6 +98,7 @@ export class AttemptsService {
         startAt: true,
         endAt: true,
         status: true,
+        series: { select: { id: true, name: true } },
         _count: { select: { questions: true } },
         attempts: { where: { studentId: student.id }, select: { id: true, status: true, score: true } },
       },
@@ -185,6 +194,7 @@ export class AttemptsService {
               id: true,
               text: true,
               type: true,
+              imageKey: true,
               options: { orderBy: { position: 'asc' }, select: { id: true, text: true } },
             },
           },
@@ -193,6 +203,7 @@ export class AttemptsService {
       this.prisma.attemptAnswer.findMany({ where: { attemptId: attempt.id } }),
     ]);
     const ordered = attempt.test.shuffleQuestions ? shuffled(rows, attempt.id) : rows;
+    const imageTtl = Math.max(600, Math.ceil((this.deadline(attempt).getTime() - Date.now()) / 1000) + 600);
     const answerOf = new Map(answers.map((a) => [a.questionId, a]));
     return {
       attemptId: attempt.id,
@@ -210,6 +221,8 @@ export class AttemptsService {
         id: r.question.id,
         text: r.question.text,
         type: r.question.type,
+        // Valid until shortly after the test ends, so a long test never shows a broken picture.
+        imageUrl: r.question.imageKey ? this.imageLink(r.question.imageKey, imageTtl) : null,
         marks: Number(r.marks),
         options: attempt.test.shuffleOptions
           ? shuffled(r.question.options, attempt.id + r.question.id)
@@ -325,6 +338,7 @@ export class AttemptsService {
       unanswered: attempt.unanswered,
       submittedAt: attempt.submittedAt,
       reviewAvailable: reviewOpen,
+      ...(await this.analysis(attempt)),
     };
     if (!reviewOpen) return { ...base, review: null };
 
@@ -344,9 +358,67 @@ export class AttemptsService {
         text: r.question.text,
         marks: Number(r.marks),
         explanation: r.question.explanation,
+        imageUrl: r.question.imageKey ? this.imageLink(r.question.imageKey, 3600) : null,
         selectedOptionIds: chosen.get(r.questionId) ?? [],
         options: r.question.options.map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect })),
       })),
+    };
+  }
+
+  private imageLink(key: string, ttlSeconds: number) {
+    return this.storage.signedUrl(key, 'question-image', 'inline', ttlSeconds);
+  }
+
+  /**
+   * How the student did compared with the rest of the test, and where they are strong or weak.
+   * Nothing here reveals any answer: only counts, marks and ranks.
+   */
+  private async analysis(attempt: AttemptWithTest) {
+    const finished = { testId: attempt.testId, status: { not: AttemptStatus.IN_PROGRESS } };
+    const mine = Number(attempt.score ?? 0);
+    const [better, stats, rows, answers] = await Promise.all([
+      this.prisma.attempt.count({ where: { ...finished, score: { gt: mine } } }),
+      this.prisma.attempt.aggregate({ where: finished, _count: { _all: true }, _avg: { score: true }, _max: { score: true } }),
+      this.prisma.testQuestion.findMany({
+        where: { testId: attempt.testId },
+        select: {
+          questionId: true,
+          marks: true,
+          question: {
+            select: {
+              options: { select: { id: true, isCorrect: true } },
+              topic: { select: { subject: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+      this.prisma.attemptAnswer.findMany({ where: { attemptId: attempt.id } }),
+    ]);
+    const chosen = new Map(answers.map((a) => [a.questionId, a.selectedOptionIds]));
+    const negative = Number(attempt.test.negativeMark);
+
+    const bySubject = new Map<string, { name: string; correct: number; incorrect: number; skipped: number; score: number; total: number }>();
+    for (const r of rows) {
+      const name = r.question.topic.subject.name;
+      const row = bySubject.get(name) ?? { name, correct: 0, incorrect: 0, skipped: 0, score: 0, total: 0 };
+      row.total += Number(r.marks);
+      const v = verdict(chosen.get(r.questionId) ?? [], r.question.options.filter((o) => o.isCorrect).map((o) => o.id));
+      if (v === 'correct') {
+        row.correct++;
+        row.score += Number(r.marks);
+      } else if (v === 'incorrect') {
+        row.incorrect++;
+        row.score -= negative;
+      } else row.skipped++;
+      bySubject.set(name, row);
+    }
+
+    return {
+      rank: better + 1, // equal scores share a rank
+      participants: stats._count._all,
+      average: +Number(stats._avg.score ?? 0).toFixed(2),
+      highest: Number(stats._max.score ?? 0),
+      subjects: [...bySubject.values()].map((s) => ({ ...s, score: +s.score.toFixed(2) })),
     };
   }
 
@@ -374,13 +446,9 @@ export class AttemptsService {
     let incorrect = 0;
     let unanswered = 0;
     for (const r of rows) {
-      const picked = chosen.get(r.questionId) ?? [];
-      if (picked.length === 0) {
-        unanswered++;
-        continue;
-      }
-      const right = r.question.options.filter((o) => o.isCorrect).map((o) => o.id);
-      if (sameSet(picked, right)) {
+      const v = verdict(chosen.get(r.questionId) ?? [], r.question.options.filter((o) => o.isCorrect).map((o) => o.id));
+      if (v === 'skipped') unanswered++;
+      else if (v === 'correct') {
         correct++;
         score += Number(r.marks);
       } else {

@@ -13,6 +13,7 @@ import {
   type Paginated,
   type Question,
   type TestDetail,
+  type TestSeries,
   type TestResults,
 } from "@/lib/api";
 import { Badge, btnGhost, btnPrimary, ErrorNote, inputCls, Modal } from "@/components/ui";
@@ -36,6 +37,11 @@ export function TestBuilder({ id }: { id: string }) {
   };
   const act = useMutation({
     mutationFn: (a: "publish" | "close") => api(`/tests/${id}/${a}`, { method: "POST" }),
+    onSuccess: refresh,
+  });
+  const series = useQuery({ queryKey: ["test-series"], queryFn: () => api<TestSeries[]>("/test-series") });
+  const moveSeries = useMutation({
+    mutationFn: (seriesId: string | null) => api(`/tests/${id}`, { method: "PATCH", body: { seriesId } }),
     onSuccess: refresh,
   });
   const remove = useMutation({
@@ -69,6 +75,14 @@ export function TestBuilder({ id }: { id: string }) {
             {t.startAt && ` · opens ${format(new Date(t.startAt), "d MMM yyyy, h:mm a")}`}
             {t.endAt && ` · closes ${format(new Date(t.endAt), "d MMM yyyy, h:mm a")}`}
           </p>
+          <label className="mt-2 flex items-center gap-2 text-[12.5px] text-sub">
+            Series
+            <select aria-label="Test series" className={inputCls + " !h-8 max-w-64"} value={t.series?.id ?? ""}
+              disabled={moveSeries.isPending} onChange={(e) => moveSeries.mutate(e.target.value || null)}>
+              <option value="">None (stand-alone)</option>
+              {series.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </label>
         </div>
         <div className="flex gap-2">
           {t.status === "DRAFT" && (
@@ -88,7 +102,7 @@ export function TestBuilder({ id }: { id: string }) {
           )}
         </div>
       </div>
-      <ErrorNote error={act.error ?? remove.error} />
+      <ErrorNote error={act.error ?? remove.error ?? moveSeries.error} />
       {locked && t.status !== "CLOSED" && (
         <p className="rounded-[10px] bg-accent-tint px-3 py-2 text-[12.5px] text-accent-ink">
           Students have started this test, so questions can no longer change.

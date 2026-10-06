@@ -7,7 +7,18 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 
 /** Keys we generate ourselves; anything else is rejected before touching the disk (no path traversal). */
-const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|apk)$/;
+const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|apk|png|jpg|webp)$/;
+
+export type StoredExt = 'pdf' | 'apk' | 'png' | 'jpg' | 'webp';
+
+/** Content-Type by stored extension (we choose the extension from the file's own bytes, never from its name). */
+export const CONTENT_TYPES: Record<StoredExt, string> = {
+  pdf: 'application/pdf',
+  apk: 'application/vnd.android.package-archive',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+};
 
 export type Disposition = 'inline' | 'attachment';
 
@@ -36,7 +47,7 @@ export class StorageService implements OnModuleInit {
   }
 
   /** Stores the bytes under a fresh random key and returns the key. */
-  async put(buffer: Buffer, ext: 'pdf' | 'apk'): Promise<string> {
+  async put(buffer: Buffer, ext: StoredExt): Promise<string> {
     const key = `${randomUUID()}.${ext}`;
     await writeFile(this.pathOf(key), buffer, { flag: 'wx' });
     return key;

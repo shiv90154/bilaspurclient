@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/content_api.dart';
 import '../../data/models.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/question_image.dart';
 import 'tests_screen.dart';
 
 final resultProvider =
@@ -69,6 +70,14 @@ class ResultScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (r.rank != null && r.participants != null) ...[
+                const SizedBox(height: 12),
+                _Standing(r: r),
+              ],
+              if (r.subjects.length > 1 || (r.subjects.length == 1 && r.subjects.first.questions > 0)) ...[
+                const SizedBox(height: 12),
+                _SubjectCard(subjects: r.subjects),
+              ],
               const SizedBox(height: 16),
               if (r.review == null)
                 const Card(
@@ -132,6 +141,7 @@ class _ReviewCard extends StatelessWidget {
                 Expanded(child: Text('$index. ${q.text}', style: const TextStyle(fontWeight: FontWeight.w600))),
               ],
             ),
+            if (q.imageUrl != null) QuestionImage(path: q.imageUrl!),
             const SizedBox(height: 8),
             for (final o in q.options)
               Container(
@@ -153,6 +163,98 @@ class _ReviewCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text('Explanation: ${q.explanation}', style: Theme.of(context).textTheme.bodySmall),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Where the student stands among everyone who finished the test.
+class _Standing extends StatelessWidget {
+  const _Standing({required this.r});
+  final TestResult r;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: scheme.primaryContainer,
+              foregroundColor: scheme.onPrimaryContainer,
+              child: Text('#${r.rank}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Rank ${r.rank} of ${r.participants}', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Average score ${fmtMarks(r.average ?? 0)} · Top score ${fmtMarks(r.highest ?? 0)}',
+                    style: text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Subject-by-subject accuracy, so a student sees where to put the next hour.
+class _SubjectCard extends StatelessWidget {
+  const _SubjectCard({required this.subjects});
+  final List<SubjectResult> subjects;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final sorted = [...subjects]..sort((a, b) => a.accuracy.compareTo(b.accuracy));
+    final weakest = sorted.length > 1 ? sorted.first : null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Subject-wise performance', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            for (final s in subjects) ...[
+              Row(
+                children: [
+                  Expanded(child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Text('${fmtMarks(s.score)} / ${fmtMarks(s.total)}', style: text.bodySmall),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: s.accuracy,
+                  minHeight: 8,
+                  color: s.accuracy >= 0.6 ? Colors.green.shade600 : (s.accuracy >= 0.4 ? Colors.orange.shade600 : Theme.of(context).colorScheme.error),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${s.correct} correct · ${s.incorrect} wrong · ${s.skipped} skipped',
+                style: text.bodySmall,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (weakest != null)
+              Text('Focus next on ${weakest.name}.', style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
           ],
         ),
       ),

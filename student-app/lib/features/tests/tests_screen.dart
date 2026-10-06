@@ -26,13 +26,75 @@ class TestsScreen extends ConsumerWidget {
           }
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(testsProvider.future),
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: tests.length,
-              itemBuilder: (_, i) => _TestCard(test: tests[i]),
+              children: [
+                // A series is a bundle of tests (e.g. "NEET Mock Series 2027"); stand-alone tests come last.
+                for (final group in _groupBySeries(tests)) ...[
+                  if (group.name != null) _SeriesHeader(name: group.name!, tests: group.tests),
+                  for (final t in group.tests) _TestCard(test: t),
+                ],
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _Group {
+  const _Group(this.name, this.tests);
+  final String? name;
+  final List<TestSummary> tests;
+}
+
+List<_Group> _groupBySeries(List<TestSummary> tests) {
+  final bySeries = <String, List<TestSummary>>{};
+  final loose = <TestSummary>[];
+  for (final t in tests) {
+    final n = t.seriesName;
+    if (n == null) {
+      loose.add(t);
+    } else {
+      (bySeries[n] ??= []).add(t);
+    }
+  }
+  final names = bySeries.keys.toList()..sort();
+  return [
+    for (final n in names) _Group(n, bySeries[n]!),
+    if (loose.isNotEmpty) _Group(bySeries.isEmpty ? null : 'Other tests', loose),
+  ];
+}
+
+class _SeriesHeader extends StatelessWidget {
+  const _SeriesHeader({required this.name, required this.tests});
+  final String name;
+  final List<TestSummary> tests;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = tests.where((t) => t.state == TestState.attempted).length;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.layers_outlined, size: 20, color: scheme.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text(name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              Text('$done / ${tests.length} done', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(value: tests.isEmpty ? 0 : done / tests.length, minHeight: 6),
+          ),
+        ],
       ),
     );
   }

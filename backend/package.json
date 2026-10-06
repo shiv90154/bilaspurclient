@@ -17,6 +17,7 @@
     "db:reset": "prisma migrate reset",
     "smoke:auth": "node scripts/smoke-auth.mjs",
     "smoke:tests": "node scripts/smoke-tests.mjs",
+    "smoke:tests-plus": "node scripts/smoke-tests-plus.mjs",
     "smoke:classes": "node scripts/smoke-classes.mjs",
     "smoke:materials": "node scripts/smoke-materials.mjs",
     "deploy": "nest deploy",

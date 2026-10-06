@@ -2,7 +2,7 @@ import { Controller, Get, NotFoundException, Param, Query, Res, UnauthorizedExce
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator.js';
-import { StorageService } from './storage.service.js';
+import { CONTENT_TYPES, StorageService, type StoredExt } from './storage.service.js';
 
 /**
  * Serves files for signed, expiring links only. Authorization already happened when the link was
@@ -35,7 +35,7 @@ export class FilesController {
     }
     const safeName = (name || (key.endsWith('.apk') ? 'app.apk' : 'file.pdf')).replace(/[^\w.\- ]+/g, '_').slice(0, 120);
     res.set({
-      'Content-Type': key.endsWith('.apk') ? 'application/vnd.android.package-archive' : 'application/pdf',
+      'Content-Type': CONTENT_TYPES[key.slice(key.lastIndexOf('.') + 1) as StoredExt],
       'Content-Length': String(file.size),
       'Content-Disposition': `${disposition}; filename="${safeName}"`,
       'Cache-Control': 'private, no-store',

@@ -160,6 +160,8 @@ export interface Question {
   difficulty: Difficulty;
   explanation: string | null;
   active: boolean;
+  /** Signed link to the question's picture (valid for an hour), or null. */
+  imageUrl: string | null;
   topic: { id: string; name: string; subject: { id: string; name: string } };
   options: { id: string; text: string; isCorrect: boolean; position: number }[];
 }
@@ -175,7 +177,15 @@ export interface TestRow {
   endAt: string | null;
   status: TestStatus;
   course: { id: string; name: string } | null;
+  series?: { id: string; name: string } | null;
   _count: { questions: number; attempts: number; batches: number };
+}
+export interface TestSeries {
+  id: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  _count?: { tests: number };
 }
 export interface TestDetail extends Omit<TestRow, "_count"> {
   _count: { attempts: number };

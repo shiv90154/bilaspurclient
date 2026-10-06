@@ -21,6 +21,7 @@ import type {
 
 const DETAIL_INCLUDE = {
   course: { select: { id: true, name: true } },
+  series: { select: { id: true, name: true } },
   batches: { select: { batch: { select: { id: true, name: true } } } },
   questions: {
     orderBy: { position: 'asc' },
@@ -53,7 +54,11 @@ export class TestsService {
   }
 
   async list(user: AuthUser, q: ListTestsQueryDto): Promise<Paginated<unknown>> {
-    const where: Prisma.TestWhereInput = { ...this.scope(user), ...(q.status && { status: q.status }) };
+    const where: Prisma.TestWhereInput = {
+      ...this.scope(user),
+      ...(q.status && { status: q.status }),
+      ...(q.seriesId && { seriesId: q.seriesId }),
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.test.findMany({
         where,
@@ -62,6 +67,7 @@ export class TestsService {
         take: q.limit,
         include: {
           course: { select: { id: true, name: true } },
+          series: { select: { id: true, name: true } },
           _count: { select: { questions: true, attempts: true, batches: true } },
         },
       }),
@@ -81,10 +87,12 @@ export class TestsService {
 
   async create(user: AuthUser, dto: CreateTestDto) {
     this.assertWindow(dto.startAt, dto.endAt);
+    await this.assertSeries(dto.seriesId);
     const test = await this.prisma.test.create({
       data: {
         title: dto.title,
         courseId: dto.courseId,
+        seriesId: dto.seriesId,
         durationMin: dto.durationMin,
         negativeMark: dto.negativeMark,
         shuffleQuestions: dto.shuffleQuestions,
@@ -100,7 +108,11 @@ export class TestsService {
 
   async update(user: AuthUser, id: string, dto: UpdateTestDto) {
     const test = await this.get(user, id);
-    this.assertEditable(test);
+    // Moving a test between series is only a label: allowed even after students have attempted it.
+    // (validated DTO instances carry every declared field, so look only at the ones actually sent)
+    const onlySeries = Object.entries(dto).every(([k, v]) => k === 'seriesId' || v === undefined);
+    if (!onlySeries) this.assertEditable(test);
+    await this.assertSeries(dto.seriesId);
     this.assertWindow(dto.startAt ?? test.startAt?.toISOString(), dto.endAt ?? test.endAt?.toISOString());
     const updated = await this.prisma.test.update({
       where: { id },
@@ -222,6 +234,12 @@ export class TestsService {
     if (test._count.attempts > 0) {
       throw new ForbiddenException('Students have already started this test; it can no longer be edited');
     }
+  }
+
+  private async assertSeries(seriesId?: string | null) {
+    if (!seriesId) return;
+    const s = await this.prisma.testSeries.findFirst({ where: { id: seriesId, active: true } });
+    if (!s) throw new BadRequestException('Unknown or archived test series');
   }
 
   private assertWindow(startAt?: string, endAt?: string) {
