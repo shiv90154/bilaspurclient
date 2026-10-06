@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/push_service.dart';
 import 'core/security.dart';
+import 'core/theme.dart';
 import 'data/models.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
@@ -11,6 +12,8 @@ import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notes/note_viewer_screen.dart';
 import 'features/notes/notes_screen.dart';
+import 'features/profile/profile_screen.dart';
+import 'features/shell/main_shell.dart';
 import 'features/tests/result_screen.dart';
 import 'features/tests/take_test_screen.dart';
 import 'features/tests/tests_screen.dart';
@@ -58,13 +61,21 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const _Splash()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
-      GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
-      GoRoute(path: '/notes', builder: (_, _) => const NotesScreen()),
+      // The five main tabs share one bottom bar. Everything below the shell is full screen.
+      StatefulShellRoute.indexedStack(
+        builder: (_, _, shell) => MainShell(shell: shell),
+        branches: [
+          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/notes', builder: (_, _) => const NotesScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/tests', builder: (_, _) => const TestsScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/doubts', builder: (_, _) => const DoubtsScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())]),
+        ],
+      ),
       GoRoute(
         path: '/notes/:id',
         builder: (_, state) => NoteViewerScreen(note: state.extra! as Note),
       ),
-      GoRoute(path: '/tests', builder: (_, _) => const TestsScreen()),
       GoRoute(
         path: '/tests/take',
         builder: (_, state) => TakeTestScreen(paper: state.extra! as Paper),
@@ -73,7 +84,6 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         path: '/tests/result/:attemptId',
         builder: (_, state) => ResultScreen(attemptId: state.pathParameters['attemptId']!),
       ),
-      GoRoute(path: '/doubts', builder: (_, _) => const DoubtsScreen()),
       GoRoute(
         path: '/doubts/:id',
         builder: (_, state) => DoubtThreadScreen(id: state.pathParameters['id']!),
@@ -87,12 +97,7 @@ class EduManageApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const primary = Color(0xFF3949AB);
-    final theme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: primary),
-      scaffoldBackgroundColor: const Color(0xFFF6F5F2),
-      useMaterial3: true,
-    );
+    final theme = AppTheme.light();
 
     final problem = ref.watch(deviceProblemProvider).value;
     if (problem != null) {
@@ -119,8 +124,18 @@ class _Splash extends StatelessWidget {
   const _Splash();
 
   @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/logo.png', width: 150),
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
 }
 
 class _Blocked extends StatelessWidget {

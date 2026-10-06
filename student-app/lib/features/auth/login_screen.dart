@@ -58,14 +58,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('DHĪ',
+                    Center(child: Image.asset('assets/logo.png', height: 170)),
+                    const SizedBox(height: 8),
+                    Text('Welcome back',
+                        textAlign: TextAlign.center,
                         style: Theme.of(context)
                             .textTheme
-                            .headlineMedium
+                            .titleLarge
                             ?.copyWith(fontWeight: FontWeight.w800, color: scheme.primary)),
-                    const SizedBox(height: 6),
-                    const Text('Log in to continue your classes'),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 4),
+                    const Text('Log in to continue your classes', textAlign: TextAlign.center),
+                    const SizedBox(height: 26),
                     if (message != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
