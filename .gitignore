@@ -54,3 +54,6 @@ deploy/nginx/edumanage.conf
 # Firebase secrets (FCM)
 student-app/android/app/google-services.json
 backend/firebase-service-account*.json
+
+# Files that hold real logins. The repository is public, so these stay on the developer's computer.
+*.private.md
