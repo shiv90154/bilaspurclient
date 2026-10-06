@@ -2,10 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, MessageCircleQuestion, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, qs, type DoubtDetail, type DoubtRow, type DoubtStatus, type Paginated } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, Field, inputCls, Modal } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal } from "@/components/ui";
 
 const LABEL: Record<DoubtStatus, { text: string; tone: "red" | "blue" | "amber" | "green" }> = {
   OPEN: { text: "Waiting for a teacher", tone: "red" },
@@ -32,9 +32,14 @@ export function StudentDoubts() {
         <button className={btnPrimary} onClick={() => setAsking(true)}><Plus size={16} /> Ask a doubt</button>
       </div>
       <ErrorNote error={list.error} />
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {list.isPending && <ListSkeleton rows={2} />}
       {list.data?.items.length === 0 && (
-        <p className="rounded-2xl border border-line bg-surface p-5 text-[13px] text-sub">You have not asked any doubts yet.</p>
+        <EmptyState
+          icon={MessageCircleQuestion}
+          title="No doubts yet"
+          text="Stuck on something? Ask your teachers and follow the answer here."
+          action={<button className={btnPrimary} onClick={() => setAsking(true)}><Plus size={16} /> Ask a doubt</button>}
+        />
       )}
       <ul className="flex flex-col gap-2.5">
         {list.data?.items.map((d) => (

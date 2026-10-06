@@ -2,19 +2,22 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { GraduationCap, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, qs, type Batch, type Course, type Paginated } from "@/lib/api";
 import {
   Badge,
   btnGhost,
   btnPrimary,
+  EmptyState,
   ErrorNote,
   Field,
   inputCls,
+  ListSkeleton,
   Modal,
   PageHeader,
 } from "@/components/ui";
+import { plural } from "@/lib/format";
 
 type Dialog = { kind: "course" } | { kind: "batch"; courseId?: string } | null;
 
@@ -65,11 +68,14 @@ export function CoursesView({ canEdit }: { canEdit: boolean }) {
       />
 
       <ErrorNote error={courses.error ?? batches.error ?? archive.error} />
-      {courses.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {courses.isPending && <ListSkeleton />}
       {courses.data?.items.length === 0 && (
-        <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">
-          No courses yet. Add your first course, then create batches under it.
-        </p>
+        <EmptyState
+          icon={GraduationCap}
+          title="No courses yet"
+          text="Add your first course, then create batches under it. Students, classes and tests are all organised by batch."
+          action={canEdit ? <button className={btnPrimary} onClick={() => setDialog({ kind: "course" })}><Plus size={16} /> Add course</button> : undefined}
+        />
       )}
 
       <div className="flex flex-col gap-4">
@@ -108,7 +114,7 @@ export function CoursesView({ canEdit }: { canEdit: boolean }) {
                       </span>
                     </span>
                     <span className="flex items-center gap-3">
-                      <span className="text-sub">{b._count?.students ?? 0} students</span>
+                      <span className="text-sub">{plural(b._count?.students ?? 0, "student")}</span>
                       {!b.active && <Badge tone="gray">Archived</Badge>}
                       {canEdit && b.active && (
                         <button className="text-[12px] font-semibold text-danger" onClick={() => onArchive("batches", b.id, b.name)}>

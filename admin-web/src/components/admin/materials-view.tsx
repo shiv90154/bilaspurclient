@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Download, ExternalLink, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import {
   api,
@@ -13,7 +13,7 @@ import {
   type Material,
   type Paginated,
 } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, Field, inputCls, Modal, PageHeader, Pager } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal, PageHeader, Pager } from "@/components/ui";
 import { useSubjects } from "./question-bank-view";
 
 const LIMIT = 15;
@@ -86,8 +86,16 @@ export function MaterialsView() {
 
       <input ref={replaceInput} type="file" accept="application/pdf" hidden onChange={(e) => onReplacePicked(e.target.files?.[0])} />
       <ErrorNote error={list.error ?? open.error ?? patch.error ?? archive.error ?? replace.error} />
-      {(list.isPending || replace.isPending) && <p className="text-[13px] text-sub">{replace.isPending ? "Uploading new version…" : "Loading…"}</p>}
-      {list.data?.items.length === 0 && <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">No material yet.</p>}
+      {replace.isPending && <p className="text-[13px] text-sub">Uploading new version…</p>}
+      {list.isPending && <ListSkeleton />}
+      {list.data?.items.length === 0 && (
+        <EmptyState
+          icon={FileText}
+          title="No study material yet"
+          text="Upload PDF notes and choose which batches can read them. Students read them inside the app; downloads stay off unless you allow them."
+          action={<button className={btnPrimary} onClick={() => setUploading(true)}><Plus size={16} /> Upload notes</button>}
+        />
+      )}
 
       <ul className="flex flex-col gap-3">
         {list.data?.items.map((m) => (

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarPlus, ExternalLink, Pencil, Users, XCircle } from "lucide-react";
+import { CalendarDays, CalendarPlus, ExternalLink, Pencil, Users, XCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   api,
@@ -14,7 +14,7 @@ import {
   type FacultyRow,
   type Paginated,
 } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, Field, inputCls, Modal, PageHeader, Pager } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal, PageHeader, Pager } from "@/components/ui";
 
 const TONE: Record<ClassStatus, "blue" | "green" | "gray" | "red"> = {
   SCHEDULED: "blue",
@@ -47,17 +47,11 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
 
   const list = useQuery({
     queryKey: ["classes", { tab, page, batchId }],
-    queryFn: async () => {
-      if (tab === "upcoming") {
-        // Live now plus the next two weeks, soonest first.
-        const rows = await api<ClassRow[]>("/classes/upcoming");
-        const filtered = batchId ? rows.filter((r) => r.batchId === batchId) : rows;
-        return { items: filtered, page: 1, limit: filtered.length || 1, total: filtered.length } as Paginated<ClassRow>;
-      }
-      return api<Paginated<ClassRow>>(
-        `/classes${qs({ page, limit: LIMIT, batchId, to: new Date().toISOString(), order: "desc" })}`,
-      );
-    },
+    queryFn: () =>
+      tab === "upcoming"
+        ? // Live now and everything still ahead (the same set the dashboard counts), soonest first.
+          api<Paginated<ClassRow>>(`/classes${qs({ page, limit: LIMIT, batchId, upcoming: true })}`)
+        : api<Paginated<ClassRow>>(`/classes${qs({ page, limit: LIMIT, batchId, to: new Date().toISOString(), order: "desc" })}`),
     refetchInterval: 60_000,
   });
 
@@ -100,11 +94,14 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       <ErrorNote error={list.error ?? cancel.error} />
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {list.isPending && <ListSkeleton />}
       {list.data?.items.length === 0 && (
-        <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">
-          {tab === "upcoming" ? "No class is scheduled. Use “Schedule class” to add one." : "No past classes yet."}
-        </p>
+        <EmptyState
+          icon={CalendarDays}
+          title={tab === "upcoming" ? "No class is scheduled" : "No past classes yet"}
+          text={tab === "upcoming" ? "Schedule a Zoom or Google Meet class for a batch. Students are reminded 10 minutes before it starts." : "Classes that have finished or were cancelled show up here."}
+          action={tab === "upcoming" ? <button className={btnPrimary} onClick={() => setDialog({ kind: "create" })}><CalendarPlus size={16} /> Schedule class</button> : undefined}
+        />
       )}
 
       <ul className="flex flex-col gap-3">
@@ -148,7 +145,7 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
         ))}
       </ul>
 
-      {tab === "past" && list.data && <Pager page={page} limit={LIMIT} total={list.data.total} onPage={setPage} />}
+      {list.data && list.data.total > LIMIT && <Pager page={page} limit={LIMIT} total={list.data.total} onPage={setPage} />}
 
       {dialog?.kind === "create" && (
         <ClassForm batches={batches.data?.items ?? []} isAdmin={isAdmin} onClose={() => setDialog(null)} />

@@ -2,10 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
-import { CheckCircle2, RotateCcw } from "lucide-react";
+import { CheckCircle2, MessageCircleQuestion, RotateCcw } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, qs, type DoubtDetail, type DoubtRow, type DoubtStatus, type FacultyRow, type Paginated } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, inputCls, PageHeader, Pager } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, inputCls, ListSkeleton, PageHeader, Pager } from "@/components/ui";
+import { plural } from "@/lib/format";
 
 const TONE: Record<DoubtStatus, "red" | "blue" | "amber" | "green"> = {
   OPEN: "red",
@@ -42,8 +43,10 @@ export function DoubtsView({ isAdmin }: { isAdmin: boolean }) {
       </select>
 
       <ErrorNote error={list.error} />
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
-      {list.data?.items.length === 0 && <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">No doubts here. 🎉</p>}
+      {list.isPending && <ListSkeleton />}
+      {list.data?.items.length === 0 && (
+        <EmptyState icon={MessageCircleQuestion} title="No doubts here" text="When a student asks a question in the app, it appears here so you can assign it and reply." />
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <ul className="flex flex-col gap-2">
@@ -56,7 +59,7 @@ export function DoubtsView({ isAdmin }: { isAdmin: boolean }) {
                   <Badge tone={TONE[d.status]}>{d.status}</Badge>
                 </div>
                 <p className="mt-1 text-[12px] text-sub">
-                  {d.student.user.name} · {[d.subject?.name, d.topic?.name].filter(Boolean).join(" › ") || "General"} · {d._count.messages} msgs
+                  {d.student.user.name} · {[d.subject?.name, d.topic?.name].filter(Boolean).join(" › ") || "General"} · {plural(d._count.messages, "message")}
                 </p>
                 <p className="text-[11.5px] text-sub">
                   {d.assignedTo ? `Assigned to ${d.assignedTo.name} · ` : "Unassigned · "}

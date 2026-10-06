@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, FileUp, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpenCheck, Check, FileUp, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { QuestionImport } from "./question-import";
 import {
@@ -20,9 +20,11 @@ import {
   Badge,
   btnGhost,
   btnPrimary,
+  EmptyState,
   ErrorNote,
   Field,
   inputCls,
+  ListSkeleton,
   Modal,
   PageHeader,
   Pager,
@@ -60,6 +62,8 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (id: string) => api(`/questions/${id}`, { method: "DELETE" }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["questions"] }),
   });
+
+  const filtered = !!(search || subjectId || topicId || difficulty);
 
   const reset = <T,>(set: (v: T) => void) => (v: T) => {
     set(v);
@@ -105,13 +109,31 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       <ErrorNote error={list.error ?? archive.error} />
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {list.isPending && <ListSkeleton rows={4} />}
       {list.data?.items.length === 0 && (
-        <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">
-          No questions found. {subjects.data?.length === 0
-            ? "Create a subject and topic first, then add questions."
-            : "Add your first question."}
-        </p>
+        <EmptyState
+          icon={BookOpenCheck}
+          title={filtered ? "No question matches" : "No questions yet"}
+          text={
+            filtered
+              ? "Try a different filter or search word."
+              : subjects.data?.length === 0
+                ? "Create a subject and topic first (Subjects & topics), then add questions one by one or import many from a spreadsheet."
+                : "Add questions one by one, or import many at once from a CSV spreadsheet. Tests are built from this bank."
+          }
+          action={
+            filtered ? undefined : (
+              <div className="flex flex-wrap justify-center gap-2">
+                <button className={btnPrimary} onClick={() => setDialog(subjects.data?.length ? "question" : "curriculum")}>
+                  <Plus size={16} /> {subjects.data?.length ? "Add a question" : "Add subjects & topics"}
+                </button>
+                {!!subjects.data?.length && (
+                  <button className={btnGhost} onClick={() => setDialog("import")}><FileUp size={15} /> Import CSV</button>
+                )}
+              </div>
+            )
+          }
+        />
       )}
 
       <ul className="flex flex-col gap-3">

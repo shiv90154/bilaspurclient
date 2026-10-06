@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { Download, Smartphone, Trash2, Upload } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, apiForm, fileHref } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, Field, inputCls, PageHeader } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, PageHeader } from "@/components/ui";
 
 interface AppRelease {
   id: string;
@@ -60,7 +60,7 @@ export function AppDownloadView() {
       <PageHeader title="Mobile app" subtitle="Download the latest Android app (APK), or upload a new build." />
       <ErrorNote error={list.error ?? download.error ?? remove.error} />
 
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {list.isPending && <ListSkeleton rows={1} />}
 
       {latest ? (
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
@@ -83,9 +83,7 @@ export function AppDownloadView() {
         </section>
       ) : (
         !list.isPending && (
-          <p className="rounded-2xl border border-dashed border-line bg-surface p-6 text-[13px] text-sub">
-            No app build uploaded yet. Upload the APK below once it is built.
-          </p>
+          <EmptyState icon={Smartphone} title="No app build uploaded yet" text="Upload the Android APK below once it is built, and it can be downloaded from here." />
         )
       )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, type LucideIcon } from "lucide-react";
 import { useEffect, useId, type ReactNode } from "react";
 
 export const inputCls =
@@ -134,5 +134,42 @@ export function ErrorNote({ error }: { error: unknown }) {
     <p role="alert" className="rounded-[10px] bg-danger-tint px-3 py-2 text-[12.5px] text-danger">
       {msg}
     </p>
+  );
+}
+
+/** What a list shows when there is nothing in it yet: says what the screen is for and what to do next. */
+export function EmptyState({
+  icon: Icon,
+  title,
+  text,
+  action,
+}: {
+  icon: LucideIcon;
+  title: string;
+  text?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+      <span className="rounded-2xl bg-primary-tint p-3.5 text-primary">
+        <Icon size={24} aria-hidden="true" />
+      </span>
+      <div>
+        <p className="text-[15px] font-bold">{title}</p>
+        {text && <p className="mx-auto mt-1 max-w-sm text-[13px] text-sub">{text}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** Grey placeholder cards while a list loads, so the page does not jump when the data arrives. */
+export function ListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-3" role="status" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="h-[76px] animate-pulse rounded-2xl border border-line bg-surface" />
+      ))}
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { api, type DashboardSummary } from "@/lib/api";
 import { ErrorNote } from "@/components/ui";
+import { describeActivity } from "@/lib/format";
 
 const LABELS: Record<string, [string, string]> = {
   students: ["Total students", "All registered students"],
@@ -52,7 +53,7 @@ export function DashboardStats() {
                 <li key={a.id} className="flex items-center justify-between gap-3 py-2 text-[13px]">
                   <span>
                     <span className="font-semibold">{a.actor?.name ?? "System"}</span>{" "}
-                    <span className="text-sub">· {a.action}</span>
+                    <span className="text-sub">· {describeActivity(a.action)}</span>
                   </span>
                   <span className="shrink-0 text-[12px] text-sub">
                     {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}

@@ -85,6 +85,13 @@ if (c.s === 201) {
 const nj = await student.api("POST", `/classes/${farId}/join`);
 ok("joining a class days away is refused (CLASS_NOT_OPEN)", nj.s === 409 && nj.j.code === "CLASS_NOT_OPEN", JSON.stringify(nj));
 
+const up1 = await admin.api("GET", "/classes?upcoming=true&limit=100");
+ok("upcoming=true lists a class that is days away (not only the next 14 days)", up1.s === 200 && up1.j.items.some((x) => x.id === farId), up1.s);
+await admin.api("DELETE", `/classes/${farId}`);
+const up2 = await admin.api("GET", "/classes?upcoming=true&limit=100");
+ok("a cancelled class is not listed as upcoming", !up2.j.items.some((x) => x.id === farId));
+ok("upcoming=maybe is rejected", (await admin.api("GET", "/classes?upcoming=maybe")).s === 400);
+
 for (const id of made) await admin.api("DELETE", `/classes/${id}`);
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

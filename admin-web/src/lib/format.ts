@@ -1,0 +1,70 @@
+/** "1 batch", "2 batches". Keeps counts grammatical everywhere. */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+const ACTIVITY: Record<string, string> = {
+  "auth.login": "Signed in",
+  "auth.logout": "Signed out",
+  "student.create": "Added a student",
+  "student.update": "Updated a student",
+  "student.delete": "Removed a student",
+  "student.assign-batch": "Put a student in a batch",
+  "student.remove-batch": "Took a student out of a batch",
+  "enquiry.create": "Added an enquiry",
+  "enquiry.update": "Updated an enquiry",
+  "enquiry.convert": "Turned an enquiry into a student",
+  "enquiry.delete": "Deleted an enquiry",
+  "faculty.create": "Added a teacher",
+  "faculty.update": "Updated a teacher",
+  "faculty.delete": "Removed a teacher",
+  "course.create": "Created a course",
+  "course.update": "Updated a course",
+  "batch.create": "Created a batch",
+  "batch.update": "Updated a batch",
+  "batch.set-faculty": "Chose the teachers of a batch",
+  "subject.create": "Added a subject",
+  "subject.update": "Renamed a subject",
+  "subject.delete": "Deleted a subject",
+  "topic.create": "Added a topic",
+  "topic.update": "Renamed a topic",
+  "topic.delete": "Deleted a topic",
+  "question.create": "Added a question",
+  "question.update": "Edited a question",
+  "question.bulk_create": "Imported questions",
+  "question.image_set": "Added a picture to a question",
+  "question.image_remove": "Removed a question's picture",
+  "test.create": "Created a test",
+  "test.update": "Updated a test",
+  "test.set_questions": "Chose a test's questions",
+  "test.set_batches": "Chose who can take a test",
+  "test.publish": "Published a test",
+  "test.close": "Closed a test",
+  "test.delete": "Deleted a test",
+  "test_series.create": "Created a test series",
+  "test_series.update": "Updated a test series",
+  "attempt.start": "Started a test",
+  "attempt.submit": "Submitted a test",
+  "material.create": "Uploaded study material",
+  "material.update": "Updated study material",
+  "material.replace": "Uploaded a new version of study material",
+  "material.archive": "Archived study material",
+  "material.download": "Downloaded study material",
+  "class.create": "Scheduled a class",
+  "class.update": "Changed a class",
+  "class.cancel": "Cancelled a class",
+  "doubt.create": "Asked a doubt",
+  "doubt.assign": "Assigned a doubt to a teacher",
+  "doubt.resolve": "Resolved a doubt",
+  "doubt.reopen": "Reopened a doubt",
+  "user.reset-device": "Reset a student's device",
+  "release.create": "Uploaded an app build",
+  "release.download": "Downloaded the app",
+  "release.delete": "Deleted an app build",
+};
+
+/** Plain-English line for an activity-log action code; unknown codes still read acceptably. */
+export function describeActivity(action: string): string {
+  const known = ACTIVITY[action];
+  if (known) return known;
+  const text = action.replace(/[._-]+/g, " ").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

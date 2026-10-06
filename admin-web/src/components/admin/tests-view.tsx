@@ -2,12 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Layers, Plus } from "lucide-react";
+import { ClipboardCheck, Layers, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, qs, type Paginated, type TestRow, type TestSeries, type TestStatus } from "@/lib/api";
-import { Badge, btnGhost, btnPrimary, ErrorNote, Field, inputCls, Modal, PageHeader, Pager } from "@/components/ui";
+import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal, PageHeader, Pager } from "@/components/ui";
+import { plural } from "@/lib/format";
 
 export const STATUS_TONE: Record<TestStatus, "gray" | "green" | "amber"> = {
   DRAFT: "gray",
@@ -60,9 +61,14 @@ export function TestsView() {
       </div>
 
       <ErrorNote error={list.error} />
-      {list.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {list.isPending && <ListSkeleton />}
       {list.data?.items.length === 0 && (
-        <p className="rounded-2xl border border-line bg-surface p-6 text-[13px] text-sub">No tests yet.</p>
+        <EmptyState
+          icon={ClipboardCheck}
+          title={status || seriesId ? "No test matches" : "No tests yet"}
+          text={status || seriesId ? "Try a different filter." : "Build a test from your question bank, choose the batches that can take it and publish. Marking and the timer run on the server."}
+          action={status || seriesId ? undefined : <button className={btnPrimary} onClick={() => setCreating(true)}><Plus size={16} /> New test</button>}
+        />
       )}
 
       <ul className="flex flex-col gap-3">
@@ -73,13 +79,13 @@ export function TestsView() {
                 <p className="text-[14.5px] font-bold">{t.title}</p>
                 {t.series && <p className="mt-0.5 text-[11.5px] font-semibold text-primary">{t.series.name}</p>}
                 <p className="mt-0.5 text-[12.5px] text-sub">
-                  {t.durationMin} min · {t._count.questions} questions · {Number(t.totalMarks)} marks
+                  {t.durationMin} min · {plural(t._count.questions, "question")} · {Number(t.totalMarks)} marks
                   {t.startAt && ` · opens ${format(new Date(t.startAt), "d MMM, h:mm a")}`}
                 </p>
               </div>
               <div className="flex items-center gap-3 text-[12.5px] text-sub">
-                <span>{t._count.batches} batches</span>
-                <span>{t._count.attempts} attempts</span>
+                <span>{plural(t._count.batches, "batch", "batches")}</span>
+                <span>{plural(t._count.attempts, "attempt")}</span>
                 <Badge tone={STATUS_TONE[t.status]}>{t.status}</Badge>
               </div>
             </Link>
@@ -193,7 +199,7 @@ function SeriesManager({ onClose }: { onClose: () => void }) {
             <li key={x.id} className="flex items-center justify-between gap-2 rounded-[10px] border border-line px-3 py-2 text-[13px]">
               <span>
                 <span className="font-semibold">{x.name}</span>
-                <span className="ml-2 text-sub">{x._count?.tests ?? 0} tests</span>
+                <span className="ml-2 text-sub">{plural(x._count?.tests ?? 0, "test")}</span>
                 {x.description && <span className="block text-[12px] text-sub">{x.description}</span>}
               </span>
               <span className="flex shrink-0 gap-1.5">
