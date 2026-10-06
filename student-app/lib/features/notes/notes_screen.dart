@@ -20,7 +20,11 @@ class NotesScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(notesProvider),
         builder: (notes) {
           if (notes.isEmpty) {
-            return const EmptyState(icon: Icons.menu_book_outlined, text: 'No notes shared with your batch yet.');
+            return const EmptyState(
+              icon: Icons.menu_book_outlined,
+              title: 'No notes yet',
+              text: 'PDF notes your teachers share with your batch will appear here, grouped by subject.',
+            );
           }
           // Group by subject so a student finds Physics notes under Physics.
           final groups = <String, List<Note>>{};

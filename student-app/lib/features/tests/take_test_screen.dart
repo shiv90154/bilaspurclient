@@ -89,14 +89,14 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> with WidgetsBin
     final unanswered = widget.paper.questions.length - _session.answered;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Submit test?'),
         content: Text(unanswered == 0
             ? 'You answered every question. You cannot change answers after submitting.'
             : '$unanswered question(s) are unanswered. You cannot change answers after submitting.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep working')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep working')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Submit')),
         ],
       ),
     );

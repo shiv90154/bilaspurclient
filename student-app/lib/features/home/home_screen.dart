@@ -34,12 +34,18 @@ class HomeScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
 
     final liveTests = (ref.watch(testsProvider).value ?? const <TestSummary>[])
-        .where((t) => t.state == TestState.open || t.state == TestState.inProgress)
+        .where(
+          (t) => t.state == TestState.open || t.state == TestState.inProgress,
+        )
         .take(3)
         .toList();
-    final classes = (ref.watch(classesProvider).value ?? const <LiveClass>[]).take(3).toList();
+    final classes = (ref.watch(classesProvider).value ?? const <LiveClass>[])
+        .take(3)
+        .toList();
     final doubts = ref.watch(doubtsProvider).value ?? const <Doubt>[];
-    final replied = doubts.where((d) => d.status == DoubtStatus.answered).length;
+    final replied = doubts
+        .where((d) => d.status == DoubtStatus.answered)
+        .length;
 
     return Scaffold(
       body: SafeArea(
@@ -52,7 +58,11 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.asset('assets/logo.png', width: 56, height: 56),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 56,
+                      height: 56,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -60,59 +70,81 @@ class HomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Welcome back,', style: text.bodyMedium),
-                        Text(user.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: scheme.primary)),
+                        Text(
+                          user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: scheme.primary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickTile(
-                      icon: Icons.menu_book,
-                      label: 'Study\nmaterial',
-                      background: scheme.primaryContainer,
-                      foreground: scheme.onPrimaryContainer,
-                      onTap: () => context.go('/notes'),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _QuickTile(
+                        icon: Icons.menu_book,
+                        label: 'Study\nmaterial',
+                        background: scheme.primaryContainer,
+                        foreground: scheme.onPrimaryContainer,
+                        onTap: () => context.go('/notes'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickTile(
-                      icon: Icons.quiz,
-                      label: 'Tests',
-                      background: scheme.tertiaryContainer,
-                      foreground: scheme.onTertiaryContainer,
-                      onTap: () => context.go('/tests'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _QuickTile(
+                        icon: Icons.quiz,
+                        label: 'Tests',
+                        background: scheme.tertiaryContainer,
+                        foreground: scheme.onTertiaryContainer,
+                        onTap: () => context.go('/tests'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickTile(
-                      icon: Icons.help,
-                      label: 'Ask a\ndoubt',
-                      background: scheme.secondaryContainer,
-                      foreground: scheme.onSecondaryContainer,
-                      onTap: () => context.go('/doubts'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _QuickTile(
+                        icon: Icons.help,
+                        label: 'Ask a\ndoubt',
+                        background: scheme.secondaryContainer,
+                        foreground: scheme.onSecondaryContainer,
+                        onTap: () => context.go('/doubts'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 26),
-              _SectionTitle('Live classes', actionLabel: 'See all', onAction: () => context.push('/classes')),
+              _SectionTitle(
+                'Live classes',
+                actionLabel: 'See all',
+                onAction: () => context.push('/classes'),
+              ),
               if (classes.isEmpty)
-                const _InfoCard(icon: Icons.videocam_off_outlined, text: 'No class is scheduled right now.')
+                const _InfoCard(
+                  icon: Icons.videocam_off_outlined,
+                  text: 'No class is scheduled right now.',
+                )
               else
                 for (final c in classes) ClassTile(item: c),
               const SizedBox(height: 16),
-              _SectionTitle('Tests for you', actionLabel: 'See all', onAction: () => context.go('/tests')),
+              _SectionTitle(
+                'Tests for you',
+                actionLabel: 'See all',
+                onAction: () => context.go('/tests'),
+              ),
               if (liveTests.isEmpty)
-                const _InfoCard(icon: Icons.event_available_outlined, text: 'No test is open right now.')
+                const _InfoCard(
+                  icon: Icons.event_available_outlined,
+                  text: 'No test is open right now.',
+                )
               else
                 for (final t in liveTests)
                   Card(
@@ -123,21 +155,31 @@ class HomeScreen extends ConsumerWidget {
                         foregroundColor: scheme.onTertiaryContainer,
                         child: const Icon(Icons.quiz_outlined),
                       ),
-                      title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       subtitle: Text(_testLine(t)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.go('/tests'),
                     ),
                   ),
               const SizedBox(height: 16),
-              _SectionTitle('Your doubts', actionLabel: 'Open', onAction: () => context.go('/doubts')),
+              _SectionTitle(
+                'Your doubts',
+                actionLabel: 'Open',
+                onAction: () => context.go('/doubts'),
+              ),
               _InfoCard(
-                icon: replied > 0 ? Icons.mark_chat_unread_outlined : Icons.forum_outlined,
+                icon: replied > 0
+                    ? Icons.mark_chat_unread_outlined
+                    : Icons.forum_outlined,
                 text: replied > 0
                     ? '$replied of your doubts ${replied == 1 ? 'has' : 'have'} a reply from a teacher.'
                     : doubts.isEmpty
-                        ? 'Stuck on something? Ask your teachers a doubt.'
-                        : 'No new replies right now.',
+                    ? 'Stuck on something? Ask your teachers a doubt.'
+                    : 'No new replies right now.',
                 onTap: () => context.go('/doubts'),
               ),
             ],
@@ -150,7 +192,9 @@ class HomeScreen extends ConsumerWidget {
   static String _testLine(TestSummary t) {
     if (t.state == TestState.inProgress) return 'In progress · tap to resume';
     final end = t.endAt;
-    final when = end == null ? 'Open now' : 'Open until ${DateFormat('d MMM, h:mm a').format(end)}';
+    final when = end == null
+        ? 'Open now'
+        : 'Open until ${DateFormat('d MMM, h:mm a').format(end)}';
     return '${t.durationMin} min · $when';
   }
 }
@@ -184,11 +228,14 @@ class _QuickTile extends StatelessWidget {
             children: [
               Icon(icon, size: 30, color: foreground),
               const SizedBox(height: 14),
-              Text(label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700, color: foreground, height: 1.2)),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                  height: 1.2,
+                ),
+              ),
             ],
           ),
         ),
@@ -198,7 +245,11 @@ class _QuickTile extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title, {required this.actionLabel, required this.onAction});
+  const _SectionTitle(
+    this.title, {
+    required this.actionLabel,
+    required this.onAction,
+  });
   final String title;
   final String actionLabel;
   final VoidCallback onAction;
@@ -210,7 +261,11 @@ class _SectionTitle extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
           TextButton(onPressed: onAction, child: Text(actionLabel)),
         ],

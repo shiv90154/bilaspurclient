@@ -76,7 +76,7 @@ abstract final class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 46),
           shape: RoundedRectangleBorder(borderRadius: radius),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -84,11 +84,11 @@ abstract final class AppTheme {
           minimumSize: const Size(64, 46),
           shape: RoundedRectangleBorder(borderRadius: radius),
           side: const BorderSide(color: Color(0xFFCBC4AB)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(textStyle: const TextStyle(fontWeight: FontWeight.w600)),
+        style: TextButton.styleFrom(textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: gold,

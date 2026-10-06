@@ -22,7 +22,11 @@ class TestsScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(testsProvider),
         builder: (tests) {
           if (tests.isEmpty) {
-            return const EmptyState(icon: Icons.quiz_outlined, text: 'No tests for your batch yet.');
+            return const EmptyState(
+              icon: Icons.quiz_outlined,
+              title: 'No tests yet',
+              text: 'Tests your teachers publish for your batch will appear here, grouped by series.',
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(testsProvider.future),
@@ -85,7 +89,15 @@ class _SeriesHeader extends StatelessWidget {
             children: [
               Icon(Icons.layers_outlined, size: 20, color: scheme.primary),
               const SizedBox(width: 8),
-              Expanded(child: Text(name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 12),
               Text('$done / ${tests.length} done', style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
@@ -118,22 +130,7 @@ class _TestCard extends ConsumerWidget {
 
   Future<void> _start(BuildContext context, WidgetRef ref) async {
     final go = test.state == TestState.inProgress ||
-        await showDialog<bool>(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: Text(test.title),
-                content: Text(
-                  '${test.questionCount} questions · ${test.durationMin} minutes · ${fmtMarks(test.totalMarks)} marks\n'
-                  '${test.negativeMark > 0 ? '${fmtMarks(test.negativeMark)} mark(s) deducted for each wrong answer.\n' : ''}'
-                  '\nYou can attempt this only once. The timer starts now and keeps running even if you close the app.',
-                ),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                  FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Start')),
-                ],
-              ),
-            ) ==
-            true;
+        await showDialog<bool>(context: context, builder: (_) => _StartDialog(test: test)) == true;
     if (!go || !context.mounted) return;
     try {
       final paper = await ref.read(contentApiProvider).startTest(test.id);
@@ -179,6 +176,50 @@ class _TestCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// What the student agrees to before the clock starts. Its own widget on purpose: the buttons close
+/// *this* dialog (their context), never the page behind it.
+class _StartDialog extends StatelessWidget {
+  const _StartDialog({required this.test});
+  final TestSummary test;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget line(IconData icon, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: scheme.primary),
+              const SizedBox(width: 12),
+              Expanded(child: Text(text)),
+            ],
+          ),
+        );
+    return AlertDialog(
+      title: Text(test.title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            line(Icons.help_outline, '${test.questionCount} questions · ${fmtMarks(test.totalMarks)} marks'),
+            line(Icons.timer_outlined, '${test.durationMin} minutes. The timer starts now and keeps running even if you close the app.'),
+            if (test.negativeMark > 0)
+              line(Icons.remove_circle_outline, '${fmtMarks(test.negativeMark)} mark is deducted for each wrong answer. Skipped questions lose nothing.'),
+            line(Icons.looks_one_outlined, 'You can attempt this test only once.'),
+            line(Icons.cloud_done_outlined, 'Your answers are saved as you go.'),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Start test')),
+      ],
     );
   }
 }

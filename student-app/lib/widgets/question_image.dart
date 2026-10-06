@@ -18,7 +18,7 @@ class QuestionImage extends StatelessWidget {
       child: GestureDetector(
         onTap: () => showDialog<void>(
           context: context,
-          builder: (_) => Dialog.fullscreen(
+          builder: (dialogContext) => Dialog.fullscreen(
             backgroundColor: Colors.black,
             child: Stack(
               children: [
@@ -31,7 +31,7 @@ class QuestionImage extends StatelessWidget {
                       tooltip: 'Close',
                       color: Colors.white,
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                     ),
                   ),
                 ),

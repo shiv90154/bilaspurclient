@@ -97,8 +97,9 @@ class ClassesScreen extends ConsumerWidget {
         builder: (classes) {
           if (classes.isEmpty) {
             return const EmptyState(
-              icon: Icons.videocam_off_outlined,
-              text: 'No classes are scheduled for your batch right now.\nNew classes show up here as soon as your teacher adds them.',
+              icon: Icons.videocam_outlined,
+              title: 'No classes scheduled',
+              text: 'New classes show up here as soon as your teacher adds them, and you get a reminder before each one.',
             );
           }
           // Group by day so "Today" and "Tomorrow" read naturally.

@@ -46,21 +46,32 @@ class ErrorRetry extends StatelessWidget {
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.text});
+  const EmptyState({super.key, required this.icon, required this.text, this.title});
   final IconData icon;
+  final String? title;
   final String text;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
-            Text(text, textAlign: TextAlign.center),
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+              child: Icon(icon, size: 40, color: scheme.primary),
+            ),
+            const SizedBox(height: 18),
+            if (title != null) ...[
+              Text(title!, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+            ],
+            Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
           ],
         ),
       ),

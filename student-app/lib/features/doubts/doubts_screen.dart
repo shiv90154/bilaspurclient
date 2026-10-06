@@ -42,7 +42,11 @@ class DoubtsScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(doubtsProvider),
         builder: (doubts) {
           if (doubts.isEmpty) {
-            return const EmptyState(icon: Icons.help_outline, text: 'You have not asked any doubts yet.');
+            return const EmptyState(
+              icon: Icons.help_outline,
+              title: 'No doubts yet',
+              text: 'Stuck on something? Tap "Ask a doubt" and your teachers will reply here.',
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(doubtsProvider.future),
