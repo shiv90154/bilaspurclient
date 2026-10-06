@@ -49,6 +49,8 @@ If Nginx runs in Docker: add the content of `deploy/nginx/edumanage.conf` to its
 |---|---|
 | `./deploy/deploy.sh update` | `git pull`, rebuild, restart. Database migrations run automatically on start. |
 | `./deploy/deploy.sh status` / `logs [web\|backend\|db]` | Health and logs |
+| `sudo ./deploy/deploy.sh nginx` | Adds our 2 sites to the host Nginx + HTTPS (backs up /etc/nginx first, refuses if a domain is already used, never edits other sites) |
+| `./deploy/deploy.sh domain <admin> <api>` | Switch to your own domains, then run `up` and `sudo ./deploy/deploy.sh nginx` |
 | `./deploy/deploy.sh ports [--fix]` | Show ports, or move to free ones if another program took them |
 | `./deploy/deploy.sh backup` | Database dump + uploaded files into `deploy/backups/` (14 days kept) |
 | `./deploy/deploy.sh down` | Stop the stack (data is kept in volumes) |

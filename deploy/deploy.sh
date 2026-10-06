@@ -5,6 +5,8 @@
 #                           --admin-phone 98xxxxxxxx --admin-email you@example.com [--nginx-in-docker]
 #   ./deploy/deploy.sh up          build + start (first run also creates the admin user)
 #   ./deploy/deploy.sh update      git pull, rebuild, restart (migrations run automatically)
+#   ./deploy/deploy.sh nginx       (root) add our two sites to the host Nginx + HTTPS via certbot
+#   ./deploy/deploy.sh domain <admin-domain> <api-domain>   switch domains later
 #   ./deploy/deploy.sh ports [--fix]   show / repair the two host ports
 #   ./deploy/deploy.sh status | logs [service] | seed | backup | down
 #
@@ -179,8 +181,59 @@ cmd_seed() {
   "${COMPOSE[@]}" exec -T backend npx prisma db seed
 }
 
+# Adds our two sites to the host Nginx and gets HTTPS. Existing sites are never edited:
+#   * a backup of /etc/nginx is taken first
+#   * refuses if either domain is already served by another site
+#   * `nginx -t` must pass before anything is reloaded; if it fails our files are removed again
+cmd_nginx() {
+  [[ $EUID -eq 0 ]] || die "Run as root: this writes to /etc/nginx."
+  need nginx; need certbot
+  [[ -f $ENV_FILE ]] || die "No $ENV_FILE yet."
+  render_nginx
+  local admin api avail=/etc/nginx/sites-available/dhi-edumanage enabled=/etc/nginx/sites-enabled/dhi-edumanage
+  admin=$(env_get ADMIN_DOMAIN); api=$(env_get API_DOMAIN)
+
+  local taken
+  taken=$(grep -RlsE "server_name[^;]*[[:space:]]($admin|$api)[[:space:];]" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null \
+          | grep -v "dhi-edumanage" || true)
+  [[ -z $taken ]] || die "$admin or $api is already used by: $taken  (choose other domains with: deploy.sh domain)"
+
+  mkdir -p /root/nginx-backups
+  local bak="/root/nginx-backups/nginx-before-edumanage-$(date +%Y%m%d-%H%M%S).tgz"
+  tar czf "$bak" -C /etc/nginx . && say "Backed up /etc/nginx to $bak"
+
+  cp deploy/nginx/edumanage.conf "$avail"; ln -sfn "$avail" "$enabled"
+  if ! nginx -t 2>&1; then
+    rm -f "$enabled" "$avail"
+    die "nginx -t failed with our config; removed it again, nothing was reloaded."
+  fi
+  systemctl reload nginx
+  say "Nginx now serves $admin and $api over HTTP"
+
+  local flags=(--nginx -d "$admin" -d "$api" --non-interactive --agree-tos --redirect)
+  if compgen -G "/etc/letsencrypt/accounts/*/*/*" >/dev/null; then :  # reuse the server's existing Let's Encrypt account
+  elif [[ -n ${CERTBOT_EMAIL:-} ]]; then flags+=(-m "$CERTBOT_EMAIL")
+  else flags+=(--register-unsafely-without-email); fi
+  say "Requesting HTTPS certificates"
+  if certbot "${flags[@]}"; then
+    nginx -t && systemctl reload nginx
+    say "HTTPS is on: https://$admin"
+  else
+    warn "Certificate request failed (DNS not pointing here yet, or a rate limit). Sites work over HTTP; retry later with: ./deploy/deploy.sh nginx"
+    return 1
+  fi
+}
+
+# Switch to other domains later:  ./deploy/deploy.sh domain admin.example.com api.example.com
+cmd_domain() {
+  [[ -f $ENV_FILE && $# -eq 2 ]] || die "Usage: deploy.sh domain <admin-domain> <api-domain>"
+  env_set ADMIN_DOMAIN "$1"; env_set API_DOMAIN "$2"; render_nginx
+  say "Domains set. Now run:  ./deploy/deploy.sh up   then   sudo ./deploy/deploy.sh nginx"
+}
+
 cmd_update() {
   preflight
+  [[ -d .git ]] || die "This folder is not a git clone, so 'update' cannot pull. Re-upload the code, or clone the repo."
   say "Pulling latest code"
   git pull --ff-only
   cmd_up
@@ -218,8 +271,10 @@ case "${1:-}" in
   ports)  shift; cmd_ports "$@" ;;
   status) cmd_status ;;
   logs)   shift; cmd_logs "$@" ;;
+  nginx)  cmd_nginx ;;
+  domain) shift; cmd_domain "$@" ;;
   seed)   preflight; cmd_seed ;;
   backup) cmd_backup ;;
   down)   cmd_down ;;
-  *) sed -n '2,13p' "$0"; exit 1 ;;
+  *) sed -n '2,16p' "$0"; exit 1 ;;
 esac
