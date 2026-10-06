@@ -1,0 +1,53 @@
+# Nginx virtual hosts for EduManage. deploy.sh fills the __PLACEHOLDERS__ and writes
+# deploy/nginx/edumanage.conf. These two server blocks only add new server_names, so the
+# other sites on this server keep working untouched.
+#
+# Install on a host Nginx:
+#   sudo cp deploy/nginx/edumanage.conf /etc/nginx/conf.d/edumanage.conf   (or sites-available + symlink)
+#   sudo nginx -t && sudo systemctl reload nginx
+#   sudo certbot --nginx -d __ADMIN_DOMAIN__ -d __API_DOMAIN__            (adds HTTPS + auto renewal)
+
+# Admin / faculty / student web panel
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __ADMIN_DOMAIN__;
+
+    # APK uploads are up to 150 MB.
+    client_max_body_size 160m;
+
+    location / {
+        proxy_pass http://__UPSTREAM_HOST__:__WEB_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        # Overwrite, never append: a client-supplied X-Forwarded-For must not reach the app
+        # (it would let someone dodge the login rate limit).
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_request_buffering off;
+    }
+}
+
+# API used by the Android app (and by signed file links)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __API_DOMAIN__;
+
+    client_max_body_size 160m;
+
+    location / {
+        proxy_pass http://__UPSTREAM_HOST__:__API_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_request_buffering off;
+    }
+}

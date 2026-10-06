@@ -39,10 +39,16 @@ export function clearSessionCookies(res: NextResponse) {
   res.cookies.delete(REFRESH_COOKIE);
 }
 
-/** CSRF defence for state-changing requests: Origin must match our own. */
+/**
+ * CSRF defence for state-changing requests: Origin must match our own.
+ *
+ * Behind Nginx the app only sees http://<internal host>, while the browser's Origin is the public
+ * https URL. Set PUBLIC_ORIGIN (e.g. https://admin.example.com) in production so they compare right.
+ */
 export function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
-  return !origin || origin === request.nextUrl.origin;
+  const own = (process.env.PUBLIC_ORIGIN ?? "").replace(/\/$/, "") || request.nextUrl.origin;
+  return !origin || origin === own;
 }
 
 // ───────────── talking to the backend ─────────────

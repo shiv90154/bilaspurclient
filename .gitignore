@@ -44,3 +44,9 @@ next-env.d.ts
 
 # uploaded files (local storage)
 backend/storage/
+
+# production secrets and runtime files
+deploy/production.env
+deploy/.seeded
+deploy/backups/
+deploy/nginx/edumanage.conf

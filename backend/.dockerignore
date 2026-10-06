@@ -1,0 +1,11 @@
+node_modules
+dist
+storage
+.git
+.env
+.env.*
+!.env.example
+npm-debug.log*
+test
+scripts
+*.tsbuildinfo

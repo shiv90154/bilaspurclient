@@ -1,0 +1,75 @@
+# EduManage production stack. Do not run this by hand: use  ./deploy/deploy.sh
+#
+# Built to share a server with other sites:
+#   * nothing listens on 80/443/3000/5432: only two high ports, bound to BIND_ADDR (127.0.0.1 by default)
+#   * the database publishes NO port at all: only the backend can reach it, over a private network
+#   * unique project name, network and volumes (prefix "edumanage-prod_"), so nothing collides
+#   * memory caps, so a spike here cannot starve the other sites
+name: edumanage-prod
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 768m
+    logging: &logs
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      CORS_ORIGINS: https://${ADMIN_DOMAIN}
+      SWAGGER_ENABLED: "false"
+      STORAGE_DIR: /data/storage
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
+      SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      SEED_DEMO: ${SEED_DEMO:-false}
+    volumes:
+      - storage:/data/storage
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${API_PORT}:3000"
+    mem_limit: 768m
+    logging: *logs
+
+  web:
+    build: ../admin-web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Server-to-server inside the private network; the browser never sees this.
+      BACKEND_URL: http://backend:3000/api
+      # Public URL, so the CSRF Origin check works behind Nginx.
+      PUBLIC_ORIGIN: https://${ADMIN_DOMAIN}
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${WEB_PORT}:3001"
+    mem_limit: 512m
+    logging: *logs
+
+volumes:
+  pgdata:
+  storage:
