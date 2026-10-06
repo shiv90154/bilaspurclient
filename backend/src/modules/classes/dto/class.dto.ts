@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsIn,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -98,6 +99,11 @@ export class UpdateClassDto {
 }
 
 export class ListClassesQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'asc', description: 'By start time' })
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  order?: 'asc' | 'desc';
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()

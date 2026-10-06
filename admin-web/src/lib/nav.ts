@@ -1,13 +1,11 @@
 import {
   BookOpenCheck,
-  CircleDollarSign,
   ClipboardCheck,
   FileText,
   GraduationCap,
   Home,
   LayoutDashboard,
   MessageCircleQuestion,
-  PlayCircle,
   ShieldCheck,
   Smartphone,
   UserCircle,
@@ -34,10 +32,8 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/question-bank", label: "Question Bank", icon: BookOpenCheck, roles: ["ADMIN", "FACULTY"] },
   { href: "/tests", label: "Tests", icon: ClipboardCheck, roles: ["ADMIN", "FACULTY"] },
   { href: "/materials", label: "Study Material", icon: FileText, roles: ["ADMIN", "FACULTY"] },
-  { href: "/videos", label: "Recorded Lectures", icon: PlayCircle, roles: ["ADMIN", "FACULTY"] },
   { href: "/classes", label: "Online Classes", icon: Video, roles: ["ADMIN", "FACULTY"] },
   { href: "/doubts", label: "Doubts", icon: MessageCircleQuestion, roles: ["ADMIN", "FACULTY"] },
-  { href: "/fees", label: "Fees", icon: CircleDollarSign, roles: ["ADMIN"] },
   { href: "/mobile-app", label: "Mobile App", icon: Smartphone, roles: ["ADMIN"] },
   { href: "/roles", label: "Roles & Access", icon: ShieldCheck, roles: ["ADMIN"] },
 ];
@@ -46,7 +42,6 @@ export const ADMIN_NAV: NavItem[] = [
 export const STUDENT_NAV: Omit<NavItem, "roles">[] = [
   { href: "/learn", label: "Home", icon: Home },
   { href: "/learn/classes", label: "Classes", icon: Video },
-  { href: "/learn/notes", label: "Notes", icon: FileText },
   { href: "/learn/doubts", label: "Doubts", icon: MessageCircleQuestion },
   { href: "/learn/profile", label: "Profile", icon: UserCircle },
 ];

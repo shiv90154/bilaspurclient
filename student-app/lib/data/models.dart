@@ -321,3 +321,45 @@ class DoubtThread {
   final Doubt doubt;
   final List<DoubtMessage> messages;
 }
+
+// ───────────── live classes ─────────────
+
+enum ClassState { scheduled, live, ended, cancelled }
+
+class LiveClass {
+  const LiveClass({
+    required this.id,
+    required this.title,
+    required this.startAt,
+    required this.endAt,
+    required this.state,
+    required this.teacher,
+  });
+
+  factory LiveClass.fromJson(Map<String, dynamic> j) => LiveClass(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        startAt: _date(j['startAt'])!,
+        endAt: _date(j['endAt'])!,
+        state: switch (j['status']) {
+          'LIVE' => ClassState.live,
+          'ENDED' => ClassState.ended,
+          'CANCELLED' => ClassState.cancelled,
+          _ => ClassState.scheduled,
+        },
+        teacher: ((j['faculty'] as Map?)?['user'] as Map?)?['name'] as String?,
+      );
+
+  final String id;
+  final String title;
+  final DateTime startAt;
+  final DateTime endAt;
+  final ClassState state;
+  final String? teacher;
+
+  bool get isLive => state == ClassState.live;
+
+  /// The server only lets students in from 15 minutes before the start.
+  bool get canJoinNow =>
+      state != ClassState.cancelled && state != ClassState.ended && DateTime.now().isAfter(startAt.subtract(const Duration(minutes: 15)));
+}

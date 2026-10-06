@@ -243,3 +243,25 @@ export interface FacultyRow {
   userId: string;
   user: { name: string; phone: string };
 }
+
+export type ClassStatus = "SCHEDULED" | "LIVE" | "ENDED" | "CANCELLED";
+export interface ClassRow {
+  id: string;
+  batchId: string;
+  title: string;
+  type: "ZOOM" | "OWN_LIVE" | "PREMIERE";
+  startAt: string;
+  endAt: string;
+  status: ClassStatus;
+  seriesId: string | null;
+  /** Only present for staff. Students get it from /classes/:id/join. */
+  joinUrl?: string | null;
+  batch: { id: string; name: string };
+  faculty: { id: string; user: { name: string } } | null;
+}
+export interface ClassAttendance {
+  expected: number;
+  attended: number;
+  present: { studentId: string; name: string; phone: string; joinedAt: string; durationSec: number }[];
+  absent: { studentId: string; name: string; phone: string }[];
+}

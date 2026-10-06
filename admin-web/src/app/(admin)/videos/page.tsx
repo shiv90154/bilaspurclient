@@ -1,8 +1,6 @@
-﻿import type { Metadata } from "next";
-import { ModulePage } from "@/components/module-page";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Recorded Lectures" };
-
+// Recorded lectures are not part of this release, so the page is not offered. A saved link lands on the dashboard.
 export default function Page() {
-  return <ModulePage module="videos" />;
+  redirect("/dashboard");
 }

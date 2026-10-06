@@ -27,7 +27,7 @@ export default function LearnHome() {
           </Link>
         ))}
       </div>
-      <AndroidOnlyNotice what="Notes, tests and recorded lectures" />
+      <AndroidOnlyNotice what="Study notes and tests" />
     </div>
   );
 }

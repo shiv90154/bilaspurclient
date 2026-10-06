@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/models.dart';
 import '../auth/auth_controller.dart';
+import '../classes/classes_screen.dart';
 import '../doubts/doubts_screen.dart';
 import '../tests/tests_screen.dart';
 
@@ -14,8 +15,13 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(testsProvider);
     ref.invalidate(doubtsProvider);
+    ref.invalidate(classesProvider);
     try {
-      await Future.wait([ref.read(testsProvider.future), ref.read(doubtsProvider.future)]);
+      await Future.wait([
+        ref.read(testsProvider.future),
+        ref.read(doubtsProvider.future),
+        ref.read(classesProvider.future),
+      ]);
     } catch (_) {
       // Each tab shows its own error with a retry; Home just stays quiet.
     }
@@ -31,6 +37,7 @@ class HomeScreen extends ConsumerWidget {
         .where((t) => t.state == TestState.open || t.state == TestState.inProgress)
         .take(3)
         .toList();
+    final classes = (ref.watch(classesProvider).value ?? const <LiveClass>[]).take(3).toList();
     final doubts = ref.watch(doubtsProvider).value ?? const <Doubt>[];
     final replied = doubts.where((d) => d.status == DoubtStatus.answered).length;
 
@@ -97,6 +104,12 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 26),
+              _SectionTitle('Live classes', actionLabel: 'See all', onAction: () => context.push('/classes')),
+              if (classes.isEmpty)
+                const _InfoCard(icon: Icons.videocam_off_outlined, text: 'No class is scheduled right now.')
+              else
+                for (final c in classes) ClassTile(item: c),
+              const SizedBox(height: 16),
               _SectionTitle('Tests for you', actionLabel: 'See all', onAction: () => context.go('/tests')),
               if (liveTests.isEmpty)
                 const _InfoCard(icon: Icons.event_available_outlined, text: 'No test is open right now.')

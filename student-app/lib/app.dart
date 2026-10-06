@@ -8,6 +8,7 @@ import 'core/theme.dart';
 import 'data/models.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
+import 'features/classes/classes_screen.dart';
 import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notes/note_viewer_screen.dart';
@@ -29,13 +30,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   final router = _buildRouter(ref, refresh);
-  // Tapping a push opens what it is about. A doubt reply goes to that thread; anything else
-  // (class reminders) just lands on home, where the upcoming class is.
+  // Tapping a push opens what it is about: a doubt reply opens that thread, a class reminder /
+  // reschedule / cancel opens the classes list.
   final tapSub = PushService.instance.taps.listen((data) {
     if (ref.read(authProvider).status != AuthStatus.loggedIn) return;
     final doubtId = data['doubtId'];
+    final type = data['type'];
     router.go('/home');
-    if (data['type'] == 'doubt_reply' && doubtId is String) router.push('/doubts/$doubtId');
+    if (type == 'doubt_reply' && doubtId is String) {
+      router.push('/doubts/$doubtId');
+    } else if (type is String && type.startsWith('class_')) {
+      router.push('/classes');
+    }
   });
   ref.onDispose(tapSub.cancel);
   return router;
@@ -88,6 +94,7 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         path: '/doubts/:id',
         builder: (_, state) => DoubtThreadScreen(id: state.pathParameters['id']!),
       ),
+      GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
     ],
   );
 }

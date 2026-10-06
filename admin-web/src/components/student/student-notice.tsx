@@ -13,24 +13,3 @@ export function AndroidOnlyNotice({ what }: { what: string }) {
   );
 }
 
-export function StudentPlaceholder({
-  title,
-  phase,
-  text,
-}: {
-  title: string;
-  phase: string;
-  text: string;
-}) {
-  return (
-    <section className="rounded-2xl border border-line bg-surface p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[18px] font-bold">{title}</h1>
-        <span className="rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-bold text-accent-ink">
-          {phase} · not built yet
-        </span>
-      </div>
-      <p className="mt-2 text-[13px] text-sub">{text}</p>
-    </section>
-  );
-}

@@ -84,6 +84,21 @@ class ContentApi {
         return TestResult.fromJson(res.data!);
       });
 
+  // ── live classes ──
+  /// Live now plus the next two weeks, for the student's batches.
+  Future<List<LiveClass>> upcomingClasses() => _run(() async {
+        final res = await _dio.get<List<dynamic>>('/classes/upcoming');
+        return [for (final c in res.data!) LiveClass.fromJson(c as Map<String, dynamic>)];
+      });
+
+  /// Records attendance and returns the Zoom / Meet link (only handed out inside the join window).
+  Future<String> joinClass(String id) => _run(() async {
+        final res = await _dio.post<Map<String, dynamic>>('/classes/$id/join');
+        final url = res.data!['joinUrl'] as String?;
+        if (url == null) throw ApiException('NO_LINK', 'This class has no join link yet. Ask your teacher.');
+        return url;
+      });
+
   // ── doubts ──
   Future<List<Doubt>> doubts() => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/doubts', queryParameters: {'limit': 50});

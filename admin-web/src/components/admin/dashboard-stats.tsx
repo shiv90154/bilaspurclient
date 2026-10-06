@@ -14,7 +14,6 @@ const LABELS: Record<string, [string, string]> = {
   followUpsDue: ["Follow-ups due", "Due today or overdue"],
   openDoubts: ["Open doubts", "Waiting for an answer"],
   upcomingClasses: ["Upcoming classes", "Scheduled ahead"],
-  pendingPayments: ["Pending payments", "Awaiting approval"],
 };
 
 export function DashboardStats() {

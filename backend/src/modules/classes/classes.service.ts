@@ -95,7 +95,7 @@ export class ClassesService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.liveClass.findMany({
         where,
-        orderBy: { startAt: 'asc' },
+        orderBy: { startAt: q.order ?? 'asc' },
         skip: q.skip,
         take: q.limit,
         include: INCLUDE,

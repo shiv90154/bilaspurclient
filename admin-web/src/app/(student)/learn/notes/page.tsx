@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
-import { AndroidOnlyNotice } from "@/components/student/student-notice";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Notes" };
-
+// Notes are protected content and live in the Android app; the web panel does not offer this page.
 export default function Page() {
-  return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-[18px] font-bold">Notes</h1>
-      <AndroidOnlyNotice what="Study notes" />
-    </div>
-  );
+  redirect("/learn");
 }

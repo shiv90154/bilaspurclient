@@ -1,10 +1,6 @@
-﻿import type { Metadata } from "next";
-import { ModulePage } from "@/components/module-page";
-import { requireUser } from "@/lib/server/session";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Fees" };
-
-export default async function Page() {
-  await requireUser(["ADMIN"]);
-  return <ModulePage module="fees" />;
+// Fees are not part of this release, so the page is not offered. A saved link lands on the dashboard.
+export default function Page() {
+  redirect("/dashboard");
 }
