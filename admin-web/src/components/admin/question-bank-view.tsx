@@ -257,7 +257,7 @@ function QuestionForm({ subjects, onClose }: { subjects: Subject[]; onClose: () 
                 aria-label={`Option ${i + 1} is correct`}
                 checked={o.isCorrect}
                 onChange={(e) => setCorrect(i, e.target.checked)}
-                className="size-4 accent-[var(--color-primary,#3949AB)]"
+                className="size-4 accent-[var(--color-primary,#1F4D2C)]"
               />
               <input
                 aria-label={`Option ${i + 1}`}

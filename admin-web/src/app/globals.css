@@ -1,25 +1,28 @@
 @import "tailwindcss";
 
-/* Design tokens from the EduManage design (Admin Dashboard / Student Dashboard artboards). */
+/* DHĪ look, taken from the logo: deep forest green and warm gold on a cream page.
+   Keep these in step with the mobile app (student-app/lib/core/theme.dart). */
 @theme inline {
-  --color-bg: #f6f5f2;
+  --color-bg: #fdfaf3;
   --color-surface: #ffffff;
-  --color-ink: #1c1b29;
-  --color-sub: #6b6f76;
-  --color-primary: #3949ab;
-  --color-primary-dark: #2c3690;
-  --color-primary-tint: #e8eaf9;
-  --color-accent: #f5a623;
-  --color-accent-tint: #fff4e0;
-  --color-accent-ink: #b4720a;
-  --color-success: #1e8e5a;
-  --color-success-tint: #e3f5ec;
-  --color-danger: #d64545;
+  --color-ink: #1a2b20;
+  --color-sub: #5a6659;
+  --color-primary: #1f4d2c;
+  --color-primary-dark: #0d301c;
+  --color-primary-tint: #dceadc;
+  --color-accent: #ab803b;
+  --color-accent-tint: #f5e8c8;
+  --color-accent-ink: #6b4a12;
+  --color-info: #2d6a68;
+  --color-info-tint: #d5ebe8;
+  --color-success: #1f8a52;
+  --color-success-tint: #e1f4e8;
+  --color-danger: #c53d3d;
   --color-danger-tint: #fbeaea;
-  --color-line: #e6e4de;
+  --color-line: #e6e0cc;
 
-  --font-sans: var(--font-jakarta), system-ui, sans-serif;
-  --font-display: var(--font-sora), system-ui, sans-serif;
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-display: var(--font-poppins), system-ui, sans-serif;
 }
 
 body {

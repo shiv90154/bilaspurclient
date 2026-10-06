@@ -85,7 +85,7 @@ const TONES = {
   green: "bg-success-tint text-success",
   amber: "bg-accent-tint text-accent-ink",
   red: "bg-danger-tint text-danger",
-  blue: "bg-primary-tint text-primary",
+  blue: "bg-info-tint text-info",
   gray: "bg-bg text-sub",
 } as const;
 
