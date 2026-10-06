@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/push_service.dart';
 import '../../core/secure_store.dart';
 
 class AppUser {
@@ -69,6 +72,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       final res = await _dio.get<Map<String, dynamic>>('/auth/me');
       state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(res.data!));
+      unawaited(_registerPush());
     } catch (e) {
       // sessionLost() may already have set a notice; keep it.
       if (state.status != AuthStatus.loggedOut) {
@@ -98,13 +102,18 @@ class AuthController extends Notifier<AuthState> {
         status: AuthStatus.loggedIn,
         user: AppUser.fromJson(d['user'] as Map<String, dynamic>),
       );
+      unawaited(_registerPush());
     } catch (e) {
       throw ApiException.from(e);
     }
   }
 
+  Future<void> _registerPush() async =>
+      PushService.instance.register(_dio, await _store.deviceId());
+
   Future<void> logout() async {
     try {
+      await PushService.instance.unregister(_dio, await _store.deviceId());
       await _dio.post<void>('/auth/logout');
     } catch (_) {
       // Even if the server is unreachable we still drop the local session.

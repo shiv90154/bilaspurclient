@@ -39,10 +39,11 @@ dependencies:
   go_router: ^18.0.2
   flutter_secure_storage: ^11.2.0
   device_info_plus: ^13.3.0
-  screen_protector: ^1.5.3
   safe_device: ^1.4.1
   pdfrx: ^2.6.5
   intl: ^0.20.3
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

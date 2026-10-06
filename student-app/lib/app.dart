@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/push_service.dart';
 import 'core/security.dart';
 import 'data/models.dart';
 import 'features/auth/auth_controller.dart';
@@ -24,6 +25,20 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
+  final router = _buildRouter(ref, refresh);
+  // Tapping a push opens what it is about. A doubt reply goes to that thread; anything else
+  // (class reminders) just lands on home, where the upcoming class is.
+  final tapSub = PushService.instance.taps.listen((data) {
+    if (ref.read(authProvider).status != AuthStatus.loggedIn) return;
+    final doubtId = data['doubtId'];
+    router.go('/home');
+    if (data['type'] == 'doubt_reply' && doubtId is String) router.push('/doubts/$doubtId');
+  });
+  ref.onDispose(tapSub.cancel);
+  return router;
+});
+
+GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refresh,
@@ -65,7 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
-});
+}
 
 class EduManageApp extends ConsumerWidget {
   const EduManageApp({super.key});

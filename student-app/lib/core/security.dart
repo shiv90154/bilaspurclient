@@ -1,19 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:safe_device/safe_device.dart';
-import 'package:screen_protector/screen_protector.dart';
 
 /// Android content protection (docs/10-android-protection.md).
 class Security {
-  /// FLAG_SECURE: blocks screenshots / screen recording and blanks the app in
-  /// the recents screen. Turned on for the whole app.
-  static Future<void> enableScreenProtection() async {
-    try {
-      await ScreenProtector.protectDataLeakageOn();
-      await ScreenProtector.preventScreenshotOn();
-    } catch (e) {
-      debugPrint('Screen protection unavailable: $e');
-    }
-  }
+  /// Screenshot / screen-recording protection (FLAG_SECURE) is applied natively in MainActivity.kt,
+  /// before the first frame, for the whole app. Nothing to do from Dart.
+  static Future<void> enableScreenProtection() async {}
 
   /// Returns a reason string when the device must be refused, or null if OK.
   /// Emulators are allowed in debug builds so development stays possible.
