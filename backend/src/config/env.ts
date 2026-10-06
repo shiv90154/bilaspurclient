@@ -17,6 +17,11 @@ export const envSchema = z.object({
   // Private uploads (notes PDFs). Keep outside the web root; back it up with the DB.
   STORAGE_DIR: z.string().default('./storage'),
 
+  // FCM push (optional). Firebase console > Project settings > Service accounts > Generate key.
+  // Either the path to the JSON file, or the JSON itself (handy for Docker secrets).
+  FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+
   DEVICE_CHANGE_LIMIT_30D: z.coerce.number().int().positive().default(3),
   LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),

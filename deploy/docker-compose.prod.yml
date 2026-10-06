@@ -41,6 +41,8 @@ services:
       CORS_ORIGINS: https://${ADMIN_DOMAIN}
       SWAGGER_ENABLED: "false"
       STORAGE_DIR: /data/storage
+      # Push notifications (FCM). Empty = push off, everything else works.
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
       SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}

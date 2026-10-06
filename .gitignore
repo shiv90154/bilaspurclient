@@ -50,3 +50,7 @@ deploy/production.env
 deploy/.seeded
 deploy/backups/
 deploy/nginx/edumanage.conf
+
+# Firebase secrets (FCM)
+student-app/android/app/google-services.json
+backend/firebase-service-account*.json

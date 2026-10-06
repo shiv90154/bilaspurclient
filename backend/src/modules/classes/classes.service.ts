@@ -14,6 +14,8 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { ClassStatus, ClassType, EnrollmentStatus, Role } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { classAudience, formatClassTime } from '../notifications/class-reminders.service.js';
+import { NotificationsService, type PushMessage } from '../notifications/notifications.service.js';
 import type { CreateClassDto, ListClassesQueryDto, UpdateClassDto } from './dto/class.dto.js';
 
 /** Students may enter this long before the start time. */
@@ -47,6 +49,7 @@ export class ClassesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private scope(user: AuthUser): Prisma.LiveClassWhereInput {
@@ -217,10 +220,25 @@ export class ClassesService {
 
     const updated = await this.prisma.liveClass.update({
       where: { id },
-      data: { title: dto.title, startAt: start, endAt: end, joinUrl: dto.joinUrl, facultyId },
+      data: {
+        title: dto.title,
+        startAt: start,
+        endAt: end,
+        joinUrl: dto.joinUrl,
+        facultyId,
+        // A moved class gets a fresh reminder for its new time.
+        ...(start.getTime() !== c.startAt.getTime() && { reminderSentAt: null }),
+      },
       include: INCLUDE,
     });
     await this.activity.log({ actorId: user.id, action: 'class.update', entity: 'class', entityId: id });
+    if (start.getTime() !== c.startAt.getTime()) {
+      void this.pushToClass(id, {
+        title: 'Class rescheduled',
+        body: `${updated.title} is now on ${formatClassTime(start)}`,
+        data: { type: 'class_rescheduled', classId: id },
+      });
+    }
     return this.present(user, updated);
   }
 
@@ -233,6 +251,11 @@ export class ClassesService {
       include: INCLUDE,
     });
     await this.activity.log({ actorId: user.id, action: 'class.cancel', entity: 'class', entityId: id });
+    void this.pushToClass(id, {
+      title: 'Class cancelled',
+      body: `${updated.title} (${formatClassTime(updated.startAt)}) was cancelled`,
+      data: { type: 'class_cancelled', classId: id },
+    });
     return this.present(user, updated);
   }
 
@@ -323,6 +346,15 @@ export class ClassesService {
       });
     } catch (err) {
       this.logger.error('class status sync failed', err as Error);
+    }
+  }
+
+  /** Fire-and-forget: a push problem must never fail the admin's action. */
+  private async pushToClass(classId: string, message: PushMessage) {
+    try {
+      await this.notifications.sendToUsers(await classAudience(this.prisma, classId), message);
+    } catch (err) {
+      this.logger.error('class push failed', err as Error);
     }
   }
 

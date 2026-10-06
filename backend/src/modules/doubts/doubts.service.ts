@@ -10,6 +10,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { DoubtStatus, Role } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { CreateDoubtDto, ListDoubtsQueryDto } from './dto/doubt.dto.js';
 
 const LIST_INCLUDE = {
@@ -25,6 +26,7 @@ export class DoubtsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Student: own doubts. Faculty: assigned to them, or unassigned in a batch they teach. Admin: all. */
@@ -140,6 +142,18 @@ export class DoubtsService {
         },
       }),
     ]);
+    // Staff answered -> tell the student; student followed up -> tell whoever owns the doubt.
+    const recipient =
+      user.role === Role.STUDENT
+        ? doubt.assignedToId
+        : (await this.prisma.student.findUnique({ where: { id: doubt.studentId }, select: { userId: true } }))?.userId;
+    if (recipient && recipient !== user.id) {
+      void this.notifications.sendToUsers([recipient], {
+        title: user.role === Role.STUDENT ? `${user.name} replied` : 'Your doubt has an answer',
+        body: doubt.title,
+        data: { type: 'doubt_reply', doubtId: id },
+      });
+    }
     return message;
   }
 

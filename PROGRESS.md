@@ -15,7 +15,8 @@ Is file mein sirf wahi hai jo **abhi tak bana aur chala kar check hua**. Jo nahi
 | Backend Phase 1: courses, batches, students, enquiries, faculty, dashboard | ✅ DB par run + check hua (2026-10-05) | endpoints 200; documents upload + CSV export baaki |
 | Backend Phase 2: subjects/topics, **doubts**, **questions**, **tests + attempts**, **materials + storage** | ✅ chal rahe | `smoke:tests` 26/26, `smoke:materials` 23/23 + doubt flow manual check |
 | Backend Phase 3: **classes** (Zoom link + premiere, weekly series, clash check, join window, attendance) | ✅ `smoke:classes` 27/27 | join link student ko sirf `join` se, class se 15 min pehle se |
-| Backend: baaki stubs (videos, fees, notifications) | ⬜ khali | sirf `@Module({})` |
+| Backend: notifications (FCM) — class reminder (10 min pehle), reschedule/cancel, doubt reply, `PUT /notifications/token` | 🟨 code ready, build + `smoke:classes` pass; **Firebase keys lagne ke baad hi push jayega** | token endpoint manual check; asli push abhi test nahi hua |
+| Backend: baaki stubs (videos, fees) | ⬜ khali | sirf `@Module({})` |
 | Admin/Faculty web panel (Next.js) | 🟨 asli UI: dashboard, students, courses+batches, enquiries, **question bank (+subjects/topics), tests (builder + results), study material (upload/replace/view), doubts (thread/assign/resolve)**. Baaki placeholder: videos, classes, fees, roles | build/lint/tsc pass; `node scripts/smoke-phase2.mjs` 13/13 (proxy ke through) |
 | Student web panel (iOS ke liye) | 🟨 login + shell + basic pages + **doubts (ask/thread/resolve)** | smoke pass; notes/tests jaan-boojh kar Android-only |
 | Android app (Flutter) | 🟨 login, token refresh, watermark (har screen par), **notes list + PDF viewer (memory-only), tests (timer, autosave, background report, result/review), doubts (ask/thread/resolve)** | `flutter analyze` clean. **`flutter test` Application Control policy se block (dartaotruntime.exe); app device/emulator par run nahi hua** |
@@ -138,7 +139,7 @@ Smoke tests demo seed ke users use karte hain aur sessions/devices ki rows banat
 
 1. **Admin web:** device history + reset screen (API ready), student documents + CSV export, roles page; videos/classes/fees screens backend ke saath.
 2. **Android app:** tests likhe hue hain (`test/attempt_session_test.dart`) par policy allow hone ke baad chalane hain; phir emulator/phone par run (Android SDK cmdline-tools + licenses). Baaki screens: live classes, recorded lectures.
-3. Baaki backend: videos (upload + HLS), fees/Razorpay, notifications (class reminders FCM); classes ke admin web + Flutter screens; Phase 1 ke documents upload + CSV export.
+3. Baaki backend: videos (upload + HLS), fees/Razorpay, Firebase project banake keys lagana (neeche *FCM setup*); classes ke admin web + Flutter screens; Phase 1 ke documents upload + CSV export.
 4. Infra: CI, VPS + Nginx + HTTPS, backups, Play Store ([docs/13-play-store-compliance.md](docs/13-play-store-compliance.md)).
 
 ## Dhyan dene wali baatein
@@ -175,3 +176,12 @@ Bilaspur/
 │       └── lib/               session (server), nav, modules, types
 └── student-app/               Flutter (khali project)
 ```
+
+## FCM setup (push notifications)
+
+Code taiyar hai; sirf Firebase ki do files chahiye (dono git-ignored):
+1. Firebase console → project → Android app add karo (package id wahi jo `applicationId` hai) → `google-services.json` ko `student-app/android/app/` mein rakho.
+2. Project settings → Service accounts → *Generate new private key* → JSON `backend/firebase-service-account.json` mein rakho aur `backend/.env` mein `FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json` do (Docker mein `FIREBASE_SERVICE_ACCOUNT_JSON`).
+3. Backend restart; log mein `FCM enabled` dikhna chahiye. App ko dobara build karo.
+
+Kaun sa push kab: class se 10 min pehle (batch ke students + teacher), class reschedule/cancel, doubt par jawab (student ko) / student ka follow-up (assigned faculty ko). Package id badalna ho to **pehle badlo**, phir Firebase app banao.
