@@ -1,4 +1,4 @@
-# EduManage API (NestJS + Prisma). Build context is this folder: docker build -t edumanage-api .
+# DHĪ API (NestJS + Prisma). Build context is this folder: docker build -t edumanage-api .
 # Debian (glibc), not Alpine: argon2 ships a glibc prebuilt binary.
 
 FROM node:24-bookworm-slim AS build

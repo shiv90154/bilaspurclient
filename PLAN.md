@@ -1,4 +1,4 @@
-# EduManage – Coaching App: Master Plan
+# DHĪ – Coaching App: Master Plan
 
 **Current status: [PROGRESS.md](PROGRESS.md)** (what is built, how to run it, what is left)
 

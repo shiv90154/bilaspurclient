@@ -14,7 +14,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: { default: "EduManage", template: "%s · EduManage" },
+  title: { default: "DHĪ", template: "%s · DHĪ" },
   description: "Coaching institute management: students, tests, classes and more.",
 };
 

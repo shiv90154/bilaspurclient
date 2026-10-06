@@ -58,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('EduManage',
+                    Text('DHĪ',
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium

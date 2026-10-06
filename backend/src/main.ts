@@ -37,7 +37,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('EduManage API')
+        .setTitle('DHĪ API')
         .setDescription('Coaching institute backend')
         .setVersion('0.1.0')
         .addBearerAuth()

@@ -79,12 +79,12 @@ r = await student.api("GET", `/app-releases/${id}/download-url`);
 ok("student cannot get a download link (403)", r.s === 403, JSON.stringify(r));
 
 r = await admin.api("GET", `/app-releases/${id}/download-url`);
-ok("admin gets signed link", r.s === 200 && r.j.url.startsWith("/api/files/") && r.j.fileName === `EduManage-${version}.apk`, JSON.stringify(r));
+ok("admin gets signed link", r.s === 200 && r.j.url.startsWith("/api/files/") && r.j.fileName === `DHI-${version}.apk`, JSON.stringify(r));
 const res = await admin.fetch(r.j.url.replace(/^\/api\//, "/api/backend/"));
 const got = Buffer.from(await res.arrayBuffer());
 ok("download through proxy: 200, right size, byte-identical", res.status === 200 && got.length === apk.length && got.equals(apk), `${res.status} ${got.length}`);
 ok("content-type is the Android package type", res.headers.get("content-type") === "application/vnd.android.package-archive", res.headers.get("content-type"));
-ok("served as attachment with proper name", (res.headers.get("content-disposition") ?? "").includes(`attachment; filename="EduManage-${version}.apk"`), res.headers.get("content-disposition"));
+ok("served as attachment with proper name", (res.headers.get("content-disposition") ?? "").includes(`attachment; filename="DHI-${version}.apk"`), res.headers.get("content-disposition"));
 
 r = await admin.api("DELETE", `/app-releases/${id}`);
 ok("delete", r.s === 200, JSON.stringify(r));

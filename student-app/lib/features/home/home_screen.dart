@@ -22,7 +22,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EduManage'),
+        title: const Text('DHĪ'),
         actions: [
           IconButton(
             tooltip: 'Log out',

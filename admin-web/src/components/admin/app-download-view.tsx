@@ -68,7 +68,7 @@ export function AppDownloadView() {
             <span className="rounded-2xl bg-primary-tint p-3 text-primary"><Smartphone size={26} /></span>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-[17px] font-bold">EduManage for Android</h2>
+                <h2 className="text-[17px] font-bold">DHĪ for Android</h2>
                 <Badge tone="green">Latest</Badge>
               </div>
               <p className="mt-0.5 text-[13px] text-sub">

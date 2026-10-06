@@ -1,4 +1,4 @@
-# admin-web — EduManage web panels
+# admin-web — DHĪ web panels
 
 Next.js 16 (App Router) · React 19 · Tailwind 4. One app serves the **admin/faculty panel** and the **student web panel** (for iOS users; protected content stays in the Android app). Status of the whole project: [../PROGRESS.md](../PROGRESS.md).
 
@@ -62,7 +62,7 @@ src/lib/server/session.ts        server-only session helpers
 src/lib/{nav,modules,types,constants}.ts
 ```
 
-Design tokens (colors, Sora + Plus Jakarta Sans) are in `src/app/globals.css`, taken from the EduManage design.
+Design tokens (colors, Sora + Plus Jakarta Sans) are in `src/app/globals.css`, taken from the DHĪ design.
 
 ## Notes
 

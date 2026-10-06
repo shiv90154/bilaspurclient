@@ -1,4 +1,4 @@
-# EduManage — Progress (2026-10-05)
+# DHĪ — Progress (2026-10-05)
 
 Plan: [PLAN.md](PLAN.md) · Module docs: [docs/](docs/) · Requirement: [requrment.md](requrment.md)
 
@@ -75,7 +75,7 @@ Seed (`npm run db:seed`) — **sirf local/testing ke liye**:
 | Student | 9999999997 | Demo@12345 |
 
 ### Admin/Faculty + Student web — [admin-web/](admin-web/)
-Next.js 16 (App Router) + Tailwind 4, design EduManage artifact ke tokens se (Sora + Plus Jakarta Sans, primary `#3949AB`).
+Next.js 16 (App Router) + Tailwind 4, design DHĪ artifact ke tokens se (Sora + Plus Jakarta Sans, primary `#3949AB`).
 
 - **Login:** browser kabhi token nahi dekhta. Next server cookies (`httpOnly`) set karta hai aur har API call `/api/backend/*` se jaati hai (same-origin proxy jo bearer lagata hai). XSS se token chori nahi ho sakta.
 - **Auto refresh:** access token expire hone par proxy khud refresh karta hai. Parallel requests **ek hi refresh share** karti hain (warna backend ise token chori samajh kar session maar deta).

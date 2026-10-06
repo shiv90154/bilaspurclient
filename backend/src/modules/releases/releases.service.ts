@@ -58,8 +58,8 @@ export class ReleasesService {
         data: {
           version,
           fileKey: key,
-          // Clients download it as "EduManage-<version>.apk", whatever the build called it.
-          fileName: `EduManage-${version}.apk`,
+          // Clients download it as "DHI-<version>.apk", whatever the build called it.
+          fileName: `DHI-${version}.apk`,
           size: file.size,
           notes,
           uploadedById: user.id,

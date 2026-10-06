@@ -1,4 +1,4 @@
-# backend — EduManage API
+# backend — DHĪ API
 
 NestJS 12 (ESM) · Prisma 7 · PostgreSQL 18. Status of the whole project: [../PROGRESS.md](../PROGRESS.md).
 

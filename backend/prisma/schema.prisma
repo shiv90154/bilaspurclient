@@ -1,4 +1,4 @@
-// EduManage database schema (PostgreSQL).
+// DHĪ database schema (PostgreSQL).
 // Module docs: ../../docs/*.md
 
 generator client {

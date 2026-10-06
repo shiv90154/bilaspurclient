@@ -84,7 +84,7 @@ class EduManageApp extends ConsumerWidget {
       return MaterialApp(theme: theme, home: _Blocked(reason: problem));
     }
     return MaterialApp.router(
-      title: 'EduManage',
+      title: 'DHĪ',
       theme: theme,
       routerConfig: ref.watch(routerProvider),
       // One watermark over every screen once signed in (notes, tests, doubts, ...), so no screen
