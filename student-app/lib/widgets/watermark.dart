@@ -37,13 +37,15 @@ class _WatermarkPainter extends CustomPainter {
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(color: Color(0x1F000000), fontSize: 14, fontWeight: FontWeight.w600),
+        // Small and light: it has to survive a photo of the screen without getting in the way of reading.
+        style: const TextStyle(color: Color(0x1A000000), fontSize: 11, fontWeight: FontWeight.w500),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    const stepX = 190.0;
-    const stepY = 120.0;
+    // Space the repeats by the text's own width so a long name never runs into the next copy.
+    final stepX = math.max(painter.width + 90, 220.0);
+    const stepY = 170.0;
     canvas.save();
     canvas.translate(size.width / 2, size.height / 2);
     canvas.rotate(-math.pi / 7);
