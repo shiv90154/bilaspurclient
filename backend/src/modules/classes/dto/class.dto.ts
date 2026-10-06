@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsIn,
   IsEnum,
@@ -103,6 +105,12 @@ export class ListClassesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['asc', 'desc'])
   order?: 'asc' | 'desc';
+
+  @ApiPropertyOptional({ description: 'Only classes that are live or still ahead (never cancelled ones)' })
+  @IsOptional()
+  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @IsBoolean()
+  upcoming?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()

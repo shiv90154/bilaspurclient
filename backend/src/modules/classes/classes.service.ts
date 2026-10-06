@@ -88,7 +88,8 @@ export class ClassesService {
           ...(q.from || q.to
             ? { startAt: { ...(q.from && { gte: new Date(q.from) }), ...(q.to && { lt: new Date(q.to) }) } }
             : {}),
-          ...(q.status && this.statusFilter(q.status)),
+          ...(q.upcoming && { status: { not: ClassStatus.CANCELLED }, endAt: { gt: new Date() } }),
+          ...(q.status && !q.upcoming && this.statusFilter(q.status)),
         },
       ],
     };
