@@ -18,6 +18,7 @@ import type { TokenPair } from "@/lib/types";
 type Ctx = { params: Promise<{ path: string[] }> };
 
 const BODY_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const STREAM_ABOVE_BYTES = 4 * 1024 * 1024;
 const PASS_THROUGH_HEADERS = [
   "content-type",
   "content-disposition",
@@ -54,9 +55,33 @@ async function handle(request: NextRequest, ctx: Ctx) {
     return response;
   }
 
-  const body = BODY_METHODS.has(request.method)
-    ? await request.arrayBuffer()
-    : undefined;
+  // Big uploads (APKs up to 150 MB, PDFs) are streamed straight through. Buffering them in memory
+  // crashed the 512 MB web container at ~75 MB. A streamed body can only be sent once, so the access
+  // token is made fresh first (a cheap call) instead of retrying after a TOKEN_EXPIRED answer.
+  const streaming =
+    BODY_METHODS.has(request.method) &&
+    Number(request.headers.get("content-length") ?? 0) > STREAM_ABOVE_BYTES;
+  if (streaming) {
+    try {
+      let probe = await backendRequest("/auth/me", { accessToken: access });
+      if (probe.status === 401 && (await refreshNow())) {
+        probe = await backendRequest("/auth/me", { accessToken: access });
+      }
+      if (!probe.ok) {
+        const response = NextResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 });
+        clearSessionCookies(response);
+        return response;
+      }
+    } catch {
+      return NextResponse.json({ code: "BACKEND_UNREACHABLE" }, { status: 502 });
+    }
+  }
+
+  const body = streaming
+    ? request.body
+    : BODY_METHODS.has(request.method)
+      ? await request.arrayBuffer()
+      : undefined;
   const target = `/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
   const contentType = request.headers.get("content-type");
 
@@ -66,12 +91,14 @@ async function handle(request: NextRequest, ctx: Ctx) {
       accessToken: access,
       headers: contentType ? { "content-type": contentType } : undefined,
       body,
-    });
+      // Node's fetch requires this when the request body is a stream.
+      ...(streaming ? { duplex: "half" } : {}),
+    } as RequestInit & { accessToken?: string });
 
   let upstream: Response;
   try {
     upstream = await send();
-    if (upstream.status === 401 && !rotated) {
+    if (upstream.status === 401 && !rotated && !streaming) {
       const err = await readError(upstream.clone());
       if (err.code === "TOKEN_EXPIRED" && (await refreshNow())) {
         upstream = await send();
