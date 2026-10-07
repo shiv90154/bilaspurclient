@@ -60,6 +60,12 @@ export class CreateMaterialDto {
   @IsBoolean()
   allowDownload?: boolean;
 
+  @ApiPropertyOptional({ default: false, description: 'Free demo: every student can open it, approved or not' })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  isDemo?: boolean;
+
   @ApiPropertyOptional({ enum: ContentStatus, default: ContentStatus.PUBLISHED })
   @IsOptional()
   @IsEnum(ContentStatus)
@@ -102,6 +108,11 @@ export class UpdateMaterialDto {
   @IsOptional()
   @IsBoolean()
   allowDownload?: boolean;
+
+  @ApiPropertyOptional({ description: 'Free demo: every student can open it, approved or not' })
+  @IsOptional()
+  @IsBoolean()
+  isDemo?: boolean;
 
   @ApiPropertyOptional({ enum: ContentStatus })
   @IsOptional()

@@ -88,10 +88,12 @@ export class JwtAuthGuard implements CanActivate {
     if (user.deletedAt || user.status !== UserStatus.ACTIVE) {
       throw forbidden(ErrorCode.ACCOUNT_DISABLED, 'Account is disabled');
     }
+    // ACTIVE = full access; PENDING = waiting for approval, demo content only.
     if (
       user.role === Role.STUDENT &&
       user.student &&
-      user.student.status !== StudentStatus.ACTIVE
+      user.student.status !== StudentStatus.ACTIVE &&
+      user.student.status !== StudentStatus.PENDING
     ) {
       throw forbidden(
         ErrorCode.STUDENT_NOT_ACTIVE,
@@ -104,6 +106,7 @@ export class JwtAuthGuard implements CanActivate {
       role: user.role,
       sessionId: session.id,
       name: user.name,
+      demo: user.role === Role.STUDENT && user.student?.status === StudentStatus.PENDING,
     };
     return true;
   }

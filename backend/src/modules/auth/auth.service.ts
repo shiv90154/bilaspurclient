@@ -20,6 +20,9 @@ import {
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { PrivacyService } from '../privacy/privacy.service.js';
+import { SettingsService } from '../settings/settings.service.js';
+import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RefreshDto } from './dto/refresh.dto.js';
 import {
@@ -49,8 +52,14 @@ export interface AuthProfile {
   email: string | null;
   role: Role;
   studentId: string | null;
-  /** Shown as a faint overlay on notes/tests/videos to deter leaks. */
-  watermark: { name: string; phone: string };
+  /** Faint name + phone overlay in the student app. The admin switches it on in Settings. */
+  watermark: { enabled: boolean; name: string; phone: string };
+  /** The student has not yet accepted the current terms + privacy policy: the app asks first. */
+  consentRequired: boolean;
+  /** Self-registered and not yet approved: only demo notes/tests, no doubts or classes. */
+  demo: boolean;
+  /** The course a demo student asked to join. */
+  requestedCourse: { id: string; name: string } | null;
 }
 
 export interface LoginResult extends TokenPair {
@@ -68,6 +77,8 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
     private readonly activity: ActivityService,
+    private readonly settings: SettingsService,
+    private readonly privacy: PrivacyService,
   ) {}
 
   async login(dto: LoginDto, meta: RequestMeta): Promise<LoginResult> {
@@ -77,7 +88,7 @@ export class AuthService {
         deletedAt: null,
         OR: [{ phone: identifier }, { email: identifier.toLowerCase() }],
       },
-      include: { student: { select: { id: true, status: true } } },
+      include: { student: { select: { id: true, status: true, requestedCourse: { select: { id: true, name: true } } } } },
     });
 
     if (!user) {
@@ -110,11 +121,19 @@ export class AuthService {
     if (
       user.role === Role.STUDENT &&
       user.student &&
-      user.student.status !== StudentStatus.ACTIVE
+      user.student.status !== StudentStatus.ACTIVE &&
+      user.student.status !== StudentStatus.PENDING
     ) {
       throw forbidden(
         ErrorCode.STUDENT_NOT_ACTIVE,
         'Your account is not active. Please contact the institute.',
+      );
+    }
+    // The Android app is for students only; staff work in the web panel.
+    if (dto.platform === Platform.ANDROID && user.role !== Role.STUDENT) {
+      throw forbidden(
+        ErrorCode.STAFF_USE_WEB,
+        'This app is for students. Admins and teachers use the web panel.',
       );
     }
 
@@ -218,7 +237,7 @@ export class AuthService {
 
     return {
       ...(await this.issueTokens(user.id, user.role, session.id, secret)),
-      user: this.toProfile(user),
+      user: await this.toProfile(user),
     };
   }
 
@@ -275,7 +294,8 @@ export class AuthService {
     if (
       user.role === Role.STUDENT &&
       user.student &&
-      user.student.status !== StudentStatus.ACTIVE
+      user.student.status !== StudentStatus.ACTIVE &&
+      user.student.status !== StudentStatus.PENDING
     ) {
       throw forbidden(
         ErrorCode.STUDENT_NOT_ACTIVE,
@@ -318,9 +338,43 @@ export class AuthService {
   async me(user: AuthUser): Promise<AuthProfile> {
     const record = await this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
-      include: { student: { select: { id: true, status: true } } },
+      include: { student: { select: { id: true, status: true, requestedCourse: { select: { id: true, name: true } } } } },
     });
     return this.toProfile(record);
+  }
+
+  /**
+   * The signed-in user changes their own password. Every other session ends (a stolen
+   * session stops working); the one making the change stays signed in.
+   */
+  async changePassword(user: AuthUser, dto: ChangePasswordDto, meta: RequestMeta): Promise<void> {
+    const record = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+    // 400, not 401: clients treat a 401 as "session gone" and would log the user out.
+    if (!(await verifyPassword(record.passwordHash, dto.currentPassword))) {
+      throw badRequest(ErrorCode.WRONG_PASSWORD, 'Current password is wrong');
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw badRequest(ErrorCode.PASSWORD_UNCHANGED, 'Choose a password different from the current one');
+    }
+    const passwordHash = await hashPassword(dto.newPassword);
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+      this.prisma.session.updateMany({
+        where: { userId: user.id, revokedAt: null, id: { not: user.sessionId } },
+        data: { revokedAt: now, revokedReason: SessionRevokeReason.PASSWORD_CHANGED },
+      }),
+    ]);
+    await this.activity.log({
+      actorId: user.id,
+      action: 'auth.change-password',
+      entity: 'user',
+      entityId: user.id,
+      ip: meta.ip,
+    });
   }
 
   // ───────────── helpers ─────────────
@@ -344,14 +398,15 @@ export class AuthService {
     return new Date(from.getTime() + days * DAY_MS);
   }
 
-  private toProfile(user: {
+  private async toProfile(user: {
     id: string;
     name: string;
     phone: string;
     email: string | null;
     role: Role;
-    student?: { id: string } | null;
-  }): AuthProfile {
+    student?: { id: string; status: StudentStatus; requestedCourse: { id: string; name: string } | null } | null;
+  }): Promise<AuthProfile> {
+    const demo = user.role === Role.STUDENT && user.student?.status === StudentStatus.PENDING;
     return {
       id: user.id,
       name: user.name,
@@ -359,7 +414,14 @@ export class AuthService {
       email: user.email,
       role: user.role,
       studentId: user.student?.id ?? null,
-      watermark: { name: user.name, phone: user.phone },
+      watermark: {
+        enabled: await this.settings.get('watermarkEnabled'),
+        name: user.name,
+        phone: user.phone,
+      },
+      consentRequired: await this.privacy.consentRequired(user.id, user.role),
+      demo,
+      requestedCourse: demo ? (user.student?.requestedCourse ?? null) : null,
     };
   }
 

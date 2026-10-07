@@ -77,16 +77,22 @@ export class AttemptsService {
     return new Date(Math.min(byDuration, byWindow));
   }
 
-  /** Published tests of the student's active batches, with their own attempt status. */
+  /** Free demo tests for everyone; batch tests only for approved students of that batch. */
+  private reachable(user: AuthUser, studentId: string): Prisma.TestWhereInput {
+    const ownBatches: Prisma.TestWhereInput = {
+      batches: { some: { batch: { students: { some: { studentId, status: EnrollmentStatus.ACTIVE } } } } },
+    };
+    return { OR: user.demo ? [{ isDemo: true }] : [{ isDemo: true }, ownBatches] };
+  }
+
+  /** Published tests of the student's active batches (and demo tests), with their own attempt status. */
   async available(user: AuthUser) {
     const student = await this.studentOf(user);
     const now = new Date();
     const tests = await this.prisma.test.findMany({
       where: {
         status: { in: [TestStatus.PUBLISHED, TestStatus.CLOSED] },
-        batches: {
-          some: { batch: { students: { some: { studentId: student.id, status: EnrollmentStatus.ACTIVE } } } },
-        },
+        ...this.reachable(user, student.id),
       },
       orderBy: [{ startAt: 'asc' }, { createdAt: 'desc' }],
       select: {
@@ -135,9 +141,7 @@ export class AttemptsService {
       where: {
         id: testId,
         status: TestStatus.PUBLISHED,
-        batches: {
-          some: { batch: { students: { some: { studentId: student.id, status: EnrollmentStatus.ACTIVE } } } },
-        },
+        ...this.reachable(user, student.id),
       },
     });
     if (!test) throw new NotFoundException('Test not available');

@@ -21,6 +21,7 @@ import {
   ListTestsQueryDto,
   SaveAnswersDto,
   SetTestBatchesDto,
+  SetTestDemoDto,
   SetTestQuestionsDto,
   UpdateTestDto,
 } from './dto/test.dto.js';
@@ -85,6 +86,16 @@ export class TestsController {
   @Post(':id/publish')
   publish(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.tests.publish(user, id);
+  }
+
+  @Roles(Role.ADMIN, Role.FACULTY)
+  @Post(':id/demo')
+  setDemo(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetTestDemoDto,
+  ) {
+    return this.tests.setDemo(user, id, dto.isDemo);
   }
 
   @Roles(Role.ADMIN, Role.FACULTY)

@@ -88,6 +88,13 @@ export class DoubtsService {
   async create(user: AuthUser, dto: CreateDoubtDto) {
     const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
     if (!student) throw new ForbiddenException('Only students can raise doubts');
+    if (user.demo) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'DEMO_ACCOUNT',
+        message: 'Doubts open once the institute approves your admission.',
+      });
+    }
     if (dto.batchId) {
       const enrolled = await this.prisma.studentBatch.findUnique({
         where: { studentId_batchId: { studentId: student.id, batchId: dto.batchId } },

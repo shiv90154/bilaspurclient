@@ -24,6 +24,10 @@ export const ErrorCode = {
   DEVICE_BLOCKED: 'DEVICE_BLOCKED',
   DEVICE_LIMIT_REACHED: 'DEVICE_LIMIT_REACHED',
   FORBIDDEN_ROLE: 'FORBIDDEN_ROLE',
+  PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
+  WRONG_PASSWORD: 'WRONG_PASSWORD',
+  STAFF_USE_WEB: 'STAFF_USE_WEB', // admin/faculty tried to log in to the student app
+  DEMO_ACCOUNT: 'DEMO_ACCOUNT', // feature needs an approved (ACTIVE) student // change-password: the current password does not match
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

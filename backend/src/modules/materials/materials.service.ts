@@ -41,6 +41,7 @@ const PUBLIC_SELECT = {
   fileType: true,
   size: true,
   allowDownload: true,
+  isDemo: true,
   version: true,
   status: true,
   createdAt: true,
@@ -61,8 +62,9 @@ export class MaterialsService {
   /** Students: published + one of their active batches. Faculty: own uploads or their batches. Admin: all. */
   private scope(user: AuthUser): Prisma.MaterialWhereInput {
     if (user.role === Role.STUDENT) {
-      return {
-        status: ContentStatus.PUBLISHED,
+      // Free demo material is open to every student; the rest only to their own batches.
+      // A demo (not yet approved) student gets the demo material only.
+      const ownBatches: Prisma.MaterialWhereInput = {
         batches: {
           some: {
             batch: {
@@ -72,6 +74,10 @@ export class MaterialsService {
             },
           },
         },
+      };
+      return {
+        status: ContentStatus.PUBLISHED,
+        OR: user.demo ? [{ isDemo: true }] : [{ isDemo: true }, ownBatches],
       };
     }
     if (user.role === Role.FACULTY) {
@@ -138,6 +144,7 @@ export class MaterialsService {
           subjectId: dto.subjectId,
           topicId: dto.topicId,
           allowDownload: dto.allowDownload ?? false,
+          isDemo: dto.isDemo ?? false,
           status: dto.status ?? ContentStatus.PUBLISHED,
           fileKey: key,
           fileName: checked.originalname,

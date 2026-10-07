@@ -22,6 +22,14 @@ export const envSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
 
+  // Email (OTP for sign-up and forgot password). Any SMTP provider. Without SMTP_HOST, codes are
+  // printed to the backend log in development and email features answer "not set up" in production.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().optional(), // e.g. "DHĪ <no-reply@example.com>"
+
   DEVICE_CHANGE_LIMIT_30D: z.coerce.number().int().positive().default(3),
   LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),

@@ -172,6 +172,7 @@ model User {
   failedLoginCount Int        @default(0)
   lockedUntil      DateTime?
   lastLoginAt      DateTime?
+  emailVerifiedAt  DateTime? // set when an email OTP was confirmed (self-registration)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   deletedAt        DateTime?
@@ -181,10 +182,12 @@ model User {
   sessions          Session[]
   devices           Device[]
   activityLogs      ActivityLog[]
-  doubtsAssigned    Doubt[]        @relation("DoubtAssignee")
+  doubtsAssigned    Doubt[]           @relation("DoubtAssignee")
   doubtMessages     DoubtMessage[]
   enquiriesAssigned Enquiry[]
   paymentsApproved  Payment[]
+  consents          Consent[]
+  deletionRequests  DeletionRequest[]
 
   @@index([role, status])
   @@map("users")
@@ -270,33 +273,39 @@ model FacultyBatch {
 // ───────────── Student management (doc 01) ─────────────
 
 model Student {
-  id            String        @id @default(uuid())
-  userId        String        @unique
-  admissionNo   String?       @unique
-  dob           DateTime?     @db.Date
-  gender        Gender?
-  address       String?
-  city          String?
-  guardianName  String?
-  guardianPhone String?
-  photoKey      String?
-  status        StudentStatus @default(PENDING)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  deletedAt     DateTime?
+  id                String        @id @default(uuid())
+  userId            String        @unique
+  admissionNo       String?       @unique
+  dob               DateTime?     @db.Date
+  gender            Gender?
+  address           String?
+  city              String?
+  guardianName      String?
+  guardianPhone     String?
+  photoKey          String?
+  status            StudentStatus @default(PENDING)
+  notes             String?
+  // Self-registration from the app/web: the course they asked for. Until the admin approves
+  // (status ACTIVE + a batch) the student is a "demo" student and sees only demo content.
+  registeredVia     String? // "APP" | "WEB"; null when the institute created the account
+  requestedCourseId String?
+  reviewNote        String? // admin's note when a registration is rejected
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
 
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  academic      AcademicDetail?
-  batches       StudentBatch[]
-  documents     StudentDocument[]
-  attempts      Attempt[]
-  doubts        Doubt[]
-  classAttended ClassAttendance[]
-  materialViews MaterialView[]
-  videoProgress VideoProgress[]
-  fees          StudentFee[]
-  enquiry       Enquiry?
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestedCourse Course?           @relation("RequestedCourse", fields: [requestedCourseId], references: [id], onDelete: SetNull)
+  academic        AcademicDetail?
+  batches         StudentBatch[]
+  documents       StudentDocument[]
+  attempts        Attempt[]
+  doubts          Doubt[]
+  classAttended   ClassAttendance[]
+  materialViews   MaterialView[]
+  videoProgress   VideoProgress[]
+  fees            StudentFee[]
+  enquiry         Enquiry?
 
   @@index([status])
   @@map("students")
@@ -321,12 +330,13 @@ model Course {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  batches    Batch[]
-  subjects   Subject[]
-  tests      Test[]
-  testSeries TestSeries[]
-  feePlans   FeePlan[]
-  enquiries  Enquiry[]
+  batches     Batch[]
+  subjects    Subject[]
+  tests       Test[]
+  testSeries  TestSeries[]
+  feePlans    FeePlan[]
+  enquiries   Enquiry[]
+  requestedBy Student[]    @relation("RequestedCourse")
 
   @@map("courses")
 }
@@ -486,6 +496,7 @@ model Test {
   negativeMark     Decimal    @default(0) @db.Decimal(4, 2)
   shuffleQuestions Boolean    @default(false)
   shuffleOptions   Boolean    @default(false)
+  isDemo           Boolean    @default(false) // free sample test for demo (not yet approved) students
   startAt          DateTime?
   endAt            DateTime?
   status           TestStatus @default(DRAFT)
@@ -578,6 +589,7 @@ model Material {
   fileType      String
   size          Int
   allowDownload Boolean       @default(false)
+  isDemo        Boolean       @default(false) // free sample: every student, approved or not, can open it
   version       Int           @default(1)
   status        ContentStatus @default(PUBLISHED)
   uploadedById  String?
@@ -645,6 +657,8 @@ model Video {
   status       VideoStatus @default(UPLOADING)
   sourceKey    String? // original upload
   hlsKey       String? // HLS manifest (AES-128 encrypted)
+  externalUrl  String? // for now: a YouTube (unlisted) / Drive / any https link the app opens
+  isDemo       Boolean     @default(false) // free sample for not-yet-approved students
   encKeyId     String? // reference to the encryption key
   thumbnailKey String?
   uploadedById String?
@@ -898,6 +912,67 @@ model AppRelease {
   @@map("app_releases")
 }
 
+// Institute-wide switches the admin changes from the panel, e.g. "watermarkEnabled".
+// A missing row means the default in SettingsService.
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// ───────────── Privacy: consent + account deletion (doc 13, DPDP Act) ─────────────
+
+// Proof that a student (and their guardian, for minors) accepted a version of the terms and
+// privacy policy. Rows are never edited; a new version means a new row.
+model Consent {
+  id            String   @id @default(uuid())
+  userId        String
+  version       String // e.g. "2026-10-07"
+  guardianName  String? // who gave consent for a minor
+  guardianAgree Boolean  @default(false)
+  ip            String?
+  acceptedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, version])
+  @@map("consents")
+}
+
+enum DeletionRequestStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+enum DeletionRequestSource {
+  APP
+  WEB
+}
+
+// A request to delete an account and its personal data, from the app or the public web page.
+model DeletionRequest {
+  id          String                @id @default(uuid())
+  userId      String? // set when it came from a signed-in user, or once matched by phone
+  name        String
+  phone       String
+  reason      String?
+  source      DeletionRequestSource
+  status      DeletionRequestStatus @default(PENDING)
+  note        String? // admin's note, e.g. why it was rejected
+  handledById String?
+  handledAt   DateTime?
+  createdAt   DateTime              @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("deletion_requests")
+}
+
 // A named bundle of tests, e.g. "NEET Mock Series 2027". Students see their tests grouped by series.
 model TestSeries {
   id          String   @id @default(uuid())
@@ -912,4 +987,26 @@ model TestSeries {
 
   @@unique([name])
   @@map("test_series")
+}
+
+// ───────────── Email one-time codes (registration, forgot password) ─────────────
+
+enum OtpPurpose {
+  REGISTER
+  RESET_PASSWORD
+}
+
+model EmailOtp {
+  id        String     @id @default(uuid())
+  email     String
+  purpose   OtpPurpose
+  codeHash  String // HMAC of the 6-digit code; the code itself is only in the email
+  payload   Json? // REGISTER: the sign-up form (password already hashed) until the code is confirmed
+  attempts  Int        @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([email, purpose, createdAt])
+  @@map("email_otps")
 }

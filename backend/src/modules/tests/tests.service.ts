@@ -169,9 +169,20 @@ export class TestsService {
     const test = await this.get(user, id);
     if (test.status !== TestStatus.DRAFT) throw new ConflictException('Only a draft can be published');
     if (test.questions.length === 0) throw new BadRequestException('Add questions before publishing');
-    if (test.batches.length === 0) throw new BadRequestException('Assign at least one batch before publishing');
+    // A free demo test is open to every student, so it needs no batch.
+    if (test.batches.length === 0 && !test.isDemo) {
+      throw new BadRequestException('Assign at least one batch (or mark it as a free demo test) before publishing');
+    }
     const updated = await this.prisma.test.update({ where: { id }, data: { status: TestStatus.PUBLISHED } });
     await this.log(user, 'test.publish', id);
+    return updated;
+  }
+
+  /** Free demo test on/off. Allowed at any time: it only changes who can see the test. */
+  async setDemo(user: AuthUser, id: string, isDemo: boolean) {
+    await this.get(user, id);
+    const updated = await this.prisma.test.update({ where: { id }, data: { isDemo } });
+    await this.log(user, isDemo ? 'test.demo-on' : 'test.demo-off', id);
     return updated;
   }
 

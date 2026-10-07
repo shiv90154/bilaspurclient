@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsDateString,
   IsEmail,
@@ -19,7 +20,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto.js';
-import { Gender, StudentStatus } from '../../../generated/prisma/enums.js';
+import { DocumentType, Gender, StudentStatus } from '../../../generated/prisma/enums.js';
 
 const PHONE_RE = /^[6-9]\d{9}$/;
 
@@ -196,8 +197,70 @@ export class ListStudentsQueryDto extends PaginationQueryDto {
   status?: StudentStatus;
 }
 
+/** Same filters as the list, without paging: the export holds every match. */
+export class ExportStudentsQueryDto {
+  @ApiPropertyOptional({ description: 'Name, phone or admission no' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  search?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  batchId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  courseId?: string;
+
+  @ApiPropertyOptional({ enum: StudentStatus })
+  @IsOptional()
+  @IsEnum(StudentStatus)
+  status?: StudentStatus;
+}
+
+export type StudentFilters = Pick<ExportStudentsQueryDto, 'search' | 'batchId' | 'courseId' | 'status'>;
+
+export class UploadDocumentDto {
+  @ApiProperty({ enum: DocumentType })
+  @IsEnum(DocumentType)
+  type!: DocumentType;
+
+  @ApiPropertyOptional({ description: 'Shown instead of the file name, e.g. "Aadhaar card"' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  label?: string;
+}
+
 export class AssignBatchDto {
   @ApiProperty()
   @IsUUID()
   batchId!: string;
+}
+
+export class ListRegistrationsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: ['PENDING', 'ACTIVE', 'DROPPED'], default: 'PENDING' })
+  @IsOptional()
+  @IsEnum(StudentStatus)
+  status?: StudentStatus;
+}
+
+export class ApproveStudentDto {
+  @ApiProperty({ description: 'Batches the student joins' })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Choose at least one batch' })
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  batchIds!: string[];
+}
+
+export class RejectStudentDto {
+  @ApiPropertyOptional({ description: 'Sent to the student by email' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }

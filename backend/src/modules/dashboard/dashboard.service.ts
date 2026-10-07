@@ -3,6 +3,7 @@ import type { AuthUser } from '../../common/types/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import {
   ClassStatus,
+  ContentStatus,
   DoubtStatus,
   EnquiryStatus,
   PaymentStatus,
@@ -10,6 +11,8 @@ import {
   StudentStatus,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+
+const DAY_MS = 24 * 3600_000;
 
 @Injectable()
 export class DashboardService {
@@ -32,6 +35,12 @@ export class DashboardService {
       upcomingClasses,
       pendingPayments,
       recentActivity,
+      materials,
+      questions,
+      liveNow,
+      activeToday,
+      activeWeek,
+      pendingRegistrations,
     ] = await Promise.all([
       this.prisma.student.count({ where: { deletedAt: null } }),
       this.prisma.student.count({
@@ -56,6 +65,16 @@ export class DashboardService {
       }),
       this.prisma.payment.count({ where: { status: PaymentStatus.PENDING } }),
       this.recentActivity(),
+      this.prisma.material.count({ where: { status: ContentStatus.PUBLISHED } }),
+      this.prisma.question.count({ where: { active: true } }),
+      this.prisma.liveClass.count({
+        where: { status: { not: ClassStatus.CANCELLED }, startAt: { lte: now }, endAt: { gt: now } },
+      }),
+      this.activeUsers(new Date(now.getTime() - DAY_MS)),
+      this.activeUsers(new Date(now.getTime() - 7 * DAY_MS)),
+      this.prisma.student.count({
+        where: { deletedAt: null, status: StudentStatus.PENDING, registeredVia: { not: null } },
+      }),
     ]);
     return {
       role: Role.ADMIN,
@@ -68,6 +87,12 @@ export class DashboardService {
         followUpsDue,
         openDoubts,
         upcomingClasses,
+        liveNow,
+        materials,
+        questions,
+        activeToday,
+        activeWeek,
+        pendingRegistrations,
         pendingPayments,
       },
       recentActivity,
@@ -103,6 +128,16 @@ export class DashboardService {
       role: Role.FACULTY,
       counts: { activeBatches: batches, students, openDoubts, upcomingClasses },
     };
+  }
+
+  /**
+   * People who used the app or panel since `since`. A session's lastUsedAt moves on every token
+   * refresh (about every 15 minutes of use), so this counts real use, not only fresh logins.
+   */
+  private activeUsers(since: Date) {
+    return this.prisma.user.count({
+      where: { deletedAt: null, sessions: { some: { lastUsedAt: { gte: since } } } },
+    });
   }
 
   private recentActivity() {

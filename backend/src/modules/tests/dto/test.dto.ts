@@ -186,3 +186,9 @@ export class SaveAnswersDto {
   @Type(() => SaveAnswerDto)
   answers!: SaveAnswerDto[];
 }
+
+export class SetTestDemoDto {
+  @ApiProperty({ description: 'Free demo test: every student (also not yet approved ones) can take it' })
+  @IsBoolean()
+  isDemo!: boolean;
+}

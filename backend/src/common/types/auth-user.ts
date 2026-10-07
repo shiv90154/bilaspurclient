@@ -6,6 +6,8 @@ export interface AuthUser {
   role: Role;
   sessionId: string;
   name: string;
+  /** A self-registered student the institute has not approved yet: sees demo content only. */
+  demo: boolean;
 }
 
 /** Claims inside the short-lived access token. */

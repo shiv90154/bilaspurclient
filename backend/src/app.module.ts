@@ -12,7 +12,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
-// Feature modules (stubs — see docs/ for the plan and checklist of each)
+// Feature modules (see docs/ for the plan and checklist of each)
 import { StudentsModule } from './modules/students/students.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
 import { BatchesModule } from './modules/batches/batches.module.js';
@@ -29,6 +29,11 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ReleasesModule } from './modules/releases/releases.module.js';
+import { AccountModule } from './modules/account/account.module.js';
+import { MailModule } from './modules/mail/mail.module.js';
+import { PrivacyModule } from './modules/privacy/privacy.module.js';
+import { ReportsModule } from './modules/reports/reports.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 
 @Module({
   imports: [
@@ -56,6 +61,11 @@ import { ReleasesModule } from './modules/releases/releases.module.js';
     StorageModule,
     NotificationsModule,
     ReleasesModule,
+    ReportsModule,
+    SettingsModule,
+    PrivacyModule,
+    MailModule,
+    AccountModule,
   ],
   providers: [
     // Order matters: rate limit → authenticate → authorize by role.
