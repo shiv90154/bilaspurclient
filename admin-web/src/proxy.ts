@@ -7,11 +7,11 @@ import { REFRESH_COOKIE } from "./lib/constants";
  * - exposes the path to server components (used for post-refresh redirects)
  * Real authentication/role checks happen in the layouts (requireUser).
  */
-const PUBLIC_PATHS = new Set(["/login", "/register", "/forgot-password", "/privacy", "/terms", "/delete-account"]);
+const PUBLIC_PATHS = new Set(["/", "/download", "/login", "/register", "/forgot-password", "/privacy", "/terms", "/delete-account"]);
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // Login and the legal pages (Play Store needs the privacy policy and the account deletion
+  // The public website, login and the legal pages (Play Store needs the privacy policy and the account deletion
   // page reachable without an account).
   const isPublic = PUBLIC_PATHS.has(pathname);
   const hasSession = request.cookies.has(REFRESH_COOKIE);

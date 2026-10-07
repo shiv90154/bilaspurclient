@@ -85,6 +85,12 @@ export class ReleasesService {
     return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size };
   }
 
+  async latestDownloadUrl() {
+    const r = await this.prisma.appRelease.findFirst({ orderBy: { createdAt: 'desc' } });
+    if (!r) throw new NotFoundException('No app build uploaded yet');
+    return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size, version: r.version };
+  }
+
   async remove(user: AuthUser, id: string) {
     const r = await this.prisma.appRelease.findUnique({ where: { id } });
     if (!r) throw new NotFoundException('Release not found');

@@ -11,8 +11,10 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Public } from '../../common/decorators/public.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import { Role } from '../../generated/prisma/enums.js';
@@ -53,6 +55,14 @@ export class ReleasesController {
     @Body() dto: CreateReleaseDto,
   ) {
     return this.releases.create(user, file, dto.version, dto.notes);
+  }
+
+  /** The public website's "Download app" button: newest APK, no login. */
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('latest/download-url')
+  latestDownloadUrl() {
+    return this.releases.latestDownloadUrl();
   }
 
   @Get(':id/download-url')

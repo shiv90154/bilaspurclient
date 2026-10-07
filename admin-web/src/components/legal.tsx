@@ -7,7 +7,7 @@ import type { PublicInfo } from "@/lib/server/public-info";
 export function LegalPage({ title, info, children }: { title: string; info: PublicInfo; children: ReactNode }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6 sm:py-12">
-      <Link href="/login" aria-label="Home">
+      <Link href="/" aria-label="Home">
         <Brand />
       </Link>
       <h1 className="mt-8 break-words text-[24px] font-bold sm:text-[28px]">{title}</h1>
