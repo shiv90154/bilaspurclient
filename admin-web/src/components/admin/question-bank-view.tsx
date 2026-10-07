@@ -140,7 +140,7 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
         {list.data?.items.map((q) => (
           <li key={q.id} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <p className="text-[14px] font-semibold">{q.text}</p>
+              <p className="min-w-0 break-words text-[14px] font-semibold">{q.text}</p>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={TONE[q.difficulty]}>{q.difficulty}</Badge>
                 {q.type === "MULTIPLE" && <Badge tone="blue">Multi</Badge>}
@@ -156,7 +156,7 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
             <p className="mt-0.5 text-[12px] text-sub">{q.topic.subject.name} › {q.topic.name}</p>
             {q.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={fileHref(q.imageUrl)} alt="Question figure" className="mt-2.5 max-h-48 rounded-[10px] border border-line" />
+              <img src={fileHref(q.imageUrl)} alt="Question figure" className="mt-2.5 max-h-48 max-w-full rounded-[10px] border border-line" />
             )}
             <ul className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
               {q.options.map((o) => (
@@ -436,7 +436,7 @@ function CurriculumDialog({ isAdmin, onClose }: { isAdmin: boolean; onClose: () 
             submit("/subjects", { courseId })(e);
           }} className="flex flex-col gap-2 border-t border-line pt-3">
             <p className="text-[12px] font-semibold text-sub">New subject</p>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <select name="courseId" required aria-label="Course" defaultValue="" className={inputCls}>
                 <option value="" disabled>Course</option>
                 {courses.data?.items.filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

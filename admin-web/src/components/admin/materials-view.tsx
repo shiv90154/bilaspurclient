@@ -102,12 +102,13 @@ export function MaterialsView() {
           <li key={m.id} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[14.5px] font-bold">{m.title}</p>
+                <p className="break-words text-[14.5px] font-bold">{m.title}</p>
                 <p className="mt-0.5 text-[12.5px] text-sub">
                   {[m.subject?.name, m.topic?.name].filter(Boolean).join(" › ") || "No subject"} · v{m.version} · {mb(m.size)} · {format(new Date(m.updatedAt), "d MMM yyyy")}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {m.batches.length === 0 && <Badge tone="red">No batch: nobody can see it</Badge>}
+                  {m.isDemo && <Badge tone="green">Free demo: every student</Badge>}
+                  {m.batches.length === 0 && !m.isDemo && <Badge tone="red">No batch: nobody can see it</Badge>}
                   {m.batches.map((b) => <Badge key={b.batch.id} tone="blue">{b.batch.name}</Badge>)}
                   {m.status !== "PUBLISHED" && <Badge tone="gray">{m.status}</Badge>}
                 </div>
@@ -117,6 +118,11 @@ export function MaterialsView() {
                   <input type="checkbox" checked={m.allowDownload} disabled={patch.isPending}
                     onChange={(e) => patch.mutate({ id: m.id, body: { allowDownload: e.target.checked } })} />
                   Allow download
+                </label>
+                <label className="flex items-center gap-1.5 text-[12.5px]" title="Free demo: students who registered but are not approved yet can open it too">
+                  <input type="checkbox" checked={m.isDemo} disabled={patch.isPending}
+                    onChange={(e) => patch.mutate({ id: m.id, body: { isDemo: e.target.checked } })} />
+                  Free demo
                 </label>
                 <button className={btnGhost + " !h-8 !px-3"} onClick={() => open.mutate({ id: m.id, kind: "view" })}><ExternalLink size={14} /> View</button>
                 <button className={btnGhost + " !h-8 !px-3"} onClick={() => open.mutate({ id: m.id, kind: "download" })}><Download size={14} /></button>
@@ -166,6 +172,7 @@ function UploadForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
     const topicId = String(f.get("topicId") ?? "");
     if (topicId) fd.append("topicId", topicId);
     fd.append("allowDownload", f.get("allowDownload") === "on" ? "true" : "false");
+    fd.append("isDemo", f.get("isDemo") === "on" ? "true" : "false");
     fd.append("batchIds", JSON.stringify([...batchIds]));
     save.mutate(fd);
   };
@@ -209,6 +216,7 @@ function UploadForm({ onClose, onDone }: { onClose: () => void; onDone: () => vo
           </div>
         </fieldset>
         <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="allowDownload" /> Students may download</label>
+        <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="isDemo" /> Free demo (also for students waiting for approval)</label>
         <ErrorNote error={localError ? new Error(localError) : save.error} />
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>

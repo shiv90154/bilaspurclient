@@ -64,10 +64,10 @@ export function AppDownloadView() {
 
       {latest ? (
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
-          <div className="flex items-start gap-3.5">
-            <span className="rounded-2xl bg-primary-tint p-3 text-primary"><Smartphone size={26} /></span>
+          <div className="flex min-w-0 items-start gap-3.5">
+            <span className="shrink-0 rounded-2xl bg-primary-tint p-3 text-primary"><Smartphone size={26} /></span>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-[17px] font-bold">DHĪ for Android</h2>
                 <Badge tone="green">Latest</Badge>
               </div>
@@ -77,7 +77,7 @@ export function AppDownloadView() {
               {latest.notes && <p className="mt-2 whitespace-pre-wrap text-[13px]">{latest.notes}</p>}
             </div>
           </div>
-          <button className={btnPrimary + " !h-11 !px-6"} disabled={download.isPending} onClick={() => download.mutate(latest.id)}>
+          <button className={btnPrimary + " !h-11 w-full !px-6 sm:w-auto"} disabled={download.isPending} onClick={() => download.mutate(latest.id)}>
             <Download size={17} /> {download.isPending ? "Preparing…" : "Download APK"}
           </button>
         </section>
@@ -109,7 +109,7 @@ export function AppDownloadView() {
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <ErrorNote error={localError ? new Error(localError) : upload.error} />
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               {upload.isPending && <span className="text-[12.5px] text-sub">Uploading, please wait…</span>}
               <button className={btnPrimary} disabled={upload.isPending}><Upload size={16} /> Upload</button>
             </div>

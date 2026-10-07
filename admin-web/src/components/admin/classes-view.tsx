@@ -110,7 +110,7 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[14.5px] font-bold">{c.title}</p>
+                  <p className="break-words text-[14.5px] font-bold">{c.title}</p>
                   <Badge tone={TONE[c.status]}>{c.status === "LIVE" ? "Live now" : c.status.charAt(0) + c.status.slice(1).toLowerCase()}</Badge>
                   {c.seriesId && <Badge tone="gray">Weekly</Badge>}
                 </div>

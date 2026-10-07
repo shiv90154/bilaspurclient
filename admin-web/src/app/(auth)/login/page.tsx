@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { ROLE_HOME } from "@/lib/constants";
@@ -28,7 +29,7 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-[400px] rounded-2xl border border-line bg-surface p-7 shadow-sm">
+      <div className="w-full max-w-[400px] rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-7">
         <Brand />
         <h1 className="mt-6 text-[22px] font-bold">Log in</h1>
         <p className="mt-1 text-[13px] text-sub">Admin, faculty and students sign in here.</p>
@@ -42,6 +43,15 @@ export default async function LoginPage({
         <div className="mt-5">
           <LoginForm />
         </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[13px]">
+          <Link href="/forgot-password" className="font-semibold text-primary hover:underline">Forgot password?</Link>
+          <Link href="/register" className="font-semibold text-primary hover:underline">New student? Register</Link>
+        </div>
+        <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-sub">
+          <Link href="/privacy" className="hover:text-primary">Privacy policy</Link>
+          <Link href="/terms" className="hover:text-primary">Terms</Link>
+          <Link href="/delete-account" className="hover:text-primary">Delete my account</Link>
+        </p>
       </div>
     </main>
   );

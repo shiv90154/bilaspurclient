@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[23px] font-bold">Hello, {user.name.split(" ")[0]}</h1>
+        <h1 className="text-[20px] font-bold sm:text-[23px]">Hello, {user.name.split(" ")[0]}</h1>
         <p className="mt-1 text-[13px] text-sub">
           {format(new Date(), "EEEE, d MMMM")} · overview across all batches
         </p>
@@ -34,9 +34,9 @@ export default async function DashboardPage() {
           <Link
             key={href}
             href={href}
-            className="flex items-start gap-3 rounded-[14px] border border-line bg-surface p-4 transition-colors hover:border-primary"
+            className="flex flex-col items-start gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 transition-colors hover:border-primary sm:flex-row sm:gap-3 sm:p-4"
           >
-            <span className="rounded-xl bg-primary-tint p-2.5 text-primary">
+            <span className="shrink-0 rounded-xl bg-primary-tint p-2.5 text-primary">
               <Icon size={18} aria-hidden="true" />
             </span>
             <span>
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       </section>
 
       <DashboardStats />
-      <div className="max-w-md">
+      <div className="w-full max-w-md">
         <SystemStatus />
       </div>
     </div>

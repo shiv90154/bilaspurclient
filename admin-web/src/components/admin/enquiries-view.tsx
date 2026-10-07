@@ -83,7 +83,7 @@ export function EnquiriesView({ canConvert }: { canConvert: boolean }) {
       <ErrorNote error={list.error ?? setEnquiryStatus.error} />
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[720px] text-left text-[13px]">
+        <table className="rtable w-full min-w-[720px] text-left text-[13px]">
           <thead className="border-b border-line text-[11.5px] uppercase tracking-wide text-sub">
             <tr>
               <th className="px-4 py-3">Name</th>
@@ -100,11 +100,11 @@ export function EnquiriesView({ canConvert }: { canConvert: boolean }) {
                   <div className="font-semibold">{e.name}</div>
                   <div className="text-[12px] text-sub">{e.phone}{e.source ? ` · ${e.source}` : ""}</div>
                 </td>
-                <td className="px-4 py-3 text-sub">{e.courseInterest?.name ?? "—"}</td>
-                <td className="px-4 py-3 text-sub">
+                <td data-label="Interested in" className="px-4 py-3 text-sub">{e.courseInterest?.name ?? "—"}</td>
+                <td data-label="Follow-up" className="px-4 py-3 text-sub">
                   {e.followUpDate ? format(new Date(e.followUpDate), "d MMM yyyy") : "—"}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Status" className="px-4 py-3">
                   {e.status === "CONVERTED" ? (
                     <Badge tone="green">CONVERTED</Badge>
                   ) : (

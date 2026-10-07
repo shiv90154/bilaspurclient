@@ -4,7 +4,7 @@ import { X, type LucideIcon } from "lucide-react";
 import { useEffect, useId, type ReactNode } from "react";
 
 export const inputCls =
-  "h-10 w-full rounded-[10px] border border-line bg-surface px-3 text-[13.5px] outline-none focus:border-primary";
+  "h-10 w-full min-w-0 rounded-[10px] border border-line bg-surface px-3 text-base outline-none focus:border-primary sm:text-[13.5px]";
 export const btnPrimary =
   "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-[13px] font-bold text-white hover:bg-primary-dark disabled:opacity-60";
 export const btnGhost =
@@ -21,9 +21,9 @@ export function PageHeader({
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-[23px] font-bold">{title}</h1>
-        {subtitle && <p className="mt-1 text-[13px] text-sub">{subtitle}</p>}
+      <div className="min-w-0">
+        <h1 className="break-words text-[20px] font-bold sm:text-[23px]">{title}</h1>
+        {subtitle && <p className="mt-1 break-words text-[13px] text-sub">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -63,15 +63,21 @@ export function Modal({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Stop the page behind the dialog from scrolling (matters most on phones).
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 sm:p-10">
-      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[17px] font-bold">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 hover:bg-bg">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-ink/40 p-3 sm:p-10">
+      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-lg rounded-2xl bg-surface p-4 shadow-xl sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="min-w-0 break-words text-[17px] font-bold">{title}</h2>
+          <button onClick={onClose} aria-label="Close" className="-mr-1 shrink-0 rounded-lg p-1.5 hover:bg-bg">
             <X size={18} />
           </button>
         </div>
@@ -110,7 +116,7 @@ export function Pager({
 }) {
   const pages = Math.max(1, Math.ceil(total / limit));
   return (
-    <div className="flex items-center justify-between text-[12.5px] text-sub">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-sub">
       <span>{total} total</span>
       <div className="flex items-center gap-2">
         <button className={btnGhost + " !h-8 !px-3"} disabled={page <= 1} onClick={() => onPage(page - 1)}>
@@ -150,7 +156,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface px-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface px-5 py-10 text-center sm:px-6 sm:py-12">
       <span className="rounded-2xl bg-primary-tint p-3.5 text-primary">
         <Icon size={24} aria-hidden="true" />
       </span>

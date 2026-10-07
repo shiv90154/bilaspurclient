@@ -14,6 +14,7 @@ import {
   Modal,
   PageHeader,
 } from "@/components/ui";
+import { ResetPasswordButton } from "@/components/password";
 
 interface FacultyRow {
   id: string;
@@ -52,7 +53,7 @@ export function FacultyView() {
       <ErrorNote error={list.error ?? remove.error} />
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] text-left text-[13px]">
+        <table className="rtable w-full min-w-[640px] text-left text-[13px]">
           <thead className="border-b border-line text-[11.5px] uppercase tracking-wide text-sub">
             <tr>
               <th className="px-4 py-3">Faculty</th>
@@ -68,10 +69,11 @@ export function FacultyView() {
                   <div className="font-semibold">{f.user.name}</div>
                   <div className="text-[12px] text-sub">{f.user.phone}{f.qualification ? ` · ${f.qualification}` : ""}</div>
                 </td>
-                <td className="px-4 py-3 text-sub">{f.batches.map((b) => `${b.batch.course.name} · ${b.batch.name}`).join(", ") || "—"}</td>
-                <td className="px-4 py-3"><Badge tone={f.user.status === "ACTIVE" ? "green" : "red"}>{f.user.status}</Badge></td>
-                <td className="px-4 py-3 text-right">
-                  <button className={btnGhost + " !h-8 !px-3"} onClick={() => setEditing(f)}>Edit</button>{" "}
+                <td data-label="Batches" className="px-4 py-3 text-sub">{f.batches.map((b) => `${b.batch.course.name} · ${b.batch.name}`).join(", ") || "—"}</td>
+                <td data-label="Status" className="px-4 py-3"><Badge tone={f.user.status === "ACTIVE" ? "green" : "red"}>{f.user.status}</Badge></td>
+                <td className="space-x-2 whitespace-nowrap px-4 py-3 text-right">
+                  <button className={btnGhost + " !h-8 !px-3"} onClick={() => setEditing(f)}>Edit</button>
+                  <ResetPasswordButton userId={f.user.id} name={f.user.name} className={btnGhost + " !h-8 !px-3"} />
                   <button
                     className={btnGhost + " !h-8 !px-3 text-danger"}
                     onClick={() => window.confirm(`Delete ${f.user.name}? Their login will be disabled.`) && remove.mutate(f.id)}

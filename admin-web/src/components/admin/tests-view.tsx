@@ -75,8 +75,8 @@ export function TestsView() {
         {list.data?.items.map((t) => (
           <li key={t.id}>
             <Link href={`/tests/${t.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary">
-              <div>
-                <p className="text-[14.5px] font-bold">{t.title}</p>
+              <div className="min-w-0">
+                <p className="break-words text-[14.5px] font-bold">{t.title}</p>
                 {t.series && <p className="mt-0.5 text-[11.5px] font-semibold text-primary">{t.series.name}</p>}
                 <p className="mt-0.5 text-[12.5px] text-sub">
                   {t.durationMin} min · {plural(t._count.questions, "question")} · {Number(t.totalMarks)} marks

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
-import { CheckCircle2, MessageCircleQuestion, RotateCcw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, MessageCircleQuestion, RotateCcw } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, qs, type DoubtDetail, type DoubtRow, type DoubtStatus, type FacultyRow, type Paginated } from "@/lib/api";
 import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, inputCls, ListSkeleton, PageHeader, Pager } from "@/components/ui";
@@ -48,14 +48,15 @@ export function DoubtsView({ isAdmin }: { isAdmin: boolean }) {
         <EmptyState icon={MessageCircleQuestion} title="No doubts here" text="When a student asks a question in the app, it appears here so you can assign it and reply." />
       )}
 
+      {/* Phones show the list or the open thread, one at a time; large screens show both side by side. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <ul className="flex flex-col gap-2">
+        <ul className={`flex-col gap-2 ${openId ? "hidden lg:flex" : "flex"}`}>
           {list.data?.items.map((d) => (
             <li key={d.id}>
-              <button onClick={() => setOpenId(d.id)} aria-current={openId === d.id}
+              <button onClick={() => { setOpenId(d.id); window.scrollTo({ top: 0 }); }} aria-current={openId === d.id}
                 className={`w-full rounded-2xl border bg-surface p-3.5 text-left hover:border-primary ${openId === d.id ? "border-primary" : "border-line"}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[13.5px] font-semibold">{d.title}</p>
+                  <p className="min-w-0 break-words text-[13.5px] font-semibold">{d.title}</p>
                   <Badge tone={TONE[d.status]}>{d.status}</Badge>
                 </div>
                 <p className="mt-1 text-[12px] text-sub">
@@ -71,7 +72,12 @@ export function DoubtsView({ isAdmin }: { isAdmin: boolean }) {
           {list.data && <Pager page={page} limit={LIMIT} total={list.data.total} onPage={setPage} />}
         </ul>
 
-        <div>
+        <div className={openId ? "flex flex-col gap-3" : "hidden lg:block"}>
+          {openId && (
+            <button onClick={() => setOpenId(null)} className="inline-flex items-center gap-1.5 self-start text-[13px] font-semibold text-primary lg:hidden">
+              <ArrowLeft size={15} /> All doubts
+            </button>
+          )}
           {openId ? <Thread key={openId} id={openId} isAdmin={isAdmin} /> : (
             <p className="rounded-2xl border border-dashed border-line p-8 text-center text-[13px] text-sub">Select a doubt to read and reply.</p>
           )}
@@ -109,10 +115,10 @@ function Thread({ id, isAdmin }: { id: string; isAdmin: boolean }) {
   };
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-[16px] font-bold">{d.title}</h2>
+        <div className="min-w-0">
+          <h2 className="break-words text-[16px] font-bold">{d.title}</h2>
           <p className="text-[12.5px] text-sub">
             {d.student.user.name} · {d.student.user.phone}
             {d.classTimestamp !== null && ` · at ${mmss(d.classTimestamp)} in class`}
@@ -129,7 +135,7 @@ function Thread({ id, isAdmin }: { id: string; isAdmin: boolean }) {
       </div>
 
       {isAdmin && (
-        <label className="flex items-center gap-2 text-[12.5px] text-sub">
+        <label className="flex flex-wrap items-center gap-2 text-[12.5px] text-sub">
           Assign to
           <select aria-label="Assign to faculty" className={inputCls + " !h-8 max-w-56"} value={d.assignedTo?.id ?? ""}
             disabled={assign.isPending} onChange={(e) => e.target.value && assign.mutate(e.target.value)}>
@@ -140,11 +146,11 @@ function Thread({ id, isAdmin }: { id: string; isAdmin: boolean }) {
       )}
       <ErrorNote error={reply.error ?? assign.error ?? resolve.error}/>
 
-      <ol className="flex max-h-[420px] flex-col gap-2.5 overflow-y-auto">
+      <ol className="flex max-h-[60vh] flex-col gap-2.5 overflow-y-auto lg:max-h-[420px]">
         {d.messages.map((m) => {
           const staff = m.sender.role !== "STUDENT";
           return (
-            <li key={m.id} className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13.5px] ${staff ? "self-end bg-primary-tint" : "self-start bg-bg"}`}>
+            <li key={m.id} className={`max-w-[85%] break-words rounded-2xl px-3.5 py-2.5 text-[13.5px] ${staff ? "self-end bg-primary-tint" : "self-start bg-bg"}`}>
               <p className="whitespace-pre-wrap">{m.text}</p>
               <p className="mt-1 text-[11px] text-sub">{m.sender.name} · {format(new Date(m.createdAt), "d MMM, h:mm a")}</p>
             </li>

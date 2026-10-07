@@ -8,7 +8,12 @@ export interface AuthProfile {
   email: string | null;
   role: Role;
   studentId: string | null;
-  watermark: { name: string; phone: string };
+  watermark: { enabled: boolean; name: string; phone: string };
+  /** A student who has not accepted the current terms yet; the student area asks first. */
+  consentRequired: boolean;
+  /** Self-registered, waiting for approval: demo content only. */
+  demo: boolean;
+  requestedCourse: { id: string; name: string } | null;
 }
 
 export interface TokenPair {

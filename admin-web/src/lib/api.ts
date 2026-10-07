@@ -176,6 +176,7 @@ export interface TestRow {
   startAt: string | null;
   endAt: string | null;
   status: TestStatus;
+  isDemo?: boolean;
   course: { id: string; name: string } | null;
   series?: { id: string; name: string } | null;
   _count: { questions: number; attempts: number; batches: number };
@@ -224,6 +225,7 @@ export interface Material {
   fileName: string;
   size: number;
   allowDownload: boolean;
+  isDemo: boolean;
   version: number;
   status: ContentStatus;
   updatedAt: string;
@@ -275,3 +277,71 @@ export interface ClassAttendance {
   present: { studentId: string; name: string; phone: string; joinedAt: string; durationSec: number }[];
   absent: { studentId: string; name: string; phone: string }[];
 }
+
+/** Institute-wide switches (admin only). */
+export interface AppSettings {
+  watermarkEnabled: boolean;
+  blockDeveloperOptions: boolean;
+  instituteName: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+}
+
+export type DeletionRequestStatus = "PENDING" | "COMPLETED" | "REJECTED";
+export interface DeletionRequestRow {
+  id: string;
+  name: string;
+  phone: string;
+  reason: string | null;
+  source: "APP" | "WEB";
+  status: DeletionRequestStatus;
+  note: string | null;
+  createdAt: string;
+  handledAt: string | null;
+  user: { id: string; role: string; student: { id: string; admissionNo: string | null } | null } | null;
+}
+
+export type DocumentType = "PHOTO" | "ID_PROOF" | "MARKSHEET" | "OTHER";
+export interface StudentDocument {
+  id: string;
+  type: DocumentType;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface StudentRecords {
+  summary: {
+    testsTaken: number;
+    averagePercentage: number | null;
+    classesHeld: number;
+    classesAttended: number;
+    attendancePercentage: number | null;
+    doubtsAsked: number;
+    doubtsOpen: number;
+    materialsOpened: number;
+    materialViews: number;
+  };
+  tests: {
+    attemptId: string;
+    testId: string;
+    title: string;
+    status: string;
+    startedAt: string;
+    submittedAt: string | null;
+    score: number | null;
+    totalMarks: number;
+    percentage: number | null;
+    correct: number;
+    incorrect: number;
+    unanswered: number;
+  }[];
+  attendance: { classId: string; title: string; batch: string; startAt: string; present: boolean; joinedAt: string | null }[];
+  doubts: { id: string; title: string; status: DoubtStatus; subject: string | null; messages: number; createdAt: string; resolvedAt: string | null }[];
+}
+
+/** A plain link to a CSV route through the proxy; the browser downloads it with the session cookie. */
+export const csvHref = (path: string, params: Record<string, string | number | boolean | undefined | null> = {}) =>
+  `/api/backend${path}${qs(params)}`;

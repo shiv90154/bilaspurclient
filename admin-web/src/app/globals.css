@@ -37,7 +37,71 @@ h3 {
   font-family: var(--font-display);
 }
 
+/* Tab strips scroll sideways on phones; the bar itself is just noise there. */
+[role="tablist"] {
+  scrollbar-width: none;
+}
+[role="tablist"]::-webkit-scrollbar {
+  display: none;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Phones: a table with class "rtable" turns into one card per row. Each cell
+   shows its column name from data-label, so wide tables never scroll sideways. */
+@media (max-width: 767px) {
+  .rtable {
+    min-width: 0 !important;
+  }
+  .rtable thead {
+    display: none;
+  }
+  .rtable,
+  .rtable tbody,
+  .rtable tr,
+  .rtable td {
+    display: block;
+    width: 100%;
+  }
+  .rtable tr {
+    padding: 12px 16px;
+  }
+  .rtable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0 !important;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .rtable td:first-child {
+    display: block;
+    padding-bottom: 6px !important;
+    text-align: left;
+  }
+  .rtable td[data-label]:not(:first-child)::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-sub);
+    text-align: left;
+  }
+  .rtable td:not([data-label]):not(:first-child) {
+    justify-content: flex-end;
+    padding-top: 8px !important;
+  }
+  .rtable td:empty {
+    display: none;
+  }
+  .rtable td[colspan] {
+    display: block;
+    text-align: center;
+  }
 }

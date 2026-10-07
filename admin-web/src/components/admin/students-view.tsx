@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useState, type FormEvent } from "react";
 import {
   api,
+  csvHref,
   qs,
   type Batch,
   type Paginated,
@@ -65,11 +66,17 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
         title="Students"
         subtitle="Search, filter and manage every student"
         action={
-          canEdit && (
-            <button className={btnPrimary} onClick={() => setAdding(true)}>
-              <Plus size={16} /> Add student
-            </button>
-          )
+          <div className="flex flex-wrap gap-2">
+            {/* Same filters as the table, every page. */}
+            <a className={btnGhost} href={csvHref("/students/export", { search: deferredSearch, status, batchId })} download>
+              <Download size={16} /> Export CSV
+            </a>
+            {canEdit && (
+              <button className={btnPrimary} onClick={() => setAdding(true)}>
+                <Plus size={16} /> Add student
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -98,7 +105,7 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
       <ErrorNote error={students.error} />
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] text-left text-[13px]">
+        <table className="rtable w-full min-w-[640px] text-left text-[13px]">
           <thead className="border-b border-line text-[11.5px] uppercase tracking-wide text-sub">
             <tr>
               <th className="px-4 py-3">Student</th>
@@ -116,11 +123,11 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
                   </Link>
                   <div className="text-[12px] text-sub">{s.admissionNo ?? "No admission no"}</div>
                 </td>
-                <td className="px-4 py-3">{s.user.phone}</td>
-                <td className="px-4 py-3 text-sub">
+                <td data-label="Phone" className="px-4 py-3">{s.user.phone}</td>
+                <td data-label="Batches" className="px-4 py-3 text-sub">
                   {s.batches.map((b) => b.batch.name).join(", ") || "—"}
                 </td>
-                <td className="px-4 py-3"><Badge tone={TONE[s.status]}>{s.status}</Badge></td>
+                <td data-label="Status" className="px-4 py-3"><Badge tone={TONE[s.status]}>{s.status}</Badge></td>
               </tr>
             ))}
             {students.data?.items.length === 0 && (
