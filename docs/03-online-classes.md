@@ -85,17 +85,17 @@ Video/audio, screen share, whiteboard, chat, polls, raise hand, breakout rooms, 
 7. Attendance report in admin web.
 
 ## Progress
-- [ ] Live classes CRUD
-- [ ] Batch-wise visibility
-- [ ] FCM reminders
-- [ ] Android: classes list + join
-- [ ] Admin web: scheduler
+- [x] Live classes CRUD
+- [x] Batch-wise visibility
+- [x] FCM reminders (code ready; needs Firebase keys on the server)
+- [x] Android: classes list + join
+- [x] Admin web: scheduler
 - [ ] BBB server setup
 - [ ] BBB API integration
-- [ ] Attendance capture
+- [x] Attendance capture (join from the app is recorded)
 - [ ] Recordings list
 - [ ] Android: BBB in-app + FLAG_SECURE
-- [ ] Attendance report
+- [x] Attendance report (Reports → Attendance, class-wise and student-wise, CSV)
 
 ## Notes
 - Zoom link wali class ko screen-record se bacha nahi sakte. Client ko batao.

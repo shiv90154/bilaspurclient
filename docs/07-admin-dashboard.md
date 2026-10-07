@@ -48,15 +48,15 @@ Total/active students, enquiries, pending follow-ups, study-material count, ques
 
 ## Progress
 - [x] Activity log service (`ActivityService`; table `activity_logs`)
-- [ ] Summary API (students, enquiries, follow-ups)
-- [ ] Active users metric
-- [ ] Dashboard UI v1
-- [ ] Recent activity feed
-- [ ] Material / question counts
-- [ ] Pending doubts widget
-- [ ] Live classes widget
-- [ ] Reports + CSV export
-- [ ] Faculty-scoped dashboard
+- [x] Summary API (students, enquiries, follow-ups)
+- [x] Active users metric (today / 7 days, from session use)
+- [x] Dashboard UI v1
+- [x] Recent activity feed
+- [x] Material / question counts
+- [x] Pending doubts widget
+- [x] Live classes widget (live now + upcoming)
+- [x] Reports + CSV export (`/reports/*` + `/csv`; admin web **Reports** page: attendance class-wise + student-wise, test results, student list, enquiry funnel, material views)
+- [x] Faculty-scoped dashboard and reports
 - [ ] Charts polish (v2)
 
 ## Notes

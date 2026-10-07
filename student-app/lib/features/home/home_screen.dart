@@ -42,6 +42,9 @@ class HomeScreen extends ConsumerWidget {
     final classes = (ref.watch(classesProvider).value ?? const <LiveClass>[])
         .take(3)
         .toList();
+    final liveNow = (ref.watch(classesProvider).value ?? const <LiveClass>[])
+        .where((c) => c.isLive)
+        .firstOrNull;
     final doubts = ref.watch(doubtsProvider).value ?? const <Doubt>[];
     final replied = doubts
         .where((d) => d.status == DoubtStatus.answered)
@@ -84,42 +87,68 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _QuickTile(
-                        icon: Icons.menu_book,
-                        label: 'Study\nmaterial',
-                        background: scheme.primaryContainer,
-                        foreground: scheme.onPrimaryContainer,
-                        onTap: () => context.go('/notes'),
-                      ),
+              if (user.demo) ...[
+                const SizedBox(height: 16),
+                Card(
+                  color: scheme.tertiaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.hourglass_top, color: scheme.onTertiaryContainer),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Demo account. You registered for ${user.requestedCourse ?? 'a course'}. '
+                            'Try the free demo notes and tests now; classes, doubts and all study material '
+                            'open when the institute approves your admission.',
+                            style: TextStyle(color: scheme.onTertiaryContainer),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _QuickTile(
-                        icon: Icons.quiz,
-                        label: 'Tests',
-                        background: scheme.tertiaryContainer,
-                        foreground: scheme.onTertiaryContainer,
-                        onTap: () => context.go('/tests'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _QuickTile(
-                        icon: Icons.help,
-                        label: 'Ask a\ndoubt',
-                        background: scheme.secondaryContainer,
-                        foreground: scheme.onSecondaryContainer,
-                        onTap: () => context.go('/doubts'),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+              ],
+              const SizedBox(height: 22),
+              if (liveNow != null) ...[
+                Card(
+                  color: scheme.errorContainer,
+                  child: ListTile(
+                    leading: Icon(Icons.sensors, color: scheme.onErrorContainer),
+                    title: Text('Live now: ${liveNow.title}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onErrorContainer)),
+                    subtitle: Text(liveNow.teacher ?? 'Tap to join', style: TextStyle(color: scheme.onErrorContainer)),
+                    trailing: Icon(Icons.chevron_right, color: scheme.onErrorContainer),
+                    onTap: () => context.push('/classes'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              // One tap to every part of the app.
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.05,
+                children: [
+                  _QuickTile(icon: Icons.menu_book, label: 'Notes', background: scheme.primaryContainer,
+                      foreground: scheme.onPrimaryContainer, onTap: () => context.go('/notes')),
+                  _QuickTile(icon: Icons.quiz, label: 'Tests', background: scheme.tertiaryContainer,
+                      foreground: scheme.onTertiaryContainer, onTap: () => context.go('/tests')),
+                  _QuickTile(icon: Icons.videocam, label: 'Live classes', background: scheme.errorContainer,
+                      foreground: scheme.onErrorContainer, onTap: () => context.push('/classes')),
+                  _QuickTile(icon: Icons.play_circle, label: 'Videos', background: scheme.secondaryContainer,
+                      foreground: scheme.onSecondaryContainer, onTap: () => context.push('/videos')),
+                  _QuickTile(icon: Icons.help, label: 'Doubts', background: scheme.surfaceContainerHighest,
+                      foreground: scheme.onSurface, onTap: () => context.go('/doubts')),
+                  _QuickTile(icon: Icons.person, label: 'Profile', background: scheme.surfaceContainerHighest,
+                      foreground: scheme.onSurface, onTap: () => context.go('/profile')),
+                ],
               ),
               const SizedBox(height: 26),
               _SectionTitle(
@@ -222,18 +251,20 @@ class _QuickTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+          padding: const EdgeInsets.all(10),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 30, color: foreground),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               Text(
                 label,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: foreground,
-                  height: 1.2,
+                  height: 1.15,
                 ),
               ),
             ],

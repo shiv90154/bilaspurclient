@@ -52,14 +52,14 @@ Authentication, authorization, data protection aur SSL communication.
 - [x] Password hashing (argon2id)
 - [x] JWT + refresh rotation (reuse detection, session checked on every request)
 - [x] Login rate limit / lockout
-- [ ] Password reset
+- [x] Password change (self, logs out other devices) + admin reset (one-time password, logs out everywhere). No OTP/email self-reset yet (needs an SMS/email provider).
 - [x] Helmet / CORS / validation
-- [ ] HTTPS + HSTS
-- [ ] Signed URLs for files
-- [ ] Upload validation
-- [ ] Activity / audit log (service ready; only login and reset-device are logged so far)
-- [ ] Firewall + SSH hardening
-- [ ] Encrypted backups + restore test
+- [x] HTTPS + HSTS (Let's Encrypt on Nginx; HSTS from helmet on the API and next.config on the web, plus nosniff, frame DENY, referrer + permissions policy, basic CSP)
+- [x] Signed URLs for files
+- [x] Upload validation (file type from the bytes, size limits)
+- [x] Activity / audit log (all create/update/delete, document opens, CSV exports, password changes)
+- [ ] Firewall + SSH hardening (server task: shared VPS, do with the owner)
+- [x] Encrypted backups + restore test (`BACKUP_PASSPHRASE`, `deploy.sh restore-test`)
 - [ ] Sentry / alerts
 - [ ] OWASP Top 10 review
 - [ ] (Optional) cert pinning

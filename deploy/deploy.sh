@@ -8,7 +8,7 @@
 #   ./deploy/deploy.sh nginx       (root) add our two sites to the host Nginx + HTTPS via certbot
 #   ./deploy/deploy.sh domain <admin-domain> <api-domain>   switch domains later
 #   ./deploy/deploy.sh ports [--fix]   show / repair the two host ports
-#   ./deploy/deploy.sh status | logs [service] | seed | backup | down
+#   ./deploy/deploy.sh status | logs [service] | seed | backup | restore-test | down
 #
 # Safe on a server that already runs other sites: it only ever uses two high ports on
 # 127.0.0.1, never touches 80/443/3000/5432, and never stops containers it did not create.
@@ -249,19 +249,58 @@ cmd_status() { preflight; "${COMPOSE[@]}" ps; }
 cmd_logs()   { preflight; "${COMPOSE[@]}" logs -f --tail 100 "$@"; }
 cmd_down()   { preflight; "${COMPOSE[@]}" down; }   # keeps the database and uploaded files (volumes)
 
-# Database dump + uploaded files (notes PDFs, APKs). Run daily from cron:
+# Database dump + uploaded files (notes PDFs, APKs, student documents). Run daily from cron:
 #   0 3 * * *  cd /path/to/repo && ./deploy/deploy.sh backup >> deploy/backups/backup.log 2>&1
+# With BACKUP_PASSPHRASE set in production.env the files are AES-256 encrypted (.enc), so a copy
+# kept off the server holds no readable personal data. Keep the passphrase somewhere else too:
+# without it the backups cannot be restored.
 cmd_backup() {
   preflight
-  local dir=deploy/backups stamp; stamp=$(date +%Y%m%d-%H%M%S)
-  mkdir -p "$dir"
+  local dir=deploy/backups stamp pass; stamp=$(date +%Y%m%d-%H%M%S)
+  pass=$(env_get BACKUP_PASSPHRASE || true)
+  mkdir -p "$dir"; chmod 700 "$dir"
+  local seal=(cat) ext=""
+  if [[ -n "$pass" ]]; then
+    need openssl
+    seal=(openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE); ext=".enc"
+    export BACKUP_PASSPHRASE="$pass"
+  else
+    warn "BACKUP_PASSPHRASE is not set: backups are NOT encrypted."
+  fi
   say "Backing up database"
-  "${COMPOSE[@]}" exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip > "$dir/db-$stamp.sql.gz"
+  "${COMPOSE[@]}" exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip | "${seal[@]}" > "$dir/db-$stamp.sql.gz$ext"
   say "Backing up uploaded files"
-  docker run --rm -v "${PROJECT}_storage:/data:ro" -v "$PWD/$dir:/out" alpine \
-    tar czf "/out/files-$stamp.tar.gz" -C /data .
-  find "$dir" -name '*.gz' -mtime +14 -delete    # keep two weeks
-  say "Done: $dir/db-$stamp.sql.gz  $dir/files-$stamp.tar.gz  (copy them off this server too)"
+  docker run --rm -v "${PROJECT}_storage:/data:ro" alpine tar czf - -C /data . | "${seal[@]}" > "$dir/files-$stamp.tar.gz$ext"
+  chmod 600 "$dir"/*-"$stamp".*
+  find "$dir" \( -name '*.gz' -o -name '*.gz.enc' \) -mtime +14 -delete    # keep two weeks
+  say "Done: $dir/db-$stamp.sql.gz$ext  $dir/files-$stamp.tar.gz$ext  (copy them off this server too)"
+}
+
+# Proves the newest database backup can actually be restored: loads it into a throwaway
+# Postgres container (no port, removed afterwards) and counts the main tables.
+# The live database is never touched.
+cmd_restore_test() {
+  preflight
+  local dir=deploy/backups latest pass name=edumanage-restore-test user
+  user=$(env_get POSTGRES_USER || true); user=${user:-edumanage}   # the dump assigns tables to this role
+  latest=$(ls -1t "$dir"/db-*.sql.gz "$dir"/db-*.sql.gz.enc 2>/dev/null | head -n1 || true)
+  [[ -n "$latest" ]] || die "No database backup in $dir. Run ./deploy/deploy.sh backup first."
+  say "Restoring $latest into a temporary container"
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  docker run -d --name "$name" -e POSTGRES_USER="$user" -e POSTGRES_PASSWORD=restore-test -e POSTGRES_DB=restore postgres:18-alpine >/dev/null
+  trap 'docker rm -f '"$name"' >/dev/null 2>&1 || true' EXIT
+  for _ in $(seq 1 30); do docker exec "$name" pg_isready -U "$user" -d restore >/dev/null 2>&1 && break; sleep 1; done
+  if [[ "$latest" == *.enc ]]; then
+    pass=$(env_get BACKUP_PASSPHRASE || true)
+    [[ -n "$pass" ]] || die "$latest is encrypted but BACKUP_PASSPHRASE is not set."
+    BACKUP_PASSPHRASE="$pass" openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:BACKUP_PASSPHRASE < "$latest"       | gunzip | docker exec -i "$name" psql -q -v ON_ERROR_STOP=1 -U "$user" -d restore >/dev/null
+  else
+    gunzip < "$latest" | docker exec -i "$name" psql -q -v ON_ERROR_STOP=1 -U "$user" -d restore >/dev/null
+  fi
+  docker exec "$name" psql -U "$user" -d restore -At -c     "select 'users', count(*) from users union all select 'students', count(*) from students
+     union all select 'questions', count(*) from questions union all select 'materials', count(*) from materials
+     union all select 'migrations', count(*) from _prisma_migrations" | sed 's/|/: /'
+  say "Restore test passed: $latest is readable and complete."
 }
 
 case "${1:-}" in
@@ -275,6 +314,7 @@ case "${1:-}" in
   domain) shift; cmd_domain "$@" ;;
   seed)   preflight; cmd_seed ;;
   backup) cmd_backup ;;
+  restore-test) cmd_restore_test ;;
   down)   cmd_down ;;
   *) sed -n '2,16p' "$0"; exit 1 ;;
 esac

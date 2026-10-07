@@ -41,6 +41,10 @@ class ApiException implements Exception {
 
 String friendlyMessage(String code, String? fallback) => switch (code) {
       'INVALID_CREDENTIALS' => 'Wrong phone/email or password.',
+      'WRONG_PASSWORD' => 'Your current password is wrong.',
+      'STAFF_USE_WEB' => 'This app is for students. Admins and teachers please use the web panel.',
+      'DEMO_ACCOUNT' => 'This opens once the institute approves your admission.',
+      'PASSWORD_UNCHANGED' => 'Choose a password different from the current one.',
       'ACCOUNT_LOCKED' => 'Too many wrong attempts. Try again after 15 minutes.',
       'ACCOUNT_DISABLED' => 'This account is disabled. Contact the institute.',
       'STUDENT_NOT_ACTIVE' => 'Your account is not active. Contact the institute (fees/approval pending).',

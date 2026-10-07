@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -15,6 +16,10 @@ class AppUser {
     required this.phone,
     required this.email,
     required this.role,
+    this.watermarkEnabled = false,
+    this.consentRequired = false,
+    this.demo = false,
+    this.requestedCourse,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -23,6 +28,11 @@ class AppUser {
         phone: j['phone'] as String,
         email: j['email'] as String?,
         role: j['role'] as String,
+        // The admin switches this in Settings. Older servers do not send it: treat as off.
+        watermarkEnabled: (j['watermark'] as Map?)?['enabled'] == true,
+        consentRequired: j['consentRequired'] == true,
+        demo: j['demo'] == true,
+        requestedCourse: (j['requestedCourse'] as Map?)?['name'] as String?,
       );
 
   final String id;
@@ -30,6 +40,18 @@ class AppUser {
   final String phone;
   final String? email;
   final String role;
+
+  /// Show the name + phone overlay on every screen.
+  final bool watermarkEnabled;
+
+  /// The current terms + privacy policy are not accepted yet: the app shows the consent screen.
+  final bool consentRequired;
+
+  /// Registered in the app but not approved yet: only free demo notes/tests, no doubts.
+  final bool demo;
+
+  /// The course a demo student asked to join.
+  final String? requestedCourse;
 }
 
 enum AuthStatus { loading, loggedOut, loggedIn }
@@ -58,7 +80,22 @@ class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() {
     Future.microtask(_restore);
+    // Pick up admin changes (e.g. the watermark switch) when the app comes back to the front.
+    final lifecycle = AppLifecycleListener(onResume: () => unawaited(refreshProfile()));
+    ref.onDispose(lifecycle.dispose);
     return const AuthState(status: AuthStatus.loading);
+  }
+
+  /// Re-reads /auth/me quietly. A network error keeps the current profile; a dead session
+  /// is handled by the API client (sessionLost).
+  Future<void> refreshProfile() async {
+    if (state.status != AuthStatus.loggedIn) return;
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/auth/me');
+      if (state.status == AuthStatus.loggedIn) {
+        state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(res.data!));
+      }
+    } catch (_) {}
   }
 
   SecureStore get _store => ref.read(secureStoreProvider);
@@ -71,7 +108,13 @@ class AuthController extends Notifier<AuthState> {
     }
     try {
       final res = await _dio.get<Map<String, dynamic>>('/auth/me');
-      state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(res.data!));
+      final user = AppUser.fromJson(res.data!);
+      // The app is for students; a staff session (from an older build) is dropped.
+      if (user.role != 'STUDENT') {
+        await logout();
+        return;
+      }
+      state = AuthState(status: AuthStatus.loggedIn, user: user);
       unawaited(_registerPush());
     } catch (e) {
       // sessionLost() may already have set a notice; keep it.

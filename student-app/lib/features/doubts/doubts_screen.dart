@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../data/content_api.dart';
 import '../../data/models.dart';
 import '../../widgets/async_view.dart';
+import '../auth/auth_controller.dart';
 
 final doubtsProvider = FutureProvider.autoDispose<List<Doubt>>((ref) => ref.watch(contentApiProvider).doubts());
 final doubtThreadProvider =
@@ -23,6 +24,16 @@ class DoubtsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(authProvider.select((s) => s.user?.demo ?? false))) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My doubts')),
+        body: const EmptyState(
+          icon: Icons.lock_clock,
+          title: 'Opens after approval',
+          text: 'You can ask your teachers doubts once the institute approves your admission.',
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('My doubts')),
       floatingActionButton: FloatingActionButton.extended(

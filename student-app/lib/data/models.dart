@@ -426,3 +426,86 @@ class LiveClass {
   bool get canJoinNow =>
       state != ClassState.cancelled && state != ClassState.ended && DateTime.now().isAfter(startAt.subtract(const Duration(minutes: 15)));
 }
+
+/// The signed-in student's own record (`GET /students/me`).
+class MyProfile {
+  const MyProfile({
+    required this.admissionNo,
+    required this.dob,
+    required this.city,
+    required this.address,
+    required this.guardianName,
+    required this.guardianPhone,
+    required this.targetExam,
+    required this.photoUrl,
+    required this.batches,
+    required this.testsTaken,
+    required this.averagePercentage,
+    required this.attendancePercentage,
+    required this.classesAttended,
+    required this.classesHeld,
+    required this.doubtsAsked,
+  });
+
+  factory MyProfile.fromJson(Map<String, dynamic> j, String origin) {
+    final stats = j['stats'] as Map<String, dynamic>? ?? const {};
+    final photo = j['photoUrl'] as String?;
+    double? pct(Object? v) => v == null ? null : _num(v);
+    return MyProfile(
+      admissionNo: j['admissionNo'] as String?,
+      dob: j['dob'] == null ? null : DateTime.parse(j['dob'] as String),
+      city: j['city'] as String?,
+      address: j['address'] as String?,
+      guardianName: j['guardianName'] as String?,
+      guardianPhone: j['guardianPhone'] as String?,
+      targetExam: (j['academic'] as Map?)?['targetExam'] as String?,
+      // Signed link, valid for an hour, relative to the server origin.
+      photoUrl: photo == null ? null : '$origin$photo',
+      batches: [
+        for (final b in (j['batches'] as List? ?? const []))
+          '${(b as Map)['batch']['course']['name']} · ${b['batch']['name']}',
+      ],
+      testsTaken: (stats['testsTaken'] as num?)?.toInt() ?? 0,
+      averagePercentage: pct(stats['averagePercentage']),
+      attendancePercentage: pct(stats['attendancePercentage']),
+      classesAttended: (stats['classesAttended'] as num?)?.toInt() ?? 0,
+      classesHeld: (stats['classesHeld'] as num?)?.toInt() ?? 0,
+      doubtsAsked: (stats['doubtsAsked'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String? admissionNo;
+  final DateTime? dob;
+  final String? city;
+  final String? address;
+  final String? guardianName;
+  final String? guardianPhone;
+  final String? targetExam;
+  final String? photoUrl;
+  final List<String> batches;
+  final int testsTaken;
+  final double? averagePercentage;
+  final double? attendancePercentage;
+  final int classesAttended;
+  final int classesHeld;
+  final int doubtsAsked;
+}
+
+/// A recorded lecture (opened by its link for now).
+class VideoItem {
+  const VideoItem({required this.id, required this.title, this.description, this.url, required this.isDemo});
+
+  factory VideoItem.fromJson(Map<String, dynamic> j) => VideoItem(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        description: j['description'] as String?,
+        url: j['externalUrl'] as String?,
+        isDemo: j['isDemo'] == true,
+      );
+
+  final String id;
+  final String title;
+  final String? description;
+  final String? url;
+  final bool isDemo;
+}

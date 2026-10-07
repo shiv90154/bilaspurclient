@@ -43,6 +43,12 @@ services:
       STORAGE_DIR: /data/storage
       # Push notifications (FCM). Empty = push off, everything else works.
       FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      # Email OTP (registration, forgot password). Empty SMTP_HOST = email features say "not set up".
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
       SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}

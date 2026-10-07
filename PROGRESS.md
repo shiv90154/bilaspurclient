@@ -1,8 +1,30 @@
-# DHĪ — Progress (2026-10-05)
+# DHĪ — Progress (2026-10-07)
 
 Plan: [PLAN.md](PLAN.md) · Module docs: [docs/](docs/) · Requirement: [requrment.md](requrment.md)
 
 Is file mein sirf wahi hai jo **abhi tak bana aur chala kar check hua**. Jo nahi bana wo "Baaki hai" mein hai.
+
+## Naya (2026-10-07)
+
+| Kya | Kahan |
+|---|---|
+| **Watermark on/off** (default **off**) | Admin web → Settings. App `/auth/me` ke `watermark.enabled` se chalti hai; app khulne / wapas aane par naya setting le leti hai. Naya APK chahiye (purane APK hamesha watermark dikhate hain). |
+| **Student profile poora** | Admin web student page: tabs (Profile, Tests & attendance, Documents, Batches & devices), photo, documents (ID proof / marksheet; sirf admin, har open log), reset password. App + student web: apna profile, batches, stats, change password. |
+| **CSV export** | Students list → Export CSV (filters ke saath). `GET /students/export` |
+| **Reports** | Admin web → Reports: attendance (class-wise + student-wise), test results, student list, enquiry funnel, material views. Har report CSV mein. Faculty ko sirf apne batches. `/reports/*` |
+| **Dashboard** | Naye counts: live now, study material, question bank, active today / 7 din |
+| **Passwords** | `POST /auth/change-password` (sabke liye), `POST /users/:id/reset-password` (admin; student + faculty) |
+| **Security** | Web par HSTS + security headers; encrypted backups (`BACKUP_PASSPHRASE`) + `deploy.sh restore-test` |
+| **Legal / Play Store** | Public pages `/privacy`, `/terms`, `/delete-account` (bina login). Pehli login par terms + privacy consent (18 se kam ho to guardian ka naam + consent), record `consents` table mein. App Profile → Delete my account; admin web → Deletion Requests (personal data mitata hai, anonymous scores rehte hain). Institute naam/email/phone/address: Settings → Institute details. |
+| **Self-registration + demo** | App/web: "Create account" (naam, phone, email, course, password) → email par 6 digit OTP → account bana, student **PENDING = demo**. Demo student ko sirf "Free demo" notes/tests (admin materials/test par tick karta hai); doubts/classes band. Admin web → **Registrations**: batch choose karke Approve (full access + email) ya Reject. |
+| **Forgot password** | App + web: phone/email → account ke email par OTP → naya password (saare devices logout). |
+| **Email (SMTP)** | `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM` (production.env). Bina SMTP: dev mein OTP backend log mein, production mein "email not set up". |
+| **App security** | Admin/faculty app mein login nahi kar sakte (`STAFF_USE_WEB`). Screenshot/recording block (FLAG_SECURE, pehle se). Developer options ya USB debugging on → app nahi chalegi, "Check again" screen. Doosre apps ke overlay windows chhupe (Android 12+). |
+| **Recorded videos (link)** | Admin web → Recorded Videos: YouTube (unlisted)/Drive link, batch-wise ya "Free demo". App Home → Videos. Apna upload + encrypted HLS abhi baaki. |
+| **App Home** | Quick icons grid (Notes, Tests, Live classes, Videos, Doubts, Profile) + "Live now" banner. |
+| **Dev options switch** | Admin web → Settings → "Block Developer options" (default on). |
+
+Tests: `npm run smoke:profile` (56 checks), `npm run smoke:privacy`, `BACKEND_LOG=<log file> npm run smoke:register`.
 
 ## Ek nazar mein
 
@@ -137,10 +159,10 @@ Smoke tests demo seed ke users use karte hain aur sessions/devices ki rows banat
 
 ## Baaki hai (is order mein)
 
-1. **Admin web:** device history + reset screen (API ready), student documents + CSV export, roles page; videos/classes/fees screens backend ke saath.
-2. **Android app:** tests likhe hue hain (`test/attempt_session_test.dart`) par policy allow hone ke baad chalane hain; phir emulator/phone par run (Android SDK cmdline-tools + licenses). Baaki screens: live classes, recorded lectures.
-3. Baaki backend: videos (upload + HLS), fees/Razorpay, Firebase project banake keys lagana (neeche *FCM setup*); classes ke admin web + Flutter screens; Phase 1 ke documents upload + CSV export.
-4. Infra: CI, VPS + Nginx + HTTPS, backups, Play Store ([docs/13-play-store-compliance.md](docs/13-play-store-compliance.md)).
+1. **Play Store se pehle:** final package id (abhi `com.edumanage.student_app`), release signing key + AAB, apna domain, Settings mein institute ka email/phone/address, privacy policy lawyer se ek baar check, Data safety form + listing ([docs/13](docs/13-play-store-compliance.md)).
+2. **Server:** naya code deploy + naya APK; production.env mein `BACKUP_PASSPHRASE` daalo, phir `deploy.sh backup` + `deploy.sh restore-test`. Firewall/SSH hardening owner ke saath (shared VPS).
+3. **Jaan-boojh kar baad mein:** recorded lectures (video upload + HLS), fees/Razorpay, apna live system (BBB/LiveKit), OTP/email se khud password reset.
+4. Infra: CI, Sentry/uptime alerts.
 
 ## Dhyan dene wali baatein
 

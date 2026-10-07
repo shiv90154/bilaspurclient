@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/links.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -115,6 +117,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: _busy
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Text('Log in'),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () => context.push('/forgot'), child: const Text('Forgot password?')),
+                    ),
+                    const SizedBox(height: 4),
+                    OutlinedButton(
+                      onPressed: () => context.push('/register'),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                      child: const Text('New student? Create account'),
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      children: [
+                        TextButton(onPressed: () => openLegalPage(context, 'privacy'), child: const Text('Privacy policy')),
+                        TextButton(onPressed: () => openLegalPage(context, 'terms'), child: const Text('Terms')),
+                      ],
                     ),
                   ],
                 ),

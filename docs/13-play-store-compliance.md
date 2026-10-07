@@ -45,17 +45,18 @@ Research date: 2026-10-02. Policies badalte rehte hain — release se pehle Play
 5. Staged rollout (10% → 50% → 100%).
 
 ## Progress
+- [x] Consent: students accept terms + privacy policy before using the app; guardian consent for under-18 (DPDP). Stored in `consents` with version + time.
 - [ ] Account type decide (Organization recommended)
 - [ ] Developer verification complete
-- [ ] targetSdk 36 + AAB + App Signing
-- [ ] Permissions audit (minimal)
-- [ ] Privacy policy page (public URL)
-- [ ] Account deletion (in-app + web URL)
+- [ ] targetSdk 36 (✅ done) + AAB + App Signing (release key still missing)
+- [x] Permissions audit (minimal): only INTERNET + POST_NOTIFICATIONS
+- [x] Privacy policy page (public URL): admin-web `/privacy` (+ `/terms`), linked from login, consent screen and app Profile. Institute name/contact from Settings. Have a lawyer read it once.
+- [x] Account deletion (in-app + web URL): app Profile → Delete my account, public `/delete-account`, admin web → Deletion Requests (deletes personal data, keeps anonymous scores)
 - [ ] Data safety form
 - [ ] Content rating
 - [ ] Target audience (13+) declared
 - [ ] Reviewer demo credentials added
-- [ ] No pricing/pay UI in app (payments policy check)
+- [x] No pricing/pay UI in app (payments policy check)
 - [ ] Store listing assets
 - [ ] Internal → closed testing
 - [ ] Pre-launch report clean

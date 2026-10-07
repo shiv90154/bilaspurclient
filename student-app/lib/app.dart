@@ -7,7 +7,10 @@ import 'core/security.dart';
 import 'core/theme.dart';
 import 'data/models.dart';
 import 'features/auth/auth_controller.dart';
+import 'features/auth/consent_screen.dart';
+import 'features/auth/forgot_password_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
 import 'features/classes/classes_screen.dart';
 import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
@@ -18,10 +21,16 @@ import 'features/shell/main_shell.dart';
 import 'features/tests/result_screen.dart';
 import 'features/tests/take_test_screen.dart';
 import 'features/tests/tests_screen.dart';
+import 'features/videos/videos_screen.dart';
 import 'widgets/watermark.dart';
 
 /// Null = device OK, otherwise the reason it is refused.
-final deviceProblemProvider = FutureProvider<String?>((_) => Security.deviceProblem());
+/// Checked again every time the app comes back to the front (e.g. after turning on Developer options).
+final deviceProblemProvider = FutureProvider<String?>((ref) {
+  final lifecycle = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(lifecycle.dispose);
+  return Security.deviceProblem();
+});
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Re-evaluate redirects whenever login state changes.
@@ -47,6 +56,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
+/// Screens that work without being logged in.
+const _publicScreens = {'/login', '/register', '/forgot'};
+
 GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
   return GoRouter(
     initialLocation: '/',
@@ -58,15 +70,22 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         case AuthStatus.loading:
           return at == '/' ? null : '/';
         case AuthStatus.loggedOut:
-          return at == '/login' ? null : '/login';
+          return _publicScreens.contains(at) ? null : '/login';
         case AuthStatus.loggedIn:
-          // Any in-app screen is fine; only the splash and login are off limits once signed in.
-          return at == '/' || at == '/login' ? '/home' : null;
+          // Nothing opens until the current terms are accepted (DPDP Act, Play Store).
+          if (ref.read(authProvider).user?.consentRequired ?? false) {
+            return at == '/consent' ? null : '/consent';
+          }
+          // Any in-app screen is fine; only the splash, login and consent are off limits once signed in.
+          return at == '/' || at == '/consent' || _publicScreens.contains(at) ? '/home' : null;
       }
     },
     routes: [
       GoRoute(path: '/', builder: (_, _) => const _Splash()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/consent', builder: (_, _) => const ConsentScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/forgot', builder: (_, _) => const ForgotPasswordScreen()),
       // The five main tabs share one bottom bar. Everything below the shell is full screen.
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => MainShell(shell: shell),
@@ -95,6 +114,7 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         builder: (_, state) => DoubtThreadScreen(id: state.pathParameters['id']!),
       ),
       GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
+      GoRoute(path: '/videos', builder: (_, _) => const VideosScreen()),
     ],
   );
 }
@@ -108,19 +128,25 @@ class EduManageApp extends ConsumerWidget {
 
     final problem = ref.watch(deviceProblemProvider).value;
     if (problem != null) {
-      return MaterialApp(theme: theme, home: _Blocked(reason: problem));
+      return MaterialApp(
+        theme: theme,
+        home: _Blocked(reason: problem, onRetry: () => ref.invalidate(deviceProblemProvider)),
+      );
     }
     return MaterialApp.router(
       title: 'DHĪ',
       theme: theme,
       routerConfig: ref.watch(routerProvider),
       // One watermark over every screen once signed in (notes, tests, doubts, ...), so no screen
-      // can forget it. Student name + phone make a leaked photo traceable.
+      // can forget it. Student name + phone make a leaked photo traceable. The admin turns it
+      // on or off in the panel's Settings (off by default).
       builder: (context, child) => Consumer(
         builder: (context, ref, _) {
           final user = ref.watch(authProvider.select((s) => s.user));
           final content = child ?? const SizedBox.shrink();
-          return user == null ? content : Watermark(text: '${user.name} · ${user.phone}', child: content);
+          return user == null || !user.watermarkEnabled
+              ? content
+              : Watermark(text: '${user.name} · ${user.phone}', child: content);
         },
       ),
     );
@@ -146,8 +172,9 @@ class _Splash extends StatelessWidget {
 }
 
 class _Blocked extends StatelessWidget {
-  const _Blocked({required this.reason});
+  const _Blocked({required this.reason, required this.onRetry});
   final String reason;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -158,9 +185,13 @@ class _Blocked extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.gpp_bad_outlined, size: 56),
+              Icon(Icons.gpp_bad_outlined, size: 56, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 16),
+              Text('This phone is not safe for DHĪ', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
               Text(reason, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Check again')),
             ],
           ),
         ),

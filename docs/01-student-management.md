@@ -50,18 +50,20 @@ Student registration, profile, contact details, academic details, course/batch, 
 
 ## Progress
 - [x] DB migrations (all tables are in `backend/prisma/schema.prisma`)
-- [x] Students CRUD API (compiled; not yet run against DB)
-- [x] Courses & batches API (compiled; not yet run against DB)
-- [x] Student–batch assignment (compiled; not yet run against DB)
-- [ ] Documents upload/view
-- [x] Enquiries API + convert to student (compiled; not yet run against DB)
+- [x] Students CRUD API
+- [x] Courses & batches API
+- [x] Student–batch assignment
+- [x] Documents upload/view (`/students/:id/documents`: PDF/JPG/PNG/WebP by file bytes, 10 MB, admin only, signed 5-min link, every open logged)
+- [x] Photo (`/students/:id/photo`)
+- [x] Enquiries API + convert to student
 - [x] Search / filter / pagination
-- [ ] CSV export
-- [ ] Admin web: list + add/edit
-- [ ] Admin web: student detail page
-- [ ] Android: profile screen
-- [ ] Student web: profile page
-- [ ] Tests
+- [x] CSV export (`GET /students/export`, same filters as the list, Excel-safe)
+- [x] Student-wise records (`GET /students/:id/records`: tests, attendance, doubts, notes opened)
+- [x] Admin web: list + add/edit + Export CSV
+- [x] Admin web: student detail page (tabs: profile, tests & attendance, documents, batches & devices, reset password)
+- [x] Android: profile screen (`GET /students/me` + change password)
+- [x] Student web: profile page
+- [x] Tests (`npm run smoke:profile`)
 
 ## Notes
 - Phone number unique rakho (login ke liye bhi use ho sakta hai).

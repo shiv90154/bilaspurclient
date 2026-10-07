@@ -121,4 +121,52 @@ class ContentApi {
   Future<void> setResolved(String id, {required bool resolved}) => _run(() async {
         await _dio.post<void>('/doubts/$id/${resolved ? 'resolve' : 'reopen'}');
       });
+
+  // ── profile ──
+  Future<MyProfile> myProfile() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/students/me');
+        final origin = Uri.parse(apiUrl).replace(path: '', query: '').toString();
+        return MyProfile.fromJson(res.data!, origin);
+      });
+
+  /// Other devices are logged out; this one stays signed in.
+  Future<void> changePassword(String current, String next) => _run(() async {
+        await _dio.post<void>('/auth/change-password', data: {'currentPassword': current, 'newPassword': next});
+      });
+
+  // ── privacy ──
+  /// Institute name and the current terms version, for the consent screen.
+  Future<({String instituteName, String termsVersion})> privacyInfo() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/privacy/info');
+        return (
+          instituteName: res.data!['instituteName'] as String? ?? 'the institute',
+          termsVersion: res.data!['termsVersion'] as String,
+        );
+      });
+
+  Future<void> acceptConsent({required String version, String? guardianName}) => _run(() async {
+        await _dio.post<void>('/privacy/consent', data: {
+          'version': version,
+          'accepted': true,
+          if (guardianName != null) 'guardianAgree': true,
+          'guardianName': ?guardianName,
+        });
+      });
+
+  /// When the student already asked to delete the account: the date they asked, else null.
+  Future<DateTime?> pendingDeletion() => _run(() async {
+        final res = await _dio.get<dynamic>('/privacy/deletion-request');
+        final data = res.data;
+        return data is Map && data['createdAt'] != null ? DateTime.parse(data['createdAt'] as String).toLocal() : null;
+      });
+
+  Future<void> requestDeletion(String? reason) => _run(() async {
+        await _dio.post<void>('/privacy/deletion-request', data: {if (reason != null && reason.isNotEmpty) 'reason': reason});
+      });
+
+  // ── recorded videos ──
+  Future<List<VideoItem>> videos() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/videos', queryParameters: {'limit': 100});
+        return [for (final v in res.data!['items'] as List) VideoItem.fromJson(v as Map<String, dynamic>)];
+      });
 }

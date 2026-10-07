@@ -8,3 +8,15 @@ const apiUrl = String.fromEnvironment(
 
 /// Turns a server-relative path ("/api/files/...") into a full URL on the API host.
 String absoluteUrl(String path) => Uri.parse(apiUrl).replace(path: path, query: null).toString();
+
+/// Public website with the privacy policy, terms and account deletion pages. Override with
+/// --dart-define=WEB_URL=https://admin.example.com; otherwise `api.<domain>` becomes `admin.<domain>`
+/// (local dev: port 3000 becomes the web's 3001).
+final String webUrl = () {
+  const given = String.fromEnvironment('WEB_URL');
+  if (given.isNotEmpty) return given;
+  final api = Uri.parse(apiUrl);
+  final host = api.host.startsWith('api.') ? 'admin.${api.host.substring(4)}' : api.host;
+  final port = api.hasPort && api.port == 3000 ? 3001 : (api.hasPort ? api.port : null);
+  return Uri(scheme: api.scheme, host: host, port: port).toString();
+}();

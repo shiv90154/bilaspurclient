@@ -2,6 +2,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Android 13+: needed to show class reminders and doubt replies. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Lets MainActivity hide other apps' overlay windows over DHĪ (Android 12+, no user prompt). -->
+    <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS"/>
     <application
         android:label="DHĪ"
         android:name="${applicationName}"
