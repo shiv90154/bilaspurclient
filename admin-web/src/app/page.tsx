@@ -6,13 +6,7 @@ import { getSessionUser } from "@/lib/server/session";
 
 export const metadata: Metadata = {
   title: { absolute: "DHĪ · Ayurveda Classroom by Dr. Pardeuman Singh" },
-  description:
-    "Learn Ayurveda with Dr. Pardeuman Singh: live classes, PDF notes, test series and doubt solving in the DHĪ app.",
-  openGraph: {
-    title: "DHĪ · Ayurveda Classroom",
-    description: "Live classes, notes, test series and doubt solving with Dr. Pardeuman Singh.",
-    images: ["/founder-portrait.jpg"],
-  },
+  alternates: { canonical: "/" },
 };
 
 /** Public website for visitors; signed-in users go straight to their home. */
