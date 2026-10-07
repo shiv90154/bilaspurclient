@@ -8,6 +8,7 @@ export const SITE = {
   whatsappHref: "https://wa.me/918091334667",
   email: "dr.pardeuman@gmail.com",
   location: "Himachal Pradesh, India",
+  playStore: "https://play.google.com/store/apps/details?id=com.edumanage.student_app",
   youtube: "https://youtube.com/@ayurveda-classroom",
   facebook: "https://www.facebook.com/share/1AoyiXEE2W/",
   instagram: "https://www.instagram.com/pardeumansingh",

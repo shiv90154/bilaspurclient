@@ -16,10 +16,9 @@ export const metadata: Metadata = {
 };
 
 /** Public website for visitors; signed-in users go straight to their home. */
-export default async function RootPage({ searchParams }: { searchParams: Promise<{ app?: string }> }) {
+export default async function RootPage() {
   const state = await getSessionUser();
   if (state.status === "ok") redirect(ROLE_HOME[state.user.role]);
   if (state.status === "needs-refresh") redirect("/api/session/refresh?next=/");
-  const { app } = await searchParams;
-  return <Landing appSoon={app === "soon"} />;
+  return <Landing />;
 }

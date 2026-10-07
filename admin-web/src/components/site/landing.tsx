@@ -46,6 +46,37 @@ function InstagramIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+function GooglePlayIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path fill="#34A853" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.7-.6-1.2V3c0-.5.2-1 .6-1.2Z" />
+      <path fill="#FBBC04" d="m17.2 15.4-3.4-3.4 3.4-3.4 3.9 2.2c1.1.6 1.1 1.8 0 2.4l-3.9 2.2Z" />
+      <path fill="#EA4335" d="M17.2 15.4 13.8 12 3.6 22.2c.4.2.9.2 1.4-.1l12.2-6.7Z" />
+      <path fill="#4285F4" d="M17.2 8.6 5 1.9c-.5-.3-1-.3-1.4-.1L13.8 12l3.4-3.4Z" />
+    </svg>
+  );
+}
+
+/** "Get it on Google Play" button, styled like the official badge. */
+function PlayStoreButton({ light = false }: { light?: boolean }) {
+  return (
+    <a
+      href={SITE.playStore}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex h-14 items-center justify-center gap-3 rounded-xl px-5 transition ${
+        light ? "bg-white text-ink hover:bg-white/90" : "bg-ink text-white hover:bg-black"
+      }`}
+    >
+      <GooglePlayIcon size={26} />
+      <span className="flex flex-col text-left leading-none">
+        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">Get it on</span>
+        <span className="mt-1 text-[18px] font-semibold">Google Play</span>
+      </span>
+    </a>
+  );
+}
+
 const SOCIALS = [
   { href: SITE.youtube, label: "YouTube", icon: YoutubeIcon },
   { href: SITE.instagram, label: "Instagram", icon: InstagramIcon },
@@ -62,14 +93,14 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { icon: Download, title: "Download the app", text: "Get the DHĪ Android app from this website." },
+  { icon: Download, title: "Download the app", text: "Get the DHĪ app from the Google Play Store." },
   { icon: UserPlus, title: "Register", text: "Sign up with your name, phone and email. Verify with a one-time code." },
   { icon: BadgeCheck, title: "Start learning", text: "Once the institute approves you, your batch’s classes, notes and tests open up." },
 ];
 
 function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
   return (
-    <section id={id} className={`scroll-mt-20 px-4 sm:px-6 ${className}`}>
+    <section id={id} className={`scroll-mt-28 md:scroll-mt-20 px-4 sm:px-6 ${className}`}>
       <div className="mx-auto w-full max-w-6xl">{children}</div>
     </section>
   );
@@ -85,10 +116,9 @@ function Eyebrow({ children }: { children: ReactNode }) {
 }
 
 const btn = "inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold transition";
-const btnPrimary = `${btn} bg-primary text-white shadow-sm hover:bg-primary-dark`;
 const btnOutline = `${btn} border border-primary/25 bg-surface text-primary hover:border-primary hover:bg-primary-tint`;
 
-export function Landing({ appSoon = false }: { appSoon?: boolean }) {
+export function Landing() {
   const year = new Date().getFullYear();
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -112,6 +142,12 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
             <LogIn size={16} /> Log in
           </Link>
         </div>
+        <nav className="flex justify-between gap-4 overflow-x-auto border-t border-line/60 px-4 py-2.5 text-[13px] font-medium text-sub md:hidden" aria-label="Sections">
+          <a href="#about" className="shrink-0 hover:text-primary">About</a>
+          <a href="#features" className="shrink-0 hover:text-primary">What you get</a>
+          <a href="#app" className="shrink-0 hover:text-primary">App</a>
+          <a href="#contact" className="shrink-0 hover:text-primary">Contact</a>
+        </nav>
       </header>
 
       <main>
@@ -133,10 +169,8 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
                 all in one app.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a href="/download" className={btnPrimary}>
-                  <Download size={18} /> Download the app
-                </a>
-                <a href={SITE.youtube} target="_blank" rel="noopener noreferrer" className={btnOutline}>
+                <PlayStoreButton />
+                <a href={SITE.youtube} target="_blank" rel="noopener noreferrer" className={`${btnOutline} sm:h-14`}>
                   <YoutubeIcon size={18} /> Watch free lessons
                 </a>
               </div>
@@ -151,7 +185,7 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
             </div>
 
             <div className="relative mx-auto w-full max-w-[400px]">
-              <div className="absolute -inset-3 rounded-[2.2rem] border border-accent/40" aria-hidden="true" />
+              <div className="absolute -inset-2 rounded-[2.2rem] sm:-inset-3 border border-accent/40" aria-hidden="true" />
               <div className="relative overflow-hidden rounded-[2rem] bg-surface shadow-xl shadow-primary/10">
                 <img
                   src="/founder-portrait.jpg"
@@ -189,10 +223,9 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
                 alt={`${SITE.founder} seated in a white coat`}
                 width={900}
                 height={1200}
-                loading="lazy"
-                className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-lg shadow-primary/10"
+                                className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-lg shadow-primary/10"
               />
-              <div className="absolute -bottom-5 -right-3 rounded-2xl bg-accent px-5 py-3 text-white shadow-lg sm:-right-6">
+              <div className="absolute -bottom-5 right-3 rounded-2xl bg-accent px-5 py-3 text-white shadow-lg sm:-right-6">
                 <p className="text-[12px] uppercase tracking-wider text-white/85">Teaching on</p>
                 <p className="text-[15px] font-semibold">YouTube · App · Live</p>
               </div>
@@ -284,22 +317,12 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
                   Download the app, register and start learning once you are approved. On an iPhone or a computer, log in on
                   this website for classes, doubts and your profile.
                 </p>
-                {appSoon && (
-                  <p role="status" className="mt-5 inline-block rounded-lg bg-accent px-4 py-2 text-[14px] font-semibold text-white">
-                    The app download will be available here soon. Please contact us meanwhile.
-                  </p>
-                )}
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <a href="/download" className={`${btn} bg-accent text-white hover:brightness-110`}>
-                    <Download size={18} /> Download APK
-                  </a>
-                  <Link href="/login" className={`${btn} border border-white/30 text-white hover:bg-white/10`}>
+                  <PlayStoreButton light />
+                  <Link href="/login" className={`${btn} h-14 border border-white/30 text-white hover:bg-white/10`}>
                     Log in on the web <ArrowRight size={18} />
                   </Link>
                 </div>
-                <p className="mt-4 text-[12px] text-white/60">
-                  If Android asks, allow &quot;Install unknown apps&quot; for your browser, then tap Install.
-                </p>
               </div>
               <div className="hidden justify-center lg:flex">
                 <div className="flex h-56 w-56 items-center justify-center rounded-[2.5rem] bg-white/5 ring-1 ring-white/15">
@@ -357,7 +380,7 @@ export function Landing({ appSoon = false }: { appSoon?: boolean }) {
             <Link href="/privacy" className="hover:text-primary">Privacy policy</Link>
             <a href="#features" className="hover:text-primary">What you get</a>
             <Link href="/terms" className="hover:text-primary">Terms of use</Link>
-            <a href="/download" className="hover:text-primary">Download app</a>
+            <a href={SITE.playStore} target="_blank" rel="noopener noreferrer" className="hover:text-primary">Get the app</a>
             <Link href="/delete-account" className="hover:text-primary">Delete my account</Link>
             <Link href="/login" className="hover:text-primary">Log in</Link>
             <Link href="/register" className="hover:text-primary">Register</Link>
