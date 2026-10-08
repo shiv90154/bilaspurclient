@@ -10,7 +10,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
       {user.demo && !user.consentRequired && (
         <p role="status" className="mb-4 rounded-xl bg-accent-tint px-4 py-3 text-[13px] text-accent-ink">
           <b>Demo account.</b> You registered for {user.requestedCourse?.name ?? "a course"}. The institute will approve your
-          admission soon; until then you can try the free demo notes and tests in the Android app. Classes and doubts open after approval.
+          admission soon; until then you can try the free demo notes and tests in the Android app. Classes and doubts open after approval,
+          or right away when you pay the fee under <a href="/learn/fees" className="font-bold underline">Fees</a>.
         </p>
       )}
       {user.consentRequired ? <ConsentForm /> : children}

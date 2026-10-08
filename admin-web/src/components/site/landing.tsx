@@ -19,7 +19,17 @@ import {
   Video,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { inr } from "@/lib/api";
 import { SITE } from "@/lib/site";
+
+/** An open course fee from GET /fee-plans/public. */
+export interface PublicPlan {
+  id: string;
+  name: string;
+  total: string;
+  course: { id: string; name: string; description: string | null };
+  batch: { id: string; name: string; startDate: string | null } | null;
+}
 
 // lucide-react 1.x dropped brand icons, so the three social marks are drawn here.
 function YoutubeIcon({ size = 20 }: { size?: number }) {
@@ -95,7 +105,7 @@ const FEATURES = [
 const STEPS = [
   { icon: Download, title: "Download the app", text: "Get the DHĪ app from the Google Play Store." },
   { icon: UserPlus, title: "Register", text: "Sign up with your name, phone and email. Verify with a one-time code." },
-  { icon: BadgeCheck, title: "Start learning", text: "Once the institute approves you, your batch’s classes, notes and tests open up." },
+  { icon: BadgeCheck, title: "Start learning", text: "Pay the course fee on this website (or at the institute) and your batch’s classes, notes and tests open up." },
 ];
 
 function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
@@ -118,7 +128,7 @@ function Eyebrow({ children }: { children: ReactNode }) {
 const btn = "inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold transition";
 const btnOutline = `${btn} border border-primary/25 bg-surface text-primary hover:border-primary hover:bg-primary-tint`;
 
-export function Landing() {
+export function Landing({ plans = [] }: { plans?: PublicPlan[] }) {
   const year = new Date().getFullYear();
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -135,6 +145,7 @@ export function Landing() {
           <nav className="hidden items-center gap-7 text-[14px] font-medium text-sub md:flex" aria-label="Main">
             <a href="#about" className="hover:text-primary">About</a>
             <a href="#features" className="hover:text-primary">What you get</a>
+            {plans.length > 0 && <a href="#courses" className="hover:text-primary">Courses</a>}
             <a href="#app" className="hover:text-primary">App</a>
             <a href="#contact" className="hover:text-primary">Contact</a>
           </nav>
@@ -145,6 +156,7 @@ export function Landing() {
         <nav className="flex justify-between gap-4 overflow-x-auto border-t border-line/60 px-4 py-2.5 text-[13px] font-medium text-sub md:hidden" aria-label="Sections">
           <a href="#about" className="shrink-0 hover:text-primary">About</a>
           <a href="#features" className="shrink-0 hover:text-primary">What you get</a>
+          {plans.length > 0 && <a href="#courses" className="shrink-0 hover:text-primary">Courses</a>}
           <a href="#app" className="shrink-0 hover:text-primary">App</a>
           <a href="#contact" className="shrink-0 hover:text-primary">Contact</a>
         </nav>
@@ -280,6 +292,42 @@ export function Landing() {
             ))}
           </div>
         </Section>
+
+        {/* Courses and fees (only when the institute has opened some for online payment) */}
+        {plans.length > 0 && (
+          <Section id="courses" className="py-16 lg:py-24">
+            <div className="max-w-2xl">
+              <Eyebrow>Courses</Eyebrow>
+              <h2 className="mt-4 text-[30px] font-bold leading-tight text-primary-dark sm:text-[38px]">Join a course</h2>
+              <p className="mt-3 text-[16px] text-sub">
+                Pay securely online with UPI, card or net banking. Your course opens in the app as soon as the payment goes through.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {plans.map((p) => (
+                <article key={p.id} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-ink">{p.course.name}</p>
+                  <h3 className="mt-2 text-[18px] font-semibold text-ink">{p.name}</h3>
+                  {p.course.description && <p className="mt-2 text-[14px] leading-relaxed text-sub">{p.course.description}</p>}
+                  {p.batch?.startDate && (
+                    <p className="mt-2 text-[13px] text-sub">
+                      Starts {new Date(p.batch.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                  <div className="mt-auto pt-5">
+                    <p className="text-[26px] font-bold text-primary-dark">{inr(p.total)}</p>
+                    <Link href={`/learn/fees?plan=${p.id}`} className={`${btn} mt-3 w-full bg-primary text-white hover:bg-primary-dark`}>
+                      Join now <ArrowRight size={18} />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <p className="mt-6 text-[14px] text-sub">
+              New here? <Link href="/register" className="font-semibold text-primary">Register first</Link>, then log in and pay under Fees.
+            </p>
+          </Section>
+        )}
 
         {/* How to join */}
         <Section className="py-16 lg:py-24">

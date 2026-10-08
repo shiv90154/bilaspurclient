@@ -38,7 +38,7 @@ function getDeviceId(): string {
   }
 }
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const {
@@ -76,7 +76,7 @@ export function LoginForm() {
     }
 
     const { user } = (await res.json()) as { user: AuthProfile };
-    router.replace(ROLE_HOME[user.role]);
+    router.replace((user.role === "STUDENT" && next?.startsWith("/learn") ? next : undefined) ?? ROLE_HOME[user.role]);
     router.refresh();
   }
 

@@ -23,6 +23,7 @@
     "smoke:profile": "node scripts/smoke-profile.mjs",
     "smoke:privacy": "node scripts/smoke-privacy.mjs",
     "smoke:register": "node scripts/smoke-register.mjs",
+    "smoke:payments": "node scripts/smoke-payments.mjs",
     "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

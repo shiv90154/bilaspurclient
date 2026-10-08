@@ -16,15 +16,20 @@ const REASONS: Record<string, string> = {
   BACKEND_UNREACHABLE: "The server is not reachable right now.",
 };
 
+/** Where to go after login: an internal page the visitor was sent away from (e.g. /learn/fees?plan=…). */
+function safeNext(next?: string | null): string | undefined {
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/api") ? next : undefined;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string }>;
+  searchParams: Promise<{ reason?: string; next?: string }>;
 }) {
-  const state = await getSessionUser();
+  const [state, { reason, next: rawNext }] = await Promise.all([getSessionUser(), searchParams]);
+  const next = safeNext(rawNext);
   if (state.status === "ok") redirect(ROLE_HOME[state.user.role]);
 
-  const { reason } = await searchParams;
   const notice = reason ? REASONS[reason] : undefined;
 
   return (
@@ -41,7 +46,7 @@ export default async function LoginPage({
         )}
 
         <div className="mt-5">
-          <LoginForm />
+          <LoginForm next={next} />
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[13px]">
           <Link href="/forgot-password" className="font-semibold text-primary hover:underline">Forgot password?</Link>

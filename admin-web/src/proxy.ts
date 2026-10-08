@@ -17,7 +17,10 @@ export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has(REFRESH_COOKIE);
 
   if (!hasSession && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    // Come back here after login (e.g. "Join now" on the website → /learn/fees?plan=…).
+    if (pathname.startsWith("/learn")) login.searchParams.set("next", pathname + request.nextUrl.search);
+    return NextResponse.redirect(login);
   }
 
   const headers = new Headers(request.headers);

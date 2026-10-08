@@ -39,11 +39,24 @@ export default async function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Fees and access">
-        <p>
-          Fees are paid to the institute outside the app. The app does not sell anything. The institute may pause access
-          (for example when a student is inactive or fees are pending) as per the admission terms.
-        </p>
+      <Section title="Fees, payments and refunds">
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            Course fees are paid on this website (Fees section after signing in) through Razorpay, or at the institute.
+            The app itself does not sell anything. Prices are in Indian rupees and include taxes.
+          </li>
+          <li>Card, UPI and bank details are entered on Razorpay&apos;s secure page; we never see or store them.</li>
+          <li>When a payment goes through, the course opens in the app at once and a receipt is available on the website.</li>
+          <li>
+            If money is taken but the course does not open, contact us with the payment ID; it is settled within 2 working
+            days, or refunded.
+          </li>
+          <li>
+            Fees are not refundable once the course has started or study content has been opened, except when the
+            institute cancels the course. Approved refunds go back to the original payment method within 7 working days.
+          </li>
+          <li>The institute may pause access (for example when a student is inactive or fees are pending) as per the admission terms.</li>
+        </ul>
       </Section>
 
       <Section title="Availability">

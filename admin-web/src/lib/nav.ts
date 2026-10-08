@@ -5,6 +5,7 @@ import {
   FileText,
   GraduationCap,
   Home,
+  IndianRupee,
   LayoutDashboard,
   MessageCircleQuestion,
   PlayCircle,
@@ -35,6 +36,7 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/registrations", label: "Registrations", icon: UserCheck, roles: ["ADMIN"] },
   { href: "/enquiries", label: "Enquiries", icon: UserPlus, roles: ["ADMIN"] },
   { href: "/courses", label: "Courses & Batches", icon: GraduationCap, roles: ["ADMIN"] },
+  { href: "/fees", label: "Fees & Payments", icon: IndianRupee, roles: ["ADMIN"] },
   { href: "/question-bank", label: "Question Bank", icon: BookOpenCheck, roles: ["ADMIN", "FACULTY"] },
   { href: "/tests", label: "Tests", icon: ClipboardCheck, roles: ["ADMIN", "FACULTY"] },
   { href: "/materials", label: "Study Material", icon: FileText, roles: ["ADMIN", "FACULTY"] },
@@ -53,5 +55,6 @@ export const STUDENT_NAV: Omit<NavItem, "roles">[] = [
   { href: "/learn", label: "Home", icon: Home },
   { href: "/learn/classes", label: "Classes", icon: Video },
   { href: "/learn/doubts", label: "Doubts", icon: MessageCircleQuestion },
+  { href: "/learn/fees", label: "Fees", icon: IndianRupee },
   { href: "/learn/profile", label: "Profile", icon: UserCircle },
 ];

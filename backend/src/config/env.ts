@@ -30,6 +30,13 @@ export const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().optional(), // e.g. "DHĪ <no-reply@example.com>"
 
+  // Online fees on the website (Razorpay dashboard > Account & Settings > API keys / Webhooks).
+  // Without the keys online payment answers "not set up"; offline entries still work.
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_API_URL: z.string().url().default('https://api.razorpay.com/v1'), // overridden only by smoke tests
+
   DEVICE_CHANGE_LIMIT_30D: z.coerce.number().int().positive().default(3),
   LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),

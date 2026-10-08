@@ -1,6 +1,10 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { FeesView } from "@/components/admin/fees-view";
+import { requireUser } from "@/lib/server/session";
 
-// Fees are not part of this release, so the page is not offered. A saved link lands on the dashboard.
-export default function Page() {
-  redirect("/dashboard");
+export const metadata: Metadata = { title: "Fees & payments" };
+
+export default async function Page() {
+  await requireUser(["ADMIN"]);
+  return <FeesView />;
 }

@@ -27,7 +27,7 @@ Research date: 2026-10-02. Policies badalte rehte hain — release se pehle Play
 4. **App access for review:** app login-gated hai → Play Console mein **demo student credentials** + instructions do, warna reject.
 5. **Content rating** questionnaire (IARC) bharo.
 6. **Target audience & content:** students minors (13–17) ho sakte hain. Audience 13+ declare karo, **13 se kam ko target mat karo** (warna Families Policy). Ads/analytics SDK kam rakho.
-7. **Payments policy:** fees website par hai (decision). App mein **koi price, "buy", "pay on website" link ya course-selling UI nahi** — Play Billing rule: app ke andar digital access ke liye payment ho to Google Play Billing zaroori (India mein external-payment program nahi). App sirf already-enrolled students ka content access karaye. Release se pehle policy dobara verify karo.
+7. **Payments policy:** fees website par hai (decision). App mein **koi price, "buy", "pay on website" link ya course-selling UI nahi** — Play Billing rule: app ke andar digital access ke liye payment ho to Google Play Billing zaroori (India mein ab "user choice billing" bhi hai, par usme bhi Google fee lagti hai aur PCI DSS chahiye; isliye hum website-only rakhte hain). App sirf already-enrolled students ka content access karaye. Release se pehle policy dobara verify karo.
 8. **User-generated content:** doubts private student↔faculty hain (low risk); phir bhi report/abuse contact rakho.
 9. **Security features OK:** `FLAG_SECURE`, root detection, Play Integrity allowed. Par app description mein deceptive claims nahi.
 10. **Copyright:** lectures/notes ka content client ka ho, third-party copyrighted material upload na ho.

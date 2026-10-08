@@ -345,3 +345,61 @@ export interface StudentRecords {
 /** A plain link to a CSV route through the proxy; the browser downloads it with the session cookie. */
 export const csvHref = (path: string, params: Record<string, string | number | boolean | undefined | null> = {}) =>
   `/api/backend${path}${qs(params)}`;
+
+// ───────────── fees (website only) ─────────────
+
+export interface FeePlan {
+  id: string;
+  name: string;
+  total: string; // rupees, as a decimal string
+  active?: boolean;
+  course: { id: string; name: string; description: string | null };
+  batch: { id: string; name: string; startDate: string | null; active?: boolean } | null;
+  _count?: { fees: number };
+}
+
+export interface MyFeePlan extends FeePlan {
+  enrolled: boolean;
+  paid: string;
+  due: string;
+}
+
+export type PaymentMode = "RAZORPAY" | "CASH" | "UPI" | "CHEQUE" | "BANK_TRANSFER";
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "REJECTED";
+
+export interface Payment {
+  id: string;
+  amount: string;
+  mode: PaymentMode;
+  status: PaymentStatus;
+  receiptNo: string | null;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  notes: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  approvedBy: { name: string } | null;
+  studentFee: {
+    id: string;
+    total: string;
+    discount: string;
+    status: "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
+    plan: { id: string; name: string; course: { name: string }; batch: { name: string } | null };
+    student: { id: string; admissionNo: string | null; user: { name: string; phone: string; email: string | null } };
+  };
+  institute?: { instituteName: string; contactEmail: string; contactPhone: string; address: string };
+}
+
+export const PAYMENT_MODE_LABEL: Record<PaymentMode, string> = {
+  RAZORPAY: "Online (Razorpay)",
+  CASH: "Cash",
+  UPI: "UPI to institute",
+  CHEQUE: "Cheque",
+  BANK_TRANSFER: "Bank transfer",
+};
+
+/** ₹4,999 or ₹4,999.50 */
+export const inr = (v: string | number) => {
+  const n = Number(v);
+  return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+};
