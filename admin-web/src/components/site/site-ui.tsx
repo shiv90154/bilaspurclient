@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, BadgeCheck, CirclePlay, ClipboardCheck, Download, FileText, MessageCircle, ShieldCheck, UserPlus, Video } from "lucide-react";
 import { inr } from "@/lib/api";
-import { SITE } from "@/lib/site";
+import { FOUNDER, SITE } from "@/lib/site";
 
 /** An open course fee from GET /fee-plans/public. */
 export interface PublicPlan {
@@ -256,5 +256,19 @@ export function FounderPhoto({ src, alt, caption }: { src: string; alt: string; 
         )}
       </div>
     </div>
+  );
+}
+
+/** The founder's numbers (years, selections, exams) in a row of tiles. */
+export function FounderStats({ className = "" }: { className?: string }) {
+  return (
+    <ul className={`grid grid-cols-2 gap-3 lg:grid-cols-4 ${className}`}>
+      {FOUNDER.stats.map((s) => (
+        <li key={s.label} className="rounded-2xl border border-line bg-surface p-5 text-center">
+          <span className="block text-[32px] font-bold leading-none text-primary sm:text-[38px]">{s.value}</span>
+          <span className="mt-2 block text-[13px] leading-snug text-sub">{s.label}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

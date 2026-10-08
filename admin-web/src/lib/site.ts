@@ -13,3 +13,28 @@ export const SITE = {
   facebook: "https://www.facebook.com/share/1AoyiXEE2W/",
   instagram: "https://www.instagram.com/pardeumansingh",
 } as const;
+
+/** Founder profile (from Dr. Pardeuman Singh, Oct 2026). */
+export const FOUNDER = {
+  degrees: "BAMS, MS (Shalya Tantra)",
+  role: "Associate Professor, Shalya Tantra",
+  stats: [
+    { value: "15+", label: "Years of teaching" },
+    { value: "400+", label: "Students selected in AIAPGET & AMO" },
+    { value: "6", label: "AMO exams cleared (5 State + 1 Central)" },
+    { value: "15+", label: "Years in clinical surgery" },
+  ],
+  education: [
+    { degree: "MS, Shalya Tantra (Surgery)", place: "Rajiv Gandhi Ayurvedic Medical College & Hospital, Paprola (H.P.)" },
+    { degree: "BAMS", year: "2011", place: "Guru Nanak Ayurvedic Medical College & Hospital, Gopalpur, Ludhiana (Punjab)" },
+  ],
+  achievements: [
+    "Cleared the State AMO exam all five times he appeared",
+    "Cleared a central-level AMO exam",
+    "Prepared students for AIAPGET (PG entrance) and AMO exams for 15 years",
+    "About 400 students selected in AIAPGET and AMO exams",
+  ],
+  clinical:
+    "For 15 years he has served in the Shalya Tantra (surgery) department, conducting a wide range of surgeries and giving patients relief. That daily clinical work is why his classes connect every concept to real patients.",
+} as const;
+

@@ -11,6 +11,7 @@ import {
   FeatureGrid,
   FEATURES,
   FounderPhoto,
+  FounderStats,
   PlayStoreButton,
   Section,
   SectionTitle,
@@ -20,7 +21,7 @@ import {
 import { ROLE_HOME } from "@/lib/constants";
 import { getOpenPlans } from "@/lib/server/public-plans";
 import { getSessionUser } from "@/lib/server/session";
-import { SITE } from "@/lib/site";
+import { FOUNDER, SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: { absolute: "DHĪ · Ayurveda Classroom by Dr. Pardeuman Singh" },
@@ -47,7 +48,8 @@ export default async function HomePage() {
               <span className="block text-accent">Don’t just memorise it.</span>
             </h1>
             <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-sub sm:text-[17px]">
-              Learn with {SITE.founder}: live classes, clear notes, exam-style test series and quick doubt solving, all in one app.
+              Prepare for AIAPGET and AMO with {SITE.founder} ({FOUNDER.degrees}): live classes, clear notes, exam-style test
+              series and quick doubt solving, all in one app.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/courses" className={`${btnSolid} sm:h-14`}>
@@ -72,11 +74,16 @@ export default async function HomePage() {
             caption={
               <>
                 <p className="text-[18px] font-semibold">{SITE.founder}</p>
-                <p className="text-[13px] text-white/80">Founder &amp; Faculty</p>
+                <p className="text-[13px] text-white/80">{FOUNDER.degrees} · {FOUNDER.role}</p>
               </>
             }
           />
         </div>
+      </Section>
+
+      {/* The founder in numbers */}
+      <Section className="pb-14">
+        <FounderStats />
       </Section>
 
       {/* Meaning of the name */}
