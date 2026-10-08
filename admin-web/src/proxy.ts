@@ -7,7 +7,7 @@ import { REFRESH_COOKIE } from "./lib/constants";
  * - exposes the path to server components (used for post-refresh redirects)
  * Real authentication/role checks happen in the layouts (requireUser).
  */
-const PUBLIC_PATHS = new Set(["/", "/download", "/login", "/register", "/forgot-password", "/privacy", "/terms", "/delete-account"]);
+const PUBLIC_PATHS = new Set(["/", "/about", "/courses", "/features", "/app", "/contact", "/download", "/login", "/register", "/forgot-password", "/privacy", "/terms", "/delete-account"]);
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

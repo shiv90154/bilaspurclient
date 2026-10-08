@@ -35,7 +35,7 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/students", label: "Students", icon: Users, roles: ["ADMIN", "FACULTY"] },
   { href: "/registrations", label: "Registrations", icon: UserCheck, roles: ["ADMIN"] },
   { href: "/enquiries", label: "Enquiries", icon: UserPlus, roles: ["ADMIN"] },
-  { href: "/courses", label: "Courses & Batches", icon: GraduationCap, roles: ["ADMIN"] },
+  { href: "/courses-batches", label: "Courses & Batches", icon: GraduationCap, roles: ["ADMIN"] },
   { href: "/fees", label: "Fees & Payments", icon: IndianRupee, roles: ["ADMIN"] },
   { href: "/question-bank", label: "Question Bank", icon: BookOpenCheck, roles: ["ADMIN", "FACULTY"] },
   { href: "/tests", label: "Tests", icon: ClipboardCheck, roles: ["ADMIN", "FACULTY"] },
