@@ -63,6 +63,14 @@ export interface Course {
   description: string | null;
   active: boolean;
   _count?: { batches: number };
+  // public course page
+  tagline?: string | null;
+  language?: string | null;
+  duration?: string | null;
+  highlights?: string[];
+  includes?: string[];
+  audience?: string[];
+  faqs?: { q: string; a: string }[] | null;
 }
 
 export interface Batch {
@@ -352,8 +360,9 @@ export interface FeePlan {
   id: string;
   name: string;
   total: string; // rupees, as a decimal string
+  mrp: string | null; // optional "was" price
   active?: boolean;
-  course: { id: string; name: string; description: string | null };
+  course: { id: string; name: string; description: string | null; tagline?: string | null };
   batch: { id: string; name: string; startDate: string | null; active?: boolean } | null;
   _count?: { fees: number };
 }

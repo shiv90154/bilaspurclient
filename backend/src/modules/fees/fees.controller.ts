@@ -45,6 +45,12 @@ export class FeesController {
     return this.fees.publicPlans();
   }
 
+  @Public()
+  @Get('fee-plans/public/:id')
+  publicPlan(@Param('id', ParseUUIDPipe) id: string) {
+    return this.fees.publicPlan(id);
+  }
+
   @Roles(Role.STUDENT)
   @Get('fee-plans/mine')
   plansForMe(@CurrentUser() user: AuthUser) {

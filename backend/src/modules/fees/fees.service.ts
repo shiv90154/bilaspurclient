@@ -10,12 +10,16 @@ import type { Paginated } from '../../common/dto/pagination.dto.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import {
+  ClassStatus,
+  ContentStatus,
   EnrollmentStatus,
   FeeStatus,
   PaymentMode,
   PaymentStatus,
   Role,
   StudentStatus,
+  TestStatus,
+  VideoStatus,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { escapeHtml } from '../account/otp.service.js';
@@ -39,8 +43,9 @@ const PLAN_SELECT = {
   id: true,
   name: true,
   total: true,
+  mrp: true,
   active: true,
-  course: { select: { id: true, name: true, description: true } },
+  course: { select: { id: true, name: true, description: true, tagline: true } },
   batch: { select: { id: true, name: true, startDate: true, active: true } },
 } satisfies Prisma.FeePlanSelect;
 
@@ -102,6 +107,45 @@ export class FeesService {
     };
   }
 
+  /** One open plan with everything its public course page shows: details, syllabus, live counts. */
+  async publicPlan(id: string) {
+    const plan = await this.prisma.feePlan.findFirst({
+      where: { id, active: true, batch: { active: true }, course: { active: true } },
+      select: {
+        ...PLAN_SELECT,
+        batch: { select: { id: true, name: true, startDate: true, endDate: true } },
+        course: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            tagline: true,
+            language: true,
+            duration: true,
+            highlights: true,
+            includes: true,
+            audience: true,
+            faqs: true,
+            subjects: {
+              orderBy: { name: 'asc' },
+              select: { name: true, topics: { orderBy: { name: 'asc' }, select: { name: true } } },
+            },
+          },
+        },
+      },
+    });
+    if (!plan || !plan.batch) throw new NotFoundException('Course not found');
+    const inBatch = { batches: { some: { batchId: plan.batch.id } } };
+    const [tests, notes, videos, classes] = await Promise.all([
+      this.prisma.test.count({ where: { status: { not: TestStatus.DRAFT }, ...inBatch } }),
+      this.prisma.material.count({ where: { status: ContentStatus.PUBLISHED, ...inBatch } }),
+      this.prisma.video.count({ where: { status: VideoStatus.READY, ...inBatch } }),
+      this.prisma.liveClass.count({ where: { batchId: plan.batch.id, status: { not: ClassStatus.CANCELLED } } }),
+    ]);
+    const { active: _a, ...rest } = plan;
+    return { ...rest, counts: { tests, notes, videos, classes }, onlinePayments: this.razorpay.enabled };
+  }
+
   /** Same list for a signed-in student, with what they already joined or paid. */
   async plansForStudent(user: AuthUser) {
     const student = await this.studentOf(user);
@@ -145,7 +189,7 @@ export class FeesService {
     if (!batch) throw new NotFoundException('Batch not found');
     if (!batch.active) throw new BadRequestException('Batch is archived');
     const plan = await this.prisma.feePlan.create({
-      data: { name: dto.name.trim(), batchId: dto.batchId, courseId: batch.courseId, total: dto.total },
+      data: { name: dto.name.trim(), batchId: dto.batchId, courseId: batch.courseId, total: dto.total, mrp: dto.mrp || null },
       select: PLAN_SELECT,
     });
     await this.activity.log({ actorId: admin.id, action: 'fee-plan.create', entity: 'fee-plan', entityId: plan.id, meta: { total: dto.total } });
@@ -156,7 +200,7 @@ export class FeesService {
     try {
       const plan = await this.prisma.feePlan.update({
         where: { id },
-        data: { name: dto.name?.trim(), total: dto.total, active: dto.active },
+        data: { name: dto.name?.trim(), total: dto.total, active: dto.active, mrp: dto.mrp === undefined ? undefined : dto.mrp || null },
         select: PLAN_SELECT,
       });
       await this.activity.log({ actorId: admin.id, action: 'fee-plan.update', entity: 'fee-plan', entityId: id, meta: { ...dto } });

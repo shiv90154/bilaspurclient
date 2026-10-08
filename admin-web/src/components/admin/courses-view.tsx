@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { plural } from "@/lib/format";
 
-type Dialog = { kind: "course" } | { kind: "batch"; courseId?: string } | null;
+type Dialog = { kind: "course" } | { kind: "batch"; courseId?: string } | { kind: "page"; course: Course } | null;
 
 export function CoursesView({ canEdit }: { canEdit: boolean }) {
   const qc = useQueryClient();
@@ -90,6 +90,9 @@ export function CoursesView({ canEdit }: { canEdit: boolean }) {
                 </div>
                 {canEdit && (
                   <div className="flex gap-2">
+                    <button className={btnGhost + " !h-8 !px-3"} onClick={() => setDialog({ kind: "page", course: c })}>
+                      Website page
+                    </button>
                     <button className={btnGhost + " !h-8 !px-3"} onClick={() => setDialog({ kind: "batch", courseId: c.id })}>
                       Add batch
                     </button>
@@ -132,6 +135,7 @@ export function CoursesView({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {dialog?.kind === "course" && <CourseForm onClose={() => setDialog(null)} />}
+      {dialog?.kind === "page" && <CoursePageForm course={dialog.course} onClose={() => setDialog(null)} />}
       {dialog?.kind === "batch" && (
         <BatchForm courses={courses.data?.items.filter((c) => c.active) ?? []} courseId={dialog.courseId} onClose={() => setDialog(null)} />
       )}
@@ -169,6 +173,97 @@ function CourseForm({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
           <button className={btnPrimary} disabled={save.isPending}>{save.isPending ? "Saving…" : "Add course"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+const lines = (v: FormDataEntryValue | null) =>
+  String(v ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+/** FAQ text: one block per question, first line the question, the rest the answer, blocks separated by an empty line. */
+const parseFaqs = (v: FormDataEntryValue | null) =>
+  String(v ?? "")
+    .split(/\n\s*\n/)
+    .map((block) => {
+      const [q, ...a] = block.trim().split("\n");
+      return { q: (q ?? "").trim(), a: a.join("\n").trim() };
+    })
+    .filter((f) => f.q && f.a);
+
+/** Everything the public course page shows (website → Courses → View details). */
+function CoursePageForm({ course, onClose }: { course: Course; onClose: () => void }) {
+  const qc = useQueryClient();
+  const save = useMutation({
+    mutationFn: (body: Record<string, unknown>) => api(`/courses/${course.id}`, { method: "PATCH", body }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["courses"] });
+      onClose();
+    },
+  });
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    save.mutate({
+      name: val(f, "name"),
+      description: String(f.get("description") ?? "").trim(),
+      tagline: String(f.get("tagline") ?? "").trim(),
+      language: String(f.get("language") ?? "").trim(),
+      duration: String(f.get("duration") ?? "").trim(),
+      highlights: lines(f.get("highlights")),
+      includes: lines(f.get("includes")),
+      audience: lines(f.get("audience")),
+      faqs: parseFaqs(f.get("faqs")),
+    });
+  };
+  const area = inputCls + " h-auto py-2";
+  return (
+    <Modal title={`Website page: ${course.name}`} onClose={onClose}>
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        <p className="text-[12.5px] text-sub">
+          Shown on the course page of the website. Empty sections are hidden. The syllabus comes from the subjects and topics of
+          this course, and the counts of classes, notes and tests are added by themselves.
+        </p>
+        <Field label="Course name *">{(id) => <input id={id} name="name" required maxLength={100} defaultValue={course.name} className={inputCls} />}</Field>
+        <Field label="One-line tagline">
+          {(id) => <input id={id} name="tagline" maxLength={160} defaultValue={course.tagline ?? ""} placeholder="Crack AIAPGET with concept-first preparation" className={inputCls} />}
+        </Field>
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <Field label="Language">{(id) => <input id={id} name="language" maxLength={60} defaultValue={course.language ?? ""} placeholder="Hindi + English" className={inputCls} />}</Field>
+          <Field label="Duration">{(id) => <input id={id} name="duration" maxLength={60} defaultValue={course.duration ?? ""} placeholder="12 months" className={inputCls} />}</Field>
+        </div>
+        <Field label="What students will learn (one per line)">
+          {(id) => <textarea id={id} name="highlights" rows={4} defaultValue={(course.highlights ?? []).join("\n")} className={area} />}
+        </Field>
+        <Field label="This course includes (one per line, e.g. 5 live classes a week)">
+          {(id) => <textarea id={id} name="includes" rows={3} defaultValue={(course.includes ?? []).join("\n")} className={area} />}
+        </Field>
+        <Field label="Who this course is for (one per line)">
+          {(id) => <textarea id={id} name="audience" rows={3} defaultValue={(course.audience ?? []).join("\n")} className={area} />}
+        </Field>
+        <Field label="Description">
+          {(id) => <textarea id={id} name="description" rows={4} maxLength={1000} defaultValue={course.description ?? ""} className={area} />}
+        </Field>
+        <Field label="FAQ (question on the first line, answer below, empty line between questions)">
+          {(id) => (
+            <textarea
+              id={id}
+              name="faqs"
+              rows={5}
+              defaultValue={(course.faqs ?? []).map((q) => `${q.q}\n${q.a}`).join("\n\n")}
+              placeholder={"Are classes recorded?\nYes, recordings stay in the app.\n\nIs there a demo class?\nYes, free demo notes and tests open after you register."}
+              className={area}
+            />
+          )}
+        </Field>
+        <ErrorNote error={save.error} />
+        <div className="flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
+          <button className={btnPrimary} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save page"}</button>
         </div>
       </form>
     </Modal>

@@ -34,6 +34,14 @@ export class CreateFeePlanDto {
   @Min(1)
   @Max(1_000_000)
   total!: number;
+
+  @ApiPropertyOptional({ example: 7999, description: 'Original price shown struck through (0 = none)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000)
+  mrp?: number;
 }
 
 export class UpdateFeePlanDto {
@@ -51,6 +59,14 @@ export class UpdateFeePlanDto {
   @Min(1)
   @Max(1_000_000)
   total?: number;
+
+  @ApiPropertyOptional({ example: 7999, description: 'Original price shown struck through (0 = none)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000)
+  mrp?: number;
 
   @ApiPropertyOptional({ description: 'Shown on the website and open for online payment' })
   @IsOptional()

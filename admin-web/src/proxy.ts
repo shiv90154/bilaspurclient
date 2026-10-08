@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // The public website, login and the legal pages (Play Store needs the privacy policy and the account deletion
   // page reachable without an account).
-  const isPublic = PUBLIC_PATHS.has(pathname);
+  const isPublic = PUBLIC_PATHS.has(pathname) || pathname.startsWith("/courses/");
   const hasSession = request.cookies.has(REFRESH_COOKIE);
 
   if (!hasSession && !isPublic) {

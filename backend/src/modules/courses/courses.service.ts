@@ -9,6 +9,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import type {
+  CoursePageDto,
   CreateCourseDto,
   ListCoursesQueryDto,
   UpdateCourseDto,
@@ -50,7 +51,7 @@ export class CoursesService {
 
   async create(admin: AuthUser, dto: CreateCourseDto) {
     try {
-      const course = await this.prisma.course.create({ data: dto });
+      const course = await this.prisma.course.create({ data: { ...dto, ...cleanPage(dto) } });
       await this.activity.log({
         actorId: admin.id,
         action: 'course.create',
@@ -67,7 +68,7 @@ export class CoursesService {
     try {
       const course = await this.prisma.course.update({
         where: { id },
-        data: dto,
+        data: { ...dto, ...cleanPage(dto) },
       });
       await this.activity.log({
         actorId: admin.id,
@@ -99,4 +100,22 @@ export class CoursesService {
     }
     return err;
   }
+}
+
+/** Trims the page texts, drops empty lines and stores FAQs as plain JSON. */
+function cleanPage(dto: CoursePageDto) {
+  const lines = (v?: string[]) => v?.map((x) => x.trim()).filter(Boolean);
+  const text = (v?: string) => (v === undefined ? undefined : v.trim() || null);
+  return {
+    tagline: text(dto.tagline),
+    language: text(dto.language),
+    duration: text(dto.duration),
+    highlights: lines(dto.highlights),
+    includes: lines(dto.includes),
+    audience: lines(dto.audience),
+    faqs:
+      dto.faqs === undefined
+        ? undefined
+        : (dto.faqs.map((f) => ({ q: f.q.trim(), a: f.a.trim() })) as Prisma.InputJsonValue),
+  };
 }

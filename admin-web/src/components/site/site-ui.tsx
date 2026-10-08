@@ -10,8 +10,25 @@ export interface PublicPlan {
   id: string;
   name: string;
   total: string;
-  course: { id: string; name: string; description: string | null };
+  mrp: string | null;
+  course: { id: string; name: string; description: string | null; tagline: string | null };
   batch: { id: string; name: string; startDate: string | null } | null;
+}
+
+/** "₹7,999" struck through and "38% off" when a higher original price is set. */
+export function PriceTag({ total, mrp, big }: { total: string; mrp: string | null; big?: boolean }) {
+  const off = mrp && Number(mrp) > Number(total) ? Math.round((1 - Number(total) / Number(mrp)) * 100) : 0;
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+      <span className={`${big ? "text-[34px]" : "text-[26px]"} font-bold leading-none text-primary-dark`}>{inr(total)}</span>
+      {off > 0 && (
+        <>
+          <span className="text-[15px] text-sub line-through">{inr(mrp!)}</span>
+          <span className="rounded-full bg-success-tint px-2 py-0.5 text-[12px] font-bold text-success">{off}% off</span>
+        </>
+      )}
+    </div>
+  );
 }
 
 // lucide-react 1.x dropped brand icons, so the social marks are drawn here.
@@ -178,22 +195,30 @@ export function Steps() {
 }
 
 export function CourseCard({ plan }: { plan: PublicPlan }) {
+  const href = `/courses/${plan.id}`;
   return (
-    <article className="flex flex-col rounded-2xl border border-line bg-surface p-6 transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition hover:-translate-y-0.5 hover:shadow-md">
       <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-ink">{plan.course.name}</p>
-      <h3 className="mt-2 text-[18px] font-semibold text-ink">{plan.name}</h3>
-      {plan.course.description && <p className="mt-2 text-[14px] leading-relaxed text-sub">{plan.course.description}</p>}
+      <h3 className="mt-2 text-[18px] font-semibold text-ink">
+        <Link href={href} className="hover:text-primary">{plan.name}</Link>
+      </h3>
+      {(plan.course.tagline || plan.course.description) && (
+        <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-sub">{plan.course.tagline || plan.course.description}</p>
+      )}
       {plan.batch?.startDate && (
         <p className="mt-3 inline-flex w-fit rounded-full bg-primary-tint px-3 py-1 text-[12.5px] font-semibold text-primary">
           Starts {new Date(plan.batch.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
         </p>
       )}
       <div className="mt-auto pt-5">
-        <p className="text-[26px] font-bold text-primary-dark">{inr(plan.total)}</p>
-        <p className="text-[12px] text-sub">One-time fee, taxes included</p>
-        <Link href={`/learn/fees?plan=${plan.id}`} className={`${btnSolid} mt-4 w-full`}>
-          Join now <ArrowRight size={18} />
-        </Link>
+        <PriceTag total={plan.total} mrp={plan.mrp} />
+        <p className="mt-1.5 text-[12px] text-sub">One-time fee, taxes included</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link href={href} className={`${btnOutline} !h-11 !px-3 !text-[14px]`}>View details</Link>
+          <Link href={`/learn/fees?plan=${plan.id}`} className={`${btnSolid} !h-11 !px-3 !text-[14px]`}>
+            Join now <ArrowRight size={16} />
+          </Link>
+        </div>
       </div>
     </article>
   );

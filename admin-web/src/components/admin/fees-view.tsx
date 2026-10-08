@@ -42,6 +42,7 @@ const STATUS_TONE: Record<PaymentStatus, "green" | "amber" | "red" | "gray"> = {
 export function FeesView() {
   const [tab, setTab] = useState<"payments" | "plans">("payments");
   const [dialog, setDialog] = useState<"plan" | "offline" | null>(null);
+  const [editing, setEditing] = useState<FeePlan | null>(null);
 
   return (
     <div className="flex flex-col gap-5">
@@ -74,9 +75,10 @@ export function FeesView() {
         ))}
       </div>
 
-      {tab === "payments" ? <PaymentsList /> : <PlansList onAdd={() => setDialog("plan")} />}
+      {tab === "payments" ? <PaymentsList /> : <PlansList onAdd={() => setDialog("plan")} onEdit={setEditing} />}
 
       {dialog === "plan" && <PlanDialog onClose={() => setDialog(null)} />}
+      {editing && <PlanDialog plan={editing} onClose={() => setEditing(null)} />}
       {dialog === "offline" && <OfflineDialog onClose={() => setDialog(null)} />}
     </div>
   );
@@ -168,7 +170,7 @@ function PaymentsList() {
   );
 }
 
-function PlansList({ onAdd }: { onAdd: () => void }) {
+function PlansList({ onAdd, onEdit }: { onAdd: () => void; onEdit: (p: FeePlan) => void }) {
   const qc = useQueryClient();
   const plans = useQuery({ queryKey: ["fee-plans"], queryFn: () => api<FeePlan[]>("/fee-plans") });
   const update = useMutation({
@@ -176,14 +178,6 @@ function PlansList({ onAdd }: { onAdd: () => void }) {
       api(`/fee-plans/${id}`, { method: "PATCH", body }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["fee-plans"] }),
   });
-
-  const changePrice = (p: FeePlan) => {
-    const v = window.prompt(`New price for "${p.name}" in rupees`, String(Number(p.total)));
-    if (v === null) return;
-    const total = Number(v.replace(/[₹,\s]/g, ""));
-    if (!Number.isFinite(total) || total < 1) return window.alert("Enter a price like 4999");
-    update.mutate({ id: p.id, total });
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -210,9 +204,12 @@ function PlansList({ onAdd }: { onAdd: () => void }) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="mr-1 text-[15px] font-bold">{inr(p.total)}</span>
-              <button className={btnGhost + " !h-8 !px-3"} onClick={() => changePrice(p)} disabled={update.isPending}>
-                Change price
+              <span className="mr-1 text-right">
+                <span className="block text-[15px] font-bold">{inr(p.total)}</span>
+                {p.mrp && Number(p.mrp) > Number(p.total) && <span className="block text-[12px] text-sub line-through">{inr(p.mrp)}</span>}
+              </span>
+              <button className={btnGhost + " !h-8 !px-3"} onClick={() => onEdit(p)}>
+                Edit
               </button>
               <button
                 className={btnGhost + " !h-8 !px-3"}
@@ -229,18 +226,24 @@ function PlansList({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-function PlanDialog({ onClose }: { onClose: () => void }) {
+/** Add a course fee, or edit the name and prices of one (`plan`). */
+function PlanDialog({ plan, onClose }: { plan?: FeePlan; onClose: () => void }) {
   const qc = useQueryClient();
   const batches = useQuery({
     queryKey: ["batches", "active"],
     queryFn: () => api<Paginated<Batch>>(`/batches${qs({ limit: 100, active: true })}`),
+    enabled: !plan,
   });
-  const [name, setName] = useState("");
+  const [name, setName] = useState(plan?.name ?? "");
   const [batchId, setBatchId] = useState("");
-  const [total, setTotal] = useState("");
+  const [total, setTotal] = useState(plan ? String(Number(plan.total)) : "");
+  const [mrp, setMrp] = useState(plan?.mrp ? String(Number(plan.mrp)) : "");
 
   const create = useMutation({
-    mutationFn: () => api("/fee-plans", { method: "POST", body: { name, batchId, total: Number(total) } }),
+    mutationFn: () =>
+      plan
+        ? api(`/fee-plans/${plan.id}`, { method: "PATCH", body: { name, total: Number(total), mrp: Number(mrp) || 0 } })
+        : api("/fee-plans", { method: "POST", body: { name, batchId, total: Number(total), mrp: Number(mrp) || 0 } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["fee-plans"] });
       onClose();
@@ -254,8 +257,9 @@ function PlanDialog({ onClose }: { onClose: () => void }) {
 
   const active = batches.data?.items.filter((b) => b.active) ?? [];
   return (
-    <Modal title="Add course fee" onClose={onClose}>
+    <Modal title={plan ? "Edit course fee" : "Add course fee"} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {!plan && (
         <Field label="Batch the student joins after paying">
           {(id) => (
             <select id={id} className={inputCls} required value={batchId} onChange={(e) => setBatchId(e.target.value)}>
@@ -268,6 +272,7 @@ function PlanDialog({ onClose }: { onClose: () => void }) {
             </select>
           )}
         </Field>
+        )}
         <Field label="Name shown to students">
           {(id) => (
             <input id={id} className={inputCls} required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. BAMS 1st Prof: full course" />
@@ -276,6 +281,11 @@ function PlanDialog({ onClose }: { onClose: () => void }) {
         <Field label="Price in rupees (GST included)">
           {(id) => (
             <input id={id} className={inputCls} required inputMode="decimal" type="number" min={1} step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="4999" />
+          )}
+        </Field>
+        <Field label="Original price, shown struck through (optional)">
+          {(id) => (
+            <input id={id} className={inputCls} inputMode="decimal" type="number" min={0} step="0.01" value={mrp} onChange={(e) => setMrp(e.target.value)} placeholder="7999" />
           )}
         </Field>
         <ErrorNote error={create.error ?? batches.error} />

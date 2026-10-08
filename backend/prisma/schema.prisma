@@ -330,6 +330,15 @@ model Course {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  // Public course page on the website (Udemy-style). All optional; empty sections are hidden.
+  tagline    String? // one line under the title
+  language   String? // e.g. "Hindi + English"
+  duration   String? // e.g. "12 months"
+  highlights String[] @default([]) // "What you'll learn"
+  includes   String[] @default([]) // "This course includes" (besides the live counts)
+  audience   String[] @default([]) // "Who this course is for"
+  faqs       Json? // [{ "q": "...", "a": "..." }]
+
   batches     Batch[]
   subjects    Subject[]
   tests       Test[]
@@ -812,6 +821,7 @@ model FeePlan {
   courseId     String
   batchId      String?
   total        Decimal  @db.Decimal(10, 2)
+  mrp          Decimal? @db.Decimal(10, 2) // optional "was" price shown struck through
   installments Json? // [{ "label": "1st", "amount": 5000, "dueDate": "2026-11-01" }]
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
