@@ -8,9 +8,9 @@ This repository is public, so **no login IDs or passwords are stored here**. The
 
 | What | Link |
 |---|---|
-| Website and web panel (Super Admin, Faculty and Students) | https://dhīayurveda.com |
-| Android app download | https://dhīayurveda.com/mobile-app |
-| System check (should say "ok") | https://api.dhīayurveda.com/api/health |
+| Website and web panel (Super Admin, Faculty and Students) | https://dhiayurved.com |
+| Android app download | https://dhiayurved.com/mobile-app |
+| System check (should say "ok") | https://api.dhiayurved.com/api/health |
 
 The app download page opens after you sign in as **Super Admin**. Press **Download APK** to get the newest version.
 
@@ -64,4 +64,4 @@ Sign in to the app as the Student, open **Tests** and press **Start test**. Afte
 - **Protected screens.** The app blocks screenshots and screen recording, and every screen shows the student's name and number as a faint watermark.
 - **Rooted phones and emulators** are not allowed. The app will not open on them.
 - **Demo logins.** "Demo Faculty" and "Test Student" are test accounts. Remove them (Roles & Access for faculty, Students for the student) before real students start.
-- **Old addresses.** The earlier nip.io addresses still work and forward to dhīayurveda.com. Students should update to app version 1.5.1 or later, which uses the new domain.
+- **Old addresses.** dhīayurveda.com, theaadhyaayurved.com and the earlier nip.io addresses still work and forward to dhiayurved.com. Students should update to app version 1.5.2 or later, which uses the new domain.

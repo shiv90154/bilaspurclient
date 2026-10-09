@@ -1,18 +1,19 @@
 # DHĪ: Live deployment
 
-Last updated: 2026-10-08. Project status: [PROGRESS.md](PROGRESS.md). Deploy guide for a fresh server: [deploy/README.md](deploy/README.md).
+Last updated: 2026-10-09. Project status: [PROGRESS.md](PROGRESS.md). Deploy guide for a fresh server: [deploy/README.md](deploy/README.md).
 
 ## Addresses
 
 | What | URL |
 |---|---|
-| Public website + admin / faculty / student web panel | https://dhīayurveda.com |
-| API (the Android app talks to this) | https://api.dhīayurveda.com/api |
-| API health check | https://api.dhīayurveda.com/api/health |
+| Public website + admin / faculty / student web panel | https://dhiayurved.com |
+| API (the Android app talks to this) | https://api.dhiayurved.com/api |
+| API health check | https://api.dhiayurved.com/api/health |
 
-- `https://api.dhīayurveda.com/` (without `/api`) shows "Cannot GET /". That is normal: every endpoint lives under `/api`.
-- The domain is registered at GoDaddy. In DNS, the name is written as `xn--dhayurveda-2sb.com` (the ASCII form of dhīayurveda.com); the server config and certificates use that form. GoDaddy DNS: `A @` and `A api` point to `187.127.159.220`, and `www` is a CNAME to the root (Nginx redirects it to the root).
-- The old addresses still work: `admin.187-127-159-220.nip.io` redirects to the new domain, and `api.187-127-159-220.nip.io` keeps serving the API so app versions up to 1.5.0 keep working.
+- `https://api.dhiayurved.com/` (without `/api`) shows "Cannot GET /". That is normal: every endpoint lives under `/api`.
+- The domain is registered at GoDaddy. GoDaddy DNS: `A @` and `A api` point to `187.127.159.220`, and `www` is a CNAME to the root (Nginx redirects it to the root).
+- `theaadhyaayurved.com` (and `www`) also point to the server and redirect to dhiayurved.com. `theaadhyaayurved.in` is registered but still on GoDaddy's `clientHold` (as of 2026-10-09), so it does not resolve yet; once it does, add it to the certificate and the redirect block.
+- Old addresses still work. `dhīayurveda.com` (`xn--dhayurveda-2sb.com`) and `admin.187-127-159-220.nip.io` redirect to dhiayurved.com. `api.xn--dhayurveda-2sb.com` (app 1.5.1) and `api.187-127-159-220.nip.io` (app up to 1.5.0) keep serving the API, so installed apps keep working.
 - Admin login: phone `9999999999`. The password was printed once when the server was set up. It is also stored in `/opt/dhi/deploy/production.env` (`SEED_ADMIN_PASSWORD`) on the server. It is **not** kept in this repository.
 - Swagger docs (`/api/docs`) are switched off in production on purpose.
 
@@ -74,9 +75,9 @@ cd /opt/dhi
 
 ## How the domain is wired
 
-Nginx serves the domain from its own file, `/etc/nginx/sites-available/dhi-dhiayurveda` (HTTPS certificate `xn--dhayurveda-2sb.com`, covering the root, `www` and `api`). The old nip.io names stay in `dhi-edumanage`. `ADMIN_DOMAIN` and `API_DOMAIN` in `production.env` hold the new names, because the panel's login check uses `ADMIN_DOMAIN`.
+Nginx serves the domain from its own file, `/etc/nginx/sites-available/dhi-dhiayurved` (HTTPS certificate `dhiayurved.com`, covering the root, `www`, `api` and `theaadhyaayurved.com` + `www`). The previous domain stays in `dhi-dhiayurveda` (root and `www` redirect, `api` still serves) and the old nip.io names stay in `dhi-edumanage`. `ADMIN_DOMAIN` and `API_DOMAIN` in `production.env` hold the new names, because the panel's login check uses `ADMIN_DOMAIN`.
 
-Do **not** run `deploy.sh nginx` on this server any more: it would rewrite `dhi-edumanage` with the new names and clash with `dhi-dhiayurveda`.
+Do **not** run `deploy.sh nginx` on this server any more: it would rewrite `dhi-edumanage` with the new names and clash with `dhi-dhiayurved`.
 
 ## Switch to another domain (fresh setup)
 
@@ -95,10 +96,10 @@ Do **not** run `deploy.sh nginx` on this server any more: it would rewrite `dhi-
 Build against the live API, then upload the APK in the admin panel under **Mobile App**:
 
 ```bash
-flutter build apk --release --dart-define=API_URL=https://api.xn--dhayurveda-2sb.com/api
+flutter build apk --release --dart-define=API_URL=https://api.dhiayurved.com/api
 ```
 
-Version 1.5.1 and later use the new domain. Older installs use the nip.io API address, which still works.
+Version 1.5.2 and later use dhiayurved.com. Version 1.5.1 uses the dhīayurveda.com API and older installs use the nip.io API; both still work.
 
 ## Security notes
 
@@ -111,6 +112,6 @@ Version 1.5.1 and later use the new domain. Older installs use the nip.io API ad
 ## Quick health check
 
 ```bash
-curl https://api.xn--dhayurveda-2sb.com/api/health
+curl https://api.dhiayurved.com/api/health
 # {"status":"ok","db":"up","uptimeSeconds":...}
 ```

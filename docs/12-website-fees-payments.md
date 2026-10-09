@@ -57,7 +57,7 @@ Dues/expiry: fee na bhare to admin student ko `inactive` kar sakta hai → app l
 - **Offline:** admin "Record payment" (cash/UPI/cheque/bank). Part payment pe "batch abhi kholo" ka option; poora bharne pe batch apne-aap khulta hai.
 - **Receipt:** `/receipt/<id>` printable page (admin sab, student sirf apni). Email bhi jaata hai (SMTP on ho to).
 - **Keys:** `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` in `production.env`. Khaali = online band, offline chalta hai.
-- **Webhook URL:** `https://api.xn--dhayurveda-2sb.com/api/payments/razorpay/webhook`, events `payment.captured` + `order.paid`.
+- **Webhook URL:** `https://api.dhiayurved.com/api/payments/razorpay/webhook`, events `payment.captured` + `order.paid`.
 - **Test:** `npm run smoke:payments` (nakli Razorpay :3999 ke saath; API kin env ke saath chalani hai wo script ke header mein likha hai).
 
 ## Progress

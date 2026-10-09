@@ -12,7 +12,7 @@ const poppins = Poppins({
 });
 
 // Link previews (WhatsApp, Facebook, Telegram) need absolute URLs for the share image.
-const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://xn--dhayurveda-2sb.com";
+const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://dhiayurved.com";
 const DESCRIPTION =
   "Learn Ayurveda with Dr. Pardeuman Singh: live classes, PDF notes, test series and doubt solving in the DHĪ app.";
 

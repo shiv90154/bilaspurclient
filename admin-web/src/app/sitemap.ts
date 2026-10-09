@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://xn--dhayurveda-2sb.com";
+const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://dhiayurved.com";
 
 /** Public pages for search engines. */
 export default function sitemap(): MetadataRoute.Sitemap {
