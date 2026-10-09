@@ -215,7 +215,7 @@ export const COURSES = [
   },
   {
     key: 'bams1',
-    name: 'BAMS 1st Professional',
+    name: 'BAMS 1st Prof Coaching',
     description: 'Semester support for first professional BAMS: Padartha Vigyan, Kriya Sharir, Rachana Sharir and Samhita.',
     tagline: 'Build strong basics in your first year of BAMS',
     language: 'Hindi + English',
@@ -230,7 +230,7 @@ export const COURSES = [
   },
   {
     key: 'bamsfinal',
-    name: 'BAMS Final Professional',
+    name: 'BAMS Final Prof Coaching',
     description: 'Final year support for Shalya, Kayachikitsa, Panchakarma and Prasuti Tantra, with case-based teaching.',
     tagline: 'Clinical subjects taught the way they are practised',
     language: 'Hindi + English',
