@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
@@ -90,6 +91,14 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('About DHĪ'),
+                    subtitle: const Text('Dr. Pardeuman Singh, your teacher'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/about'),
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.privacy_tip_outlined),
                     title: const Text('Privacy policy'),

@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { Menu, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -68,9 +68,12 @@ function SidebarContent({
 
 export function AdminShell({
   user,
+  maintenance = false,
   children,
 }: {
   user: { name: string; role: Role };
+  /** Maintenance mode is on: a reminder bar on every page, so it is not left on by mistake. */
+  maintenance?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -151,6 +154,17 @@ export function AdminShell({
           </div>
         )}
 
+        {maintenance && (
+          <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 bg-danger px-4 py-2 text-[13px] font-semibold text-white sm:px-6 lg:px-9">
+            <Wrench size={15} aria-hidden="true" />
+            Maintenance mode is on: students see the &quot;back soon&quot; screen.
+            {user.role === "ADMIN" && (
+              <Link href="/settings" className="underline underline-offset-2">
+                Turn it off in Settings
+              </Link>
+            )}
+          </div>
+        )}
         <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-9 lg:py-7">{children}</main>
       </div>
     </div>

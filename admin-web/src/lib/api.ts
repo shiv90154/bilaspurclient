@@ -294,6 +294,8 @@ export interface AppSettings {
   contactEmail: string;
   contactPhone: string;
   address: string;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
 }
 
 export type DeletionRequestStatus = "PENDING" | "COMPLETED" | "REJECTED";
@@ -361,10 +363,29 @@ export interface FeePlan {
   name: string;
   total: string; // rupees, as a decimal string
   mrp: string | null; // optional "was" price
+  /** Admin list only: the raw offer columns. */
+  offerPrice?: string | null;
+  offerLabel?: string | null;
+  offerEndsAt?: string | null;
+  /** Public and student lists: the offer running right now, if any. */
+  offer?: PlanOffer | null;
   active?: boolean;
   course: { id: string; name: string; description: string | null; tagline?: string | null };
   batch: { id: string; name: string; startDate: string | null; active?: boolean } | null;
   _count?: { fees: number };
+}
+
+/** A limited-time price: students pay `price` instead of the plan total until `endsAt`. */
+export interface PlanOffer {
+  price: string;
+  label: string | null;
+  endsAt: string | null;
+}
+
+/** Is the stored offer of a plan running now? (Same rule as the API.) */
+export function offerRunning(p: Pick<FeePlan, "total" | "offerPrice" | "offerEndsAt">, now = Date.now()) {
+  const price = Number(p.offerPrice ?? 0);
+  return price > 0 && price < Number(p.total) && (!p.offerEndsAt || new Date(p.offerEndsAt).getTime() > now);
 }
 
 export interface MyFeePlan extends FeePlan {

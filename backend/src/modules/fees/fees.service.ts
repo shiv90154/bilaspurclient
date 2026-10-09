@@ -44,6 +44,9 @@ const PLAN_SELECT = {
   name: true,
   total: true,
   mrp: true,
+  offerPrice: true,
+  offerLabel: true,
+  offerEndsAt: true,
   active: true,
   course: { select: { id: true, name: true, description: true, tagline: true } },
   batch: { select: { id: true, name: true, startDate: true, active: true } },
@@ -72,6 +75,23 @@ const PAYMENT_SELECT = {
     },
   },
 } satisfies Prisma.PaymentSelect;
+
+type OfferFields = { total: Prisma.Decimal; offerPrice: Prisma.Decimal | null; offerLabel: string | null; offerEndsAt: Date | null };
+
+/** The running offer of a plan, or null when there is none (not set, not cheaper, or ended). */
+export function activeOffer(plan: OfferFields, now = new Date()) {
+  if (!plan.offerPrice || paise(plan.offerPrice) <= 0 || paise(plan.offerPrice) >= paise(plan.total)) return null;
+  if (plan.offerEndsAt && plan.offerEndsAt.getTime() <= now.getTime()) return null;
+  return { price: plan.offerPrice, label: plan.offerLabel, endsAt: plan.offerEndsAt };
+}
+
+/** What a student pays for the plan right now: the offer price while it runs, else the total. */
+const priceNow = (plan: OfferFields) => activeOffer(plan)?.price ?? plan.total;
+
+/** Public shape: the computed offer replaces the raw offer columns. */
+function withOffer<T extends OfferFields>({ offerPrice: _p, offerLabel: _l, offerEndsAt: _e, ...plan }: T) {
+  return { ...plan, offer: activeOffer({ total: plan.total, offerPrice: _p, offerLabel: _l, offerEndsAt: _e }) };
+}
 
 interface WebhookPayment {
   id: string;
@@ -103,7 +123,7 @@ export class FeesService {
     });
     return {
       onlinePayments: this.razorpay.enabled,
-      plans: plans.map(({ active: _a, batch, ...p }) => ({ ...p, batch: batch && { id: batch.id, name: batch.name, startDate: batch.startDate } })),
+      plans: plans.map(({ active: _a, batch, ...p }) => ({ ...withOffer(p), batch: batch && { id: batch.id, name: batch.name, startDate: batch.startDate } })),
     };
   }
 
@@ -143,7 +163,7 @@ export class FeesService {
       this.prisma.liveClass.count({ where: { batchId: plan.batch.id, status: { not: ClassStatus.CANCELLED } } }),
     ]);
     const { active: _a, ...rest } = plan;
-    return { ...rest, counts: { tests, notes, videos, classes }, onlinePayments: this.razorpay.enabled };
+    return { ...withOffer(rest), counts: { tests, notes, videos, classes }, onlinePayments: this.razorpay.enabled };
   }
 
   /** Same list for a signed-in student, with what they already joined or paid. */
@@ -166,7 +186,13 @@ export class FeesService {
       plans: open.plans.map((p) => {
         const fee = fees.find((f) => f.planId === p.id && f.status !== FeeStatus.WAIVED);
         const paid = fee ? fee.payments.reduce((s, x) => s + paise(x.amount), 0) : 0;
-        const due = Math.max(0, paise(fee?.total ?? p.total) - paise(fee?.discount ?? 0) - paid);
+        const offerDue = paise(p.offer?.price ?? p.total);
+        // An unpaid fee row from before the offer gets the offer at checkout (see openFee).
+        const due = !fee
+          ? offerDue
+          : fee.status === FeeStatus.PENDING && paid === 0 && paise(fee.total) === paise(p.total)
+            ? Math.min(paise(fee.total) - paise(fee.discount), offerDue)
+            : Math.max(0, paise(fee.total) - paise(fee.discount) - paid);
         return {
           ...p,
           enrolled: !!p.batch && inBatch.has(p.batch.id) && student.status === StudentStatus.ACTIVE,
@@ -188,8 +214,9 @@ export class FeesService {
     const batch = await this.prisma.batch.findUnique({ where: { id: dto.batchId }, select: { courseId: true, active: true } });
     if (!batch) throw new NotFoundException('Batch not found');
     if (!batch.active) throw new BadRequestException('Batch is archived');
+    checkOffer(dto.total, dto.offerPrice);
     const plan = await this.prisma.feePlan.create({
-      data: { name: dto.name.trim(), batchId: dto.batchId, courseId: batch.courseId, total: dto.total, mrp: dto.mrp || null },
+      data: { name: dto.name.trim(), batchId: dto.batchId, courseId: batch.courseId, total: dto.total, mrp: dto.mrp || null, ...offerData(dto) },
       select: PLAN_SELECT,
     });
     await this.activity.log({ actorId: admin.id, action: 'fee-plan.create', entity: 'fee-plan', entityId: plan.id, meta: { total: dto.total } });
@@ -197,10 +224,15 @@ export class FeesService {
   }
 
   async updatePlan(admin: AuthUser, id: string, dto: UpdateFeePlanDto) {
+    if (dto.offerPrice || dto.total !== undefined) {
+      const current = await this.prisma.feePlan.findUnique({ where: { id }, select: { total: true, offerPrice: true } });
+      if (!current) throw new NotFoundException('Fee plan not found');
+      checkOffer(dto.total ?? Number(current.total), dto.offerPrice ?? Number(current.offerPrice ?? 0));
+    }
     try {
       const plan = await this.prisma.feePlan.update({
         where: { id },
-        data: { name: dto.name?.trim(), total: dto.total, active: dto.active, mrp: dto.mrp === undefined ? undefined : dto.mrp || null },
+        data: { name: dto.name?.trim(), total: dto.total, active: dto.active, mrp: dto.mrp === undefined ? undefined : dto.mrp || null, ...offerData(dto) },
         select: PLAN_SELECT,
       });
       await this.activity.log({ actorId: admin.id, action: 'fee-plan.update', entity: 'fee-plan', entityId: id, meta: { ...dto } });
@@ -218,7 +250,7 @@ export class FeesService {
     const student = await this.studentOf(user);
     const plan = await this.prisma.feePlan.findFirst({
       where: { id: planId, active: true, batch: { active: true }, course: { active: true } },
-      select: { id: true, name: true, total: true, batchId: true },
+      select: { id: true, name: true, total: true, batchId: true, offerPrice: true, offerLabel: true, offerEndsAt: true },
     });
     if (!plan) throw new NotFoundException('This course is not open for payment');
 
@@ -302,7 +334,10 @@ export class FeesService {
   async recordOffline(admin: AuthUser, dto: OfflinePaymentDto) {
     const student = await this.prisma.student.findFirst({ where: { id: dto.studentId, deletedAt: null }, select: { id: true } });
     if (!student) throw new NotFoundException('Student not found');
-    const plan = await this.prisma.feePlan.findUnique({ where: { id: dto.planId }, select: { id: true, total: true, batchId: true } });
+    const plan = await this.prisma.feePlan.findUnique({
+      where: { id: dto.planId },
+      select: { id: true, total: true, batchId: true, offerPrice: true, offerLabel: true, offerEndsAt: true },
+    });
     if (!plan) throw new NotFoundException('Fee plan not found');
 
     const fee = await this.openFee(student.id, plan);
@@ -376,20 +411,29 @@ export class FeesService {
     return s;
   }
 
-  /** The student's fee row for this plan (a new one at today's price the first time). Paid once = done. */
-  private async openFee(studentId: string, plan: { id: string; total: Prisma.Decimal }) {
+  /**
+   * The student's fee row for this plan (a new one at today's price the first time). Paid once = done.
+   * A running offer is stored as the discount, so the receipt still shows the full price. An unpaid
+   * row from before the offer gets the offer too.
+   */
+  private async openFee(studentId: string, plan: OfferFields & { id: string }) {
+    const offerOff = paise(plan.total) - paise(priceNow(plan));
+    const select = { id: true, total: true, discount: true, status: true } as const;
     const existing = await this.prisma.studentFee.findFirst({
       where: { studentId, planId: plan.id },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, total: true, discount: true, status: true },
+      select,
     });
     if (existing?.status === FeeStatus.PAID || existing?.status === FeeStatus.WAIVED) {
       throw new ConflictException({ statusCode: 409, code: 'ALREADY_PAID', message: 'This course is already paid' });
     }
-    return existing ?? this.prisma.studentFee.create({
-      data: { studentId, planId: plan.id, total: plan.total },
-      select: { id: true, total: true, discount: true, status: true },
-    });
+    if (!existing) {
+      return this.prisma.studentFee.create({ data: { studentId, planId: plan.id, total: plan.total, discount: rupees(offerOff) }, select });
+    }
+    if (existing.status === FeeStatus.PENDING && paise(existing.total) === paise(plan.total) && offerOff > paise(existing.discount)) {
+      return this.prisma.studentFee.update({ where: { id: existing.id }, data: { discount: rupees(offerOff) }, select });
+    }
+    return existing;
   }
 
   private async paidOn(studentFeeId: string) {
@@ -473,6 +517,21 @@ export class FeesService {
       // logged by MailService; a mail problem never undoes a payment
     }
   }
+}
+
+function checkOffer(total: number, offerPrice?: number) {
+  if (offerPrice && paise(offerPrice) >= paise(total)) {
+    throw new BadRequestException(`Offer price must be less than the course fee (₹${total})`);
+  }
+}
+
+/** Offer columns from a create/update body: 0 or "" clears a field, undefined leaves it alone. */
+function offerData(dto: { offerPrice?: number; offerLabel?: string; offerEndsAt?: string }) {
+  return {
+    offerPrice: dto.offerPrice === undefined ? undefined : dto.offerPrice || null,
+    offerLabel: dto.offerLabel === undefined ? undefined : dto.offerLabel.trim() || null,
+    offerEndsAt: dto.offerEndsAt === undefined ? undefined : dto.offerEndsAt ? new Date(dto.offerEndsAt) : null,
+  };
 }
 
 /** e.g. DHI-20261008-3F9A1C2B: date + start of the payment id (unique, no counter needed). */

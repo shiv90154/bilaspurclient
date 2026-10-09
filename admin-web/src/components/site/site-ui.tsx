@@ -1,8 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, BadgeCheck, CirclePlay, ClipboardCheck, Download, FileText, MessageCircle, ShieldCheck, UserPlus, Video } from "lucide-react";
-import { inr } from "@/lib/api";
+import { ArrowRight, BadgeCheck, CirclePlay, ClipboardCheck, Download, FileText, MessageCircle, ShieldCheck, Timer, UserPlus, Video } from "lucide-react";
+import { inr, type PlanOffer } from "@/lib/api";
+import { OfferCountdown } from "./offer-countdown";
 import { FOUNDER, SITE } from "@/lib/site";
 
 /** An open course fee from GET /fee-plans/public. */
@@ -11,21 +12,39 @@ export interface PublicPlan {
   name: string;
   total: string;
   mrp: string | null;
+  offer: PlanOffer | null;
   course: { id: string; name: string; description: string | null; tagline: string | null };
   batch: { id: string; name: string; startDate: string | null } | null;
 }
 
-/** "₹7,999" struck through and "38% off" when a higher original price is set. */
-export function PriceTag({ total, mrp, big }: { total: string; mrp: string | null; big?: boolean }) {
-  const off = mrp && Number(mrp) > Number(total) ? Math.round((1 - Number(total) / Number(mrp)) * 100) : 0;
+/**
+ * The price a student pays now, with the higher price struck through and "38% off".
+ * During an offer: the offer price, its badge and a countdown to the end.
+ */
+export function PriceTag({ total, mrp, offer, big, compact }: { total: string; mrp: string | null; offer?: PlanOffer | null; big?: boolean; compact?: boolean }) {
+  const pay = Number(offer?.price ?? total);
+  const was = Math.max(Number(mrp ?? 0), offer ? Number(total) : 0);
+  const off = was > pay ? Math.round((1 - pay / was) * 100) : 0;
   return (
-    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-      <span className={`${big ? "text-[34px]" : "text-[26px]"} font-bold leading-none text-primary-dark`}>{inr(total)}</span>
-      {off > 0 && (
-        <>
-          <span className="text-[15px] text-sub line-through">{inr(mrp!)}</span>
-          <span className="rounded-full bg-success-tint px-2 py-0.5 text-[12px] font-bold text-success">{off}% off</span>
-        </>
+    <div className="flex flex-col gap-1.5">
+      {offer && (
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-danger px-2.5 py-0.5 text-[11.5px] font-bold uppercase tracking-wide text-white">
+          {offer.label || "Limited offer"}
+        </span>
+      )}
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <span className={`${big ? "text-[34px]" : "text-[26px]"} font-bold leading-none text-primary-dark`}>{inr(pay)}</span>
+        {off > 0 && (
+          <>
+            <span className="text-[15px] text-sub line-through">{inr(was)}</span>
+            <span className="rounded-full bg-success-tint px-2 py-0.5 text-[12px] font-bold text-success">{off}% off</span>
+          </>
+        )}
+      </div>
+      {offer?.endsAt && !compact && (
+        <p className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-danger">
+          <Timer size={14} aria-hidden="true" /> <OfferCountdown endsAt={offer.endsAt} />
+        </p>
       )}
     </div>
   );
@@ -211,7 +230,7 @@ export function CourseCard({ plan }: { plan: PublicPlan }) {
         </p>
       )}
       <div className="mt-auto pt-5">
-        <PriceTag total={plan.total} mrp={plan.mrp} />
+        <PriceTag total={plan.total} mrp={plan.mrp} offer={plan.offer} />
         <p className="mt-1.5 text-[12px] text-sub">One-time fee, taxes included</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Link href={href} className={`${btnOutline} !h-11 !px-3 !text-[14px]`}>View details</Link>

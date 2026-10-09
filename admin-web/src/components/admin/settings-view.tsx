@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type AppSettings } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { btnPrimary, ErrorNote, Field, inputCls, PageHeader } from "@/components/ui";
 import { ChangePasswordForm } from "@/components/password";
@@ -10,6 +11,7 @@ export function SettingsView({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex max-w-3xl flex-col gap-5">
       <PageHeader title="Settings" subtitle={isAdmin ? "App switches and your password" : "Your password"} />
+      {isAdmin && <Maintenance />}
       {isAdmin && <AppSwitches />}
       {isAdmin && <InstituteInfo />}
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -19,6 +21,79 @@ export function SettingsView({ isAdmin }: { isAdmin: boolean }) {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Maintenance mode: the website, student panel and student app show a "back soon" screen; staff keep working. */
+function Maintenance() {
+  const qc = useQueryClient();
+  const router = useRouter();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: () => api<AppSettings>("/settings") });
+  const [draft, setDraft] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: (body: Partial<AppSettings>) => api<AppSettings>("/settings", { method: "PATCH", body }),
+    onSuccess: (data) => {
+      qc.setQueryData(["settings"], data);
+      setDraft(null);
+      router.refresh(); // updates the reminder bar at the top of the panel
+    },
+  });
+
+  const on = (save.isPending ? save.variables?.maintenanceMode : undefined) ?? settings.data?.maintenanceMode ?? false;
+  const message = draft ?? settings.data?.maintenanceMessage ?? "";
+  const changed = draft !== null && draft.trim() !== (settings.data?.maintenanceMessage ?? "");
+
+  return (
+    <section className={`rounded-2xl border p-4 sm:p-5 ${on ? "border-danger/40 bg-danger-tint" : "border-line bg-surface"}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="mt-label" className="text-[15px] font-bold">Maintenance mode</h2>
+          <p id="mt-help" className="mt-1 max-w-md text-[12.5px] text-sub">
+            When on, the website, the student web panel and the Android app show a &quot;We&apos;ll be back soon&quot; screen, and
+            students cannot sign in or register. You and the faculty keep full access to this panel. The privacy, terms and
+            account deletion pages stay open.
+          </p>
+        </div>
+        <Switch
+          checked={on}
+          disabled={settings.isPending || save.isPending}
+          labelledBy="mt-label"
+          describedBy="mt-help"
+          onChange={(v) => save.mutate({ maintenanceMode: v, maintenanceMessage: message.trim() })}
+        />
+      </div>
+      <p className={`mt-3 text-[12.5px] font-semibold ${on ? "text-danger" : "text-sub"}`}>
+        {settings.isPending ? "Loading…" : on ? "On: students see the maintenance screen right now." : "Off: the website and app are open."}
+      </p>
+      <div className="mt-4 border-t border-line pt-4">
+        <Field label="Message on the maintenance screen (optional)">
+          {(i) => (
+            <textarea
+              id={i}
+              rows={2}
+              maxLength={300}
+              value={message}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="e.g. We are adding new courses. Back by 6 pm today."
+              className={inputCls}
+            />
+          )}
+        </Field>
+        {changed && (
+          <button
+            type="button"
+            className={`${btnPrimary} mt-3`}
+            disabled={save.isPending}
+            onClick={() => save.mutate({ maintenanceMessage: message.trim() })}
+          >
+            {save.isPending ? "Saving…" : "Save message"}
+          </button>
+        )}
+      </div>
+      <div className="mt-2">
+        <ErrorNote error={settings.error ?? save.error} />
+      </div>
+    </section>
   );
 }
 

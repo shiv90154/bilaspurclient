@@ -7,6 +7,7 @@ import {
   badRequest,
   forbidden,
   unauthorized,
+  underMaintenance,
 } from '../../common/errors.js';
 import { hashPassword, verifyPassword } from '../../common/password.util.js';
 import type { AccessTokenPayload, AuthUser } from '../../common/types/auth-user.js';
@@ -128,6 +129,10 @@ export class AuthService {
         ErrorCode.STUDENT_NOT_ACTIVE,
         'Your account is not active. Please contact the institute.',
       );
+    }
+    if (user.role === Role.STUDENT) {
+      const maintenance = await this.settings.maintenance();
+      if (maintenance.on) throw underMaintenance(maintenance.message);
     }
     // The Android app is for students only; staff work in the web panel.
     if (dto.platform === Platform.ANDROID && user.role !== Role.STUDENT) {

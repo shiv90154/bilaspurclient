@@ -6,6 +6,7 @@ import { CheckCircle2, GraduationCap, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { api, inr, PAYMENT_MODE_LABEL, type MyFeePlan, type Payment } from "@/lib/api";
+import { OfferCountdown } from "@/components/site/offer-countdown";
 import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, ListSkeleton } from "@/components/ui";
 
 interface OrderResponse {
@@ -137,7 +138,26 @@ export function StudentFees({ highlight }: { highlight?: string }) {
                   {p.course.description && <p className="mt-1.5 text-[12.5px] text-sub">{p.course.description}</p>}
                 </div>
                 <div className="text-right">
-                  <div className="text-[17px] font-bold">{inr(p.total)}</div>
+                  {p.offer && !(Number(p.paid) > 0) && (
+                    <div className="mb-1">
+                      <Badge tone="red">{p.offer.label || "Offer"}</Badge>
+                    </div>
+                  )}
+                  <div className="text-[17px] font-bold">
+                    {p.offer && !(Number(p.paid) > 0) ? (
+                      <>
+                        <span className="mr-1.5 text-[13px] font-medium text-sub line-through">{inr(p.total)}</span>
+                        {inr(p.offer.price)}
+                      </>
+                    ) : (
+                      inr(p.total)
+                    )}
+                  </div>
+                  {p.offer?.endsAt && !(Number(p.paid) > 0) && (
+                    <div className="text-[12px] font-semibold text-danger">
+                      <OfferCountdown endsAt={p.offer.endsAt} />
+                    </div>
+                  )}
                   {Number(p.paid) > 0 && due > 0 && <div className="text-[12px] text-sub">Paid {inr(p.paid)} · due {inr(due)}</div>}
                 </div>
               </div>

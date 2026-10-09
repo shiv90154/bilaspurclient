@@ -8,6 +8,7 @@ import { useState, type FormEvent } from "react";
 import {
   api,
   inr,
+  offerRunning,
   PAYMENT_MODE_LABEL,
   qs,
   type Batch,
@@ -198,6 +199,16 @@ function PlansList({ onAdd, onEdit }: { onAdd: () => void; onEdit: (p: FeePlan) 
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold">{p.name}</span>
                 <Badge tone={p.active ? "green" : "gray"}>{p.active ? "On website" : "Hidden"}</Badge>
+                {p.offerPrice && Number(p.offerPrice) > 0 && (
+                  offerRunning(p) ? (
+                    <Badge tone="amber">
+                      {p.offerLabel || "Offer"}: {inr(p.offerPrice)}
+                      {p.offerEndsAt ? ` till ${format(new Date(p.offerEndsAt), "d MMM, h:mm a")}` : ""}
+                    </Badge>
+                  ) : (
+                    <Badge tone="gray">Offer ended</Badge>
+                  )
+                )}
               </div>
               <p className="mt-1 text-[12.5px] text-sub">
                 {p.course.name} → batch {p.batch?.name ?? "—"} · {p._count?.fees ?? 0} students billed
@@ -238,12 +249,22 @@ function PlanDialog({ plan, onClose }: { plan?: FeePlan; onClose: () => void }) 
   const [batchId, setBatchId] = useState("");
   const [total, setTotal] = useState(plan ? String(Number(plan.total)) : "");
   const [mrp, setMrp] = useState(plan?.mrp ? String(Number(plan.mrp)) : "");
+  const [offerPrice, setOfferPrice] = useState(plan?.offerPrice ? String(Number(plan.offerPrice)) : "");
+  const [offerLabel, setOfferLabel] = useState(plan?.offerLabel ?? "");
+  // The offer ends at the end of the chosen day (India time).
+  const [offerEnd, setOfferEnd] = useState(plan?.offerEndsAt ? istDate(plan.offerEndsAt) : "");
 
+  const hasOffer = Number(offerPrice) > 0;
+  const offerBody = {
+    offerPrice: hasOffer ? Number(offerPrice) : 0,
+    offerLabel: hasOffer ? offerLabel.trim() : "",
+    offerEndsAt: hasOffer && offerEnd ? `${offerEnd}T23:59:59+05:30` : "",
+  };
   const create = useMutation({
     mutationFn: () =>
       plan
-        ? api(`/fee-plans/${plan.id}`, { method: "PATCH", body: { name, total: Number(total), mrp: Number(mrp) || 0 } })
-        : api("/fee-plans", { method: "POST", body: { name, batchId, total: Number(total), mrp: Number(mrp) || 0 } }),
+        ? api(`/fee-plans/${plan.id}`, { method: "PATCH", body: { name, total: Number(total), mrp: Number(mrp) || 0, ...offerBody } })
+        : api("/fee-plans", { method: "POST", body: { name, batchId, total: Number(total), mrp: Number(mrp) || 0, ...offerBody } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["fee-plans"] });
       onClose();
@@ -288,6 +309,42 @@ function PlanDialog({ plan, onClose }: { plan?: FeePlan; onClose: () => void }) 
             <input id={id} className={inputCls} inputMode="decimal" type="number" min={0} step="0.01" value={mrp} onChange={(e) => setMrp(e.target.value)} placeholder="7999" />
           )}
         </Field>
+        <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-3.5">
+          <legend className="px-1 text-[13px] font-bold">Offer (optional)</legend>
+          <p className="-mt-1 text-[12px] text-sub">
+            While the offer runs, students pay the offer price and the website shows the badge and a countdown. After the end
+            date the normal price comes back by itself. Leave the offer price empty to remove the offer.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Offer price (₹)">
+              {(id) => (
+                <input
+                  id={id}
+                  className={inputCls}
+                  inputMode="decimal"
+                  type="number"
+                  min={0}
+                  max={total ? Math.max(0, Number(total) - 0.01) : undefined}
+                  step="0.01"
+                  value={offerPrice}
+                  onChange={(e) => setOfferPrice(e.target.value)}
+                  placeholder="3999"
+                />
+              )}
+            </Field>
+            <Field label="Offer ends on (last day)">
+              {(id) => (
+                <input id={id} className={inputCls} type="date" value={offerEnd} disabled={!hasOffer} onChange={(e) => setOfferEnd(e.target.value)} />
+              )}
+            </Field>
+          </div>
+          <Field label="Offer name (badge)">
+            {(id) => (
+              <input id={id} className={inputCls} maxLength={60} value={offerLabel} disabled={!hasOffer} onChange={(e) => setOfferLabel(e.target.value)} placeholder="e.g. Diwali offer" />
+            )}
+          </Field>
+          {hasOffer && !offerEnd && <p className="text-[12px] text-sub">No end date: the offer runs until you remove it.</p>}
+        </fieldset>
         <ErrorNote error={create.error ?? batches.error} />
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
@@ -427,4 +484,9 @@ function OfflineDialog({ onClose }: { onClose: () => void }) {
       </form>
     </Modal>
   );
+}
+
+/** "2026-11-01" for an ISO time, as the date in India (for a date input). */
+function istDate(iso: string) {
+  return new Date(new Date(iso).getTime() + 330 * 60_000).toISOString().slice(0, 10);
 }

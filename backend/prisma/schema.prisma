@@ -822,6 +822,10 @@ model FeePlan {
   batchId      String?
   total        Decimal  @db.Decimal(10, 2)
   mrp          Decimal? @db.Decimal(10, 2) // optional "was" price shown struck through
+  // Limited-time offer: while it runs, students pay offerPrice instead of total.
+  offerPrice   Decimal?  @db.Decimal(10, 2)
+  offerLabel   String? // e.g. "Diwali offer"
+  offerEndsAt  DateTime? // null = until the admin removes it
   installments Json? // [{ "label": "1st", "amount": 5000, "dueDate": "2026-11-01" }]
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())

@@ -44,6 +44,7 @@ String friendlyMessage(String code, String? fallback) => switch (code) {
       'WRONG_PASSWORD' => 'Your current password is wrong.',
       'STAFF_USE_WEB' => 'This app is for students. Admins and teachers please use the web panel.',
       'DEMO_ACCOUNT' => 'This opens once the institute approves your admission.',
+      'MAINTENANCE' => fallback ?? 'We are doing some maintenance. Please check back soon.',
       'PASSWORD_UNCHANGED' => 'Choose a password different from the current one.',
       'ACCOUNT_LOCKED' => 'Too many wrong attempts. Try again after 15 minutes.',
       'ACCOUNT_DISABLED' => 'This account is disabled. Contact the institute.',
@@ -71,7 +72,7 @@ const _sessionDeadCodes = {
 /// Dio wrapper: adds the bearer token, refreshes it on TOKEN_EXPIRED and reports
 /// dead sessions (e.g. SESSION_REPLACED after logging in on another device).
 class ApiClient {
-  ApiClient(this._store, {required this.onSessionLost})
+  ApiClient(this._store, {required this.onSessionLost, required this.onMaintenance})
       : dio = Dio(BaseOptions(
           baseUrl: apiUrl,
           connectTimeout: const Duration(seconds: 15),
@@ -92,6 +93,9 @@ class ApiClient {
 
   final SecureStore _store;
   final void Function(String code) onSessionLost;
+
+  /// The admin switched on maintenance mode; the app shows the maintenance screen.
+  final void Function(String message) onMaintenance;
   final Dio dio;
 
   // Refresh tokens rotate and a replayed one revokes the whole session, so
@@ -102,6 +106,12 @@ class ApiClient {
     final data = err.response?.data;
     final code = data is Map ? data['code'] as String? : null;
     final isAuthCall = err.requestOptions.extra['noAuth'] == true;
+
+    if (err.response?.statusCode == 503 && code == 'MAINTENANCE') {
+      final msg = data is Map ? data['message'] : null;
+      onMaintenance(msg is String ? msg : '');
+      return handler.next(err);
+    }
 
     if (err.response?.statusCode == 401 && !isAuthCall) {
       if (code == 'TOKEN_EXPIRED' && err.requestOptions.extra['retried'] != true) {

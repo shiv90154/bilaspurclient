@@ -8,7 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
-import { ErrorCode, forbidden, unauthorized } from '../errors.js';
+import { ErrorCode, forbidden, unauthorized, underMaintenance } from '../errors.js';
+import { SettingsService } from '../../modules/settings/settings.service.js';
 import type { AccessTokenPayload, AuthUser } from '../types/auth-user.js';
 import {
   Role,
@@ -28,6 +29,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -99,6 +101,11 @@ export class JwtAuthGuard implements CanActivate {
         ErrorCode.STUDENT_NOT_ACTIVE,
         'Your account is not active. Please contact the institute.',
       );
+    }
+
+    if (user.role === Role.STUDENT) {
+      const maintenance = await this.settings.maintenance();
+      if (maintenance.on) throw underMaintenance(maintenance.message);
     }
 
     request.user = {

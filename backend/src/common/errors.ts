@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 
@@ -27,6 +28,7 @@ export const ErrorCode = {
   PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
   WRONG_PASSWORD: 'WRONG_PASSWORD',
   STAFF_USE_WEB: 'STAFF_USE_WEB', // admin/faculty tried to log in to the student app
+  MAINTENANCE: 'MAINTENANCE', // the admin switched on maintenance mode; students are kept out
   DEMO_ACCOUNT: 'DEMO_ACCOUNT', // feature needs an approved (ACTIVE) student // change-password: the current password does not match
 } as const;
 
@@ -37,6 +39,14 @@ export const unauthorized = (code: ErrorCodeValue, message: string) =>
 
 export const forbidden = (code: ErrorCodeValue, message: string) =>
   new ForbiddenException({ statusCode: 403, code, message });
+
+/** Maintenance mode: students (app and web) get this until the admin switches it off. */
+export const underMaintenance = (message: string) =>
+  new ServiceUnavailableException({
+    statusCode: 503,
+    code: ErrorCode.MAINTENANCE,
+    message: message || 'We are doing some maintenance. Please check back soon.',
+  });
 
 export const badRequest = (code: ErrorCodeValue, message: string) =>
   new BadRequestException({ statusCode: 400, code, message });

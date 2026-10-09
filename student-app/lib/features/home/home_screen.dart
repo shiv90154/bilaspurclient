@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models.dart';
+import '../about/about_screen.dart';
 import '../auth/auth_controller.dart';
 import '../classes/classes_screen.dart';
 import '../doubts/doubts_screen.dart';
@@ -150,6 +151,8 @@ class HomeScreen extends ConsumerWidget {
                       foreground: scheme.onSurface, onTap: () => context.go('/profile')),
                 ],
               ),
+              const SizedBox(height: 14),
+              MeetTeacherCard(onTap: () => context.push('/about')),
               const SizedBox(height: 26),
               _SectionTitle(
                 'Live classes',

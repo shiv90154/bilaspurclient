@@ -15,10 +15,22 @@ const DEFAULTS = {
   contactEmail: '',
   contactPhone: '',
   address: '',
+  /** Website, student panel and student app show a maintenance screen; admin and faculty keep working. */
+  maintenanceMode: false,
+  /** Optional note on the maintenance screen, e.g. "Back by 6 pm". */
+  maintenanceMessage: '',
 };
 
 /** The settings anyone may read (public legal pages, the app's about/consent screens). */
-export const PUBLIC_KEYS = ['instituteName', 'contactEmail', 'contactPhone', 'address', 'blockDeveloperOptions'] as const;
+export const PUBLIC_KEYS = [
+  'instituteName',
+  'contactEmail',
+  'contactPhone',
+  'address',
+  'blockDeveloperOptions',
+  'maintenanceMode',
+  'maintenanceMessage',
+] as const;
 
 export type AppSettings = typeof DEFAULTS;
 type SettingKey = keyof AppSettings;
@@ -49,6 +61,18 @@ export class SettingsService {
     return (await this.all())[key];
   }
 
+  private maintenanceCache?: { at: number; value: { on: boolean; message: string } };
+
+  /** Checked on every student request, so it is cached for a few seconds. */
+  async maintenance(): Promise<{ on: boolean; message: string }> {
+    const hit = this.maintenanceCache;
+    if (hit && Date.now() - hit.at < 5_000) return hit.value;
+    const all = await this.all();
+    const value = { on: all.maintenanceMode, message: all.maintenanceMessage };
+    this.maintenanceCache = { at: Date.now(), value };
+    return value;
+  }
+
   async publicInfo() {
     const all = await this.all();
     return Object.fromEntries(PUBLIC_KEYS.map((k) => [k, all[k]])) as Pick<AppSettings, (typeof PUBLIC_KEYS)[number]>;
@@ -67,6 +91,7 @@ export class SettingsService {
         }),
       ),
     );
+    this.maintenanceCache = undefined;
     if (changes.length) {
       await this.activity.log({
         actorId: admin.id,

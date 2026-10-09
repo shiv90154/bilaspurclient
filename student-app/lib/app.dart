@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/maintenance.dart';
 import 'core/push_service.dart';
 import 'core/security.dart';
 import 'core/theme.dart';
 import 'data/models.dart';
+import 'features/about/about_screen.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/consent_screen.dart';
 import 'features/auth/forgot_password_screen.dart';
@@ -57,7 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 /// Screens that work without being logged in.
-const _publicScreens = {'/login', '/register', '/forgot'};
+const _publicScreens = {'/login', '/register', '/forgot', '/about'};
 
 GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
   return GoRouter(
@@ -77,7 +79,7 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
             return at == '/consent' ? null : '/consent';
           }
           // Any in-app screen is fine; only the splash, login and consent are off limits once signed in.
-          return at == '/' || at == '/consent' || _publicScreens.contains(at) ? '/home' : null;
+          return at == '/' || at == '/consent' || (_publicScreens.contains(at) && at != '/about') ? '/home' : null;
       }
     },
     routes: [
@@ -115,6 +117,7 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
       ),
       GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
       GoRoute(path: '/videos', builder: (_, _) => const VideosScreen()),
+      GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
     ],
   );
 }
@@ -131,6 +134,14 @@ class EduManageApp extends ConsumerWidget {
       return MaterialApp(
         theme: theme,
         home: _Blocked(reason: problem, onRetry: () => ref.invalidate(deviceProblemProvider)),
+      );
+    }
+    final maintenance = ref.watch(maintenanceProvider);
+    if (maintenance != null) {
+      return MaterialApp(
+        title: 'DHĪ',
+        theme: theme,
+        home: MaintenanceScreen(message: maintenance, onRetry: ref.read(maintenanceProvider.notifier).check),
       );
     }
     return MaterialApp.router(

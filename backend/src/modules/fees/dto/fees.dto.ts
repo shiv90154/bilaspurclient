@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEnum,
   IsIn,
+  IsISO8601,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -13,6 +14,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto.js';
 import { PaymentMode, PaymentStatus } from '../../../generated/prisma/enums.js';
@@ -42,6 +44,26 @@ export class CreateFeePlanDto {
   @Min(0)
   @Max(1_000_000)
   mrp?: number;
+
+  @ApiPropertyOptional({ example: 3999, description: 'Offer price students pay while the offer runs (0 = no offer)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000)
+  offerPrice?: number;
+
+  @ApiPropertyOptional({ example: 'Diwali offer', description: 'Badge shown with the offer price' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  offerLabel?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-01T18:29:59.000Z', description: 'When the offer ends ("" = no end date)' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== '')
+  @IsISO8601()
+  offerEndsAt?: string;
 }
 
 export class UpdateFeePlanDto {
@@ -67,6 +89,26 @@ export class UpdateFeePlanDto {
   @Min(0)
   @Max(1_000_000)
   mrp?: number;
+
+  @ApiPropertyOptional({ example: 3999, description: 'Offer price students pay while the offer runs (0 = no offer)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000)
+  offerPrice?: number;
+
+  @ApiPropertyOptional({ example: 'Diwali offer', description: 'Badge shown with the offer price' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  offerLabel?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-01T18:29:59.000Z', description: 'When the offer ends ("" = no end date)' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== '')
+  @IsISO8601()
+  offerEndsAt?: string;
 
   @ApiPropertyOptional({ description: 'Shown on the website and open for online payment' })
   @IsOptional()

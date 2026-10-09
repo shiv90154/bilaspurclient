@@ -37,4 +37,15 @@ export class UpdateSettingsDto {
   @IsString()
   @MaxLength(300)
   address?: string;
+
+  @ApiPropertyOptional({ description: 'Maintenance mode: website, student panel and app show a maintenance screen' })
+  @IsOptional()
+  @IsBoolean()
+  maintenanceMode?: boolean;
+
+  @ApiPropertyOptional({ description: 'Note on the maintenance screen, e.g. "Back by 6 pm"' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  maintenanceMessage?: string;
 }

@@ -132,6 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Wrap(
                       alignment: WrapAlignment.center,
                       children: [
+                        TextButton(onPressed: () => context.push('/about'), child: const Text('About DHĪ')),
                         TextButton(onPressed: () => openLegalPage(context, 'privacy'), child: const Text('Privacy policy')),
                         TextButton(onPressed: () => openLegalPage(context, 'terms'), child: const Text('Terms')),
                       ],

@@ -69,6 +69,7 @@ flutter:
 
   assets:
     - assets/logo.png
+    - assets/founder-portrait.jpg
 
   fonts:
     - family: Poppins

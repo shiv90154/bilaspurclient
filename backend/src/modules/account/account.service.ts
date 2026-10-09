@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { underMaintenance } from '../../common/errors.js';
 import { hashPassword } from '../../common/password.util.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { OtpPurpose, Role, SessionRevokeReason, StudentStatus, UserStatus } from '../../generated/prisma/enums.js';
@@ -50,6 +51,8 @@ export class AccountService {
 
   /** Step 1: check the form, keep it with a code, email the code. Nothing is created yet. */
   async registerStart(dto: RegisterStartDto) {
+    const maintenance = await this.settings.maintenance();
+    if (maintenance.on) throw underMaintenance(maintenance.message);
     const course = await this.prisma.course.findFirst({ where: { id: dto.courseId, active: true }, select: { id: true } });
     if (!course) throw new BadRequestException('Choose a course from the list');
     await this.assertFree(dto.phone, dto.email);

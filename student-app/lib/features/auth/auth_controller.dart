@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/maintenance.dart';
 import '../../core/push_service.dart';
 import '../../core/secure_store.dart';
 
@@ -71,6 +72,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
     ref.watch(secureStoreProvider),
     onSessionLost: (code) => ref.read(authProvider.notifier).sessionLost(code),
+    onMaintenance: (message) => ref.read(maintenanceProvider.notifier).report(message),
   );
 });
 

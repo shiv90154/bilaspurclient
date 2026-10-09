@@ -91,7 +91,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   const priceCard = (
     <div className="rounded-2xl border border-line bg-surface p-6 shadow-xl shadow-primary/10">
-      <PriceTag total={c.total} mrp={c.mrp} big />
+      <PriceTag total={c.total} mrp={c.mrp} offer={c.offer} big />
       <p className="mt-2 text-[12.5px] text-sub">One-time fee, taxes included</p>
       <Link href={joinHref} className={`${btnSolid} mt-5 w-full`}>
         Join now <ArrowRight size={18} />
@@ -280,7 +280,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
       {/* Sticky join bar on phones */}
       <div className="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
-        <PriceTag total={c.total} mrp={c.mrp} />
+        <PriceTag total={c.total} mrp={c.mrp} offer={c.offer} compact />
         <Link href={joinHref} className={`${btnSolid} !h-11 shrink-0`}>
           Join now
         </Link>

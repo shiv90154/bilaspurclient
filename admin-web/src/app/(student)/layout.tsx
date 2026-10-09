@@ -1,8 +1,13 @@
 import { StudentShell } from "@/components/student/student-shell";
 import { ConsentForm } from "@/components/student/consent-form";
+import { MaintenanceScreen } from "@/components/site/maintenance-screen";
+import { getPublicInfo } from "@/lib/server/public-info";
 import { requireUser } from "@/lib/server/session";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
+  // Checked before the session: during maintenance the API refuses student requests.
+  const info = await getPublicInfo();
+  if (info.maintenanceMode) return <MaintenanceScreen message={info.maintenanceMessage} />;
   const user = await requireUser(["STUDENT"]);
   return (
     <StudentShell user={{ name: user.name }}>
