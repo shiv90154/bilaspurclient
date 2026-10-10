@@ -29,6 +29,10 @@ export default async function LoginPage({
   const [state, { reason, next: rawNext }] = await Promise.all([getSessionUser(), searchParams]);
   const next = safeNext(rawNext);
   if (state.status === "ok") redirect(ROLE_HOME[state.user.role]);
+  // Expired access token but a refresh token: renew it and come back here, which then opens the dashboard.
+  if (state.status === "needs-refresh") {
+    redirect(`/api/session/refresh?next=${encodeURIComponent(next ? `/login?next=${encodeURIComponent(next)}` : "/login")}`);
+  }
 
   const notice = reason ? REASONS[reason] : undefined;
 

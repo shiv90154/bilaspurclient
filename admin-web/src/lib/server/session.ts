@@ -131,6 +131,12 @@ export type SessionState =
   | { status: "needs-refresh" }
   | { status: "anonymous"; reason?: string };
 
+/** Cheap check (cookies only, no backend call): is someone probably signed in on this browser? */
+export async function hasSessionCookie(): Promise<boolean> {
+  const store = await cookies();
+  return store.has(ACCESS_COOKIE) || store.has(REFRESH_COOKIE);
+}
+
 export async function getSessionUser(): Promise<SessionState> {
   const store = await cookies();
   const access = store.get(ACCESS_COOKIE)?.value;

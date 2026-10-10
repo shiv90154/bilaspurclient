@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LogIn, Menu, X } from "lucide-react";
+import { LayoutDashboard, LogIn, Menu, X } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 
 export const SITE_NAV = [
@@ -15,7 +15,8 @@ export const SITE_NAV = [
   { href: "/contact", label: "Contact" },
 ];
 
-export function SiteHeader() {
+/** `signedIn`: a session cookie is present; "My dashboard" goes via /login, which sends a signed-in user to their own home. */
+export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
   const pathname = usePathname();
   // The phone menu remembers the page it was opened on, so it closes by itself after navigating.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -49,15 +50,23 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/register"
-            className="hidden h-10 items-center rounded-xl px-3 text-[14px] font-semibold text-primary hover:bg-primary-tint sm:inline-flex"
-          >
-            Register
-          </Link>
-          <Link href="/login" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-dark">
-            <LogIn size={16} /> Log in
-          </Link>
+          {signedIn ? (
+            <Link href="/login" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-dark">
+              <LayoutDashboard size={16} /> My dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="hidden h-10 items-center rounded-xl px-3 text-[14px] font-semibold text-primary hover:bg-primary-tint sm:inline-flex"
+              >
+                Register
+              </Link>
+              <Link href="/login" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-dark">
+                <LogIn size={16} /> Log in
+              </Link>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setOpenOn(open ? null : pathname)}
@@ -88,11 +97,13 @@ export function SiteHeader() {
                 </li>
               );
             })}
-            <li className="mt-2 border-t border-line pt-3">
-              <Link href="/register" className="flex min-h-12 items-center rounded-lg px-3 text-[15px] font-semibold text-primary">
-                New student? Register
-              </Link>
-            </li>
+            {!signedIn && (
+              <li className="mt-2 border-t border-line pt-3">
+                <Link href="/register" className="flex min-h-12 items-center rounded-lg px-3 text-[15px] font-semibold text-primary">
+                  New student? Register
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       )}

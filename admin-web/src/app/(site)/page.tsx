@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import {
   btnOutline,
@@ -18,9 +17,7 @@ import {
   Steps,
   YoutubeIcon,
 } from "@/components/site/site-ui";
-import { ROLE_HOME } from "@/lib/constants";
 import { getOpenPlans } from "@/lib/server/public-plans";
-import { getSessionUser } from "@/lib/server/session";
 import { FOUNDER, SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -28,11 +25,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-/** Home page; signed-in users go straight to their own home. */
+/** Home page. Signed-in users see it too; the header's "My dashboard" takes them back. */
 export default async function HomePage() {
-  const state = await getSessionUser();
-  if (state.status === "ok") redirect(ROLE_HOME[state.user.role]);
-  if (state.status === "needs-refresh") redirect("/api/session/refresh?next=/");
   const plans = await getOpenPlans();
 
   return (
