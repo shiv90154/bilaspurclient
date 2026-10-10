@@ -19,7 +19,7 @@ interface PendingSignup {
   name: string;
   phone: string;
   passwordHash: string;
-  courseId: string;
+  courseId?: string;
   via: 'APP' | 'WEB';
 }
 
@@ -53,8 +53,10 @@ export class AccountService {
   async registerStart(dto: RegisterStartDto) {
     const maintenance = await this.settings.maintenance();
     if (maintenance.on) throw underMaintenance(maintenance.message);
-    const course = await this.prisma.course.findFirst({ where: { id: dto.courseId, active: true }, select: { id: true } });
-    if (!course) throw new BadRequestException('Choose a course from the list');
+    if (dto.courseId) {
+      const course = await this.prisma.course.findFirst({ where: { id: dto.courseId, active: true }, select: { id: true } });
+      if (!course) throw new BadRequestException('Choose a course from the list');
+    }
     await this.assertFree(dto.phone, dto.email);
 
     const payload: PendingSignup = {
@@ -94,7 +96,7 @@ export class AccountService {
         data: {
           status: StudentStatus.PENDING,
           registeredVia: payload.via,
-          requestedCourse: { connect: { id: payload.courseId } },
+          ...(payload.courseId && { requestedCourse: { connect: { id: payload.courseId } } }),
           user: {
             create: {
               name: payload.name,

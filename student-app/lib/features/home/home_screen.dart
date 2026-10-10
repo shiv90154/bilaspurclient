@@ -7,6 +7,7 @@ import '../../data/models.dart';
 import '../about/about_screen.dart';
 import '../auth/auth_controller.dart';
 import '../classes/classes_screen.dart';
+import '../courses/courses_screen.dart';
 import '../doubts/doubts_screen.dart';
 import '../tests/tests_screen.dart';
 
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
     ref.invalidate(testsProvider);
     ref.invalidate(doubtsProvider);
     ref.invalidate(classesProvider);
+    ref.invalidate(catalogProvider);
     try {
       await Future.wait([
         ref.read(testsProvider.future),
@@ -101,7 +103,7 @@ class HomeScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Demo account. You registered for ${user.requestedCourse ?? 'a course'}. '
+                            'Demo account. ${user.requestedCourse != null ? 'You registered for ${user.requestedCourse}. ' : ''}'
                             'Try the free demo notes and tests now; classes, doubts and all study material '
                             'open when the institute approves your admission.',
                             style: TextStyle(color: scheme.onTertiaryContainer),
@@ -153,7 +155,8 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               MeetTeacherCard(onTap: () => context.push('/about')),
-              const SizedBox(height: 26),
+              const SizedBox(height: 22),
+              const HomeCoursesSection(),
               _SectionTitle(
                 'Live classes',
                 actionLabel: 'See all',

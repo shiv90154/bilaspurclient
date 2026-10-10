@@ -188,7 +188,8 @@ export class AuthService {
             const limit = this.config.get('DEVICE_CHANGE_LIMIT_30D', {
               infer: true,
             });
-            if (recent >= limit) {
+            // Google's reviewers sign in from many test devices; the admin lifts the limit meanwhile.
+            if (recent >= limit && !(await this.settings.get('playReviewMode'))) {
               throw forbidden(
                 ErrorCode.DEVICE_LIMIT_REACHED,
                 'Device change limit reached. Contact the institute.',

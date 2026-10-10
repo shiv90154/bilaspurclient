@@ -26,6 +26,12 @@ export class CourseFaqDto {
 
 /** Fields of the public course page (all optional, shared by create and update). */
 export class CoursePageDto {
+  @ApiPropertyOptional({ example: 'AIAPGET', description: "Group in the app's course catalog" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  category?: string;
+
   @ApiPropertyOptional({ example: 'Crack AIAPGET with concept-first preparation' })
   @IsOptional()
   @IsString()

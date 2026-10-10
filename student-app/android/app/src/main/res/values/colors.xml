@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colours from the logo (same as lib/core/theme.dart). -->
+    <color name="ic_launcher_background">#FDFAF3</color>
+    <color name="brand_forest">#1F4D2C</color>
+</resources>

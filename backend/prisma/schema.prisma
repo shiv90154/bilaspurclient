@@ -330,6 +330,8 @@ model Course {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  // Group in the app's course catalog, e.g. "AIAPGET", "AMO". Null = "Other courses".
+  category   String?
   // Public course page on the website (Udemy-style). All optional; empty sections are hidden.
   tagline    String? // one line under the title
   language   String? // e.g. "Hindi + English"

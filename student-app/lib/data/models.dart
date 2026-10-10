@@ -509,3 +509,76 @@ class VideoItem {
   final String? url;
   final bool isDemo;
 }
+
+// ───────────── course catalog ─────────────
+
+/// One open course of the institute (GET /courses/catalog). Never carries a price: the app
+/// shows what is taught, not how to buy it (Play payments policy).
+class CatalogCourse {
+  const CatalogCourse({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.tagline,
+    required this.description,
+    required this.language,
+    required this.duration,
+    required this.highlights,
+    required this.includes,
+    required this.audience,
+    required this.subjects,
+    required this.enrolled,
+    required this.subjectCount,
+    required this.topicCount,
+    required this.tests,
+    required this.notes,
+    required this.videos,
+  });
+
+  factory CatalogCourse.fromJson(Map<String, dynamic> j) {
+    final counts = j['counts'] as Map<String, dynamic>;
+    List<String> strings(Object? v) => [for (final s in (v as List? ?? const [])) s as String];
+    return CatalogCourse(
+      id: j['id'] as String,
+      name: j['name'] as String,
+      category: j['category'] as String?,
+      tagline: j['tagline'] as String?,
+      description: j['description'] as String?,
+      language: j['language'] as String?,
+      duration: j['duration'] as String?,
+      highlights: strings(j['highlights']),
+      includes: strings(j['includes']),
+      audience: strings(j['audience']),
+      subjects: [
+        for (final s in j['subjects'] as List)
+          (name: s['name'] as String, topics: [for (final t in s['topics'] as List) t['name'] as String]),
+      ],
+      enrolled: j['enrolled'] as bool,
+      subjectCount: counts['subjects'] as int,
+      topicCount: counts['topics'] as int,
+      tests: counts['tests'] as int,
+      notes: counts['notes'] as int,
+      videos: counts['videos'] as int,
+    );
+  }
+
+  final String id;
+  final String name;
+  final String? category;
+  final String? tagline;
+  final String? description;
+  final String? language;
+  final String? duration;
+  final List<String> highlights;
+  final List<String> includes;
+  final List<String> audience;
+  final List<({String name, List<String> topics})> subjects;
+
+  /// The student is in an active batch of this course.
+  final bool enrolled;
+  final int subjectCount;
+  final int topicCount;
+  final int tests;
+  final int notes;
+  final int videos;
+}

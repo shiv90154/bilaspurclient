@@ -14,6 +14,7 @@ import 'features/auth/forgot_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/classes/classes_screen.dart';
+import 'features/courses/courses_screen.dart';
 import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notes/note_viewer_screen.dart';
@@ -117,6 +118,11 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
       ),
       GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
       GoRoute(path: '/videos', builder: (_, _) => const VideosScreen()),
+      GoRoute(path: '/courses', builder: (_, _) => const CoursesScreen()),
+      GoRoute(
+        path: '/courses/:id',
+        builder: (_, state) => CourseDetailScreen(id: state.pathParameters['id']!, initial: state.extra as CatalogCourse?),
+      ),
       GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
     ],
   );

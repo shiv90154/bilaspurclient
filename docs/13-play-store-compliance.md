@@ -52,12 +52,14 @@ Research date: 2026-10-02. Policies badalte rehte hain — release se pehle Play
 - [x] Permissions audit (minimal): only INTERNET + POST_NOTIFICATIONS
 - [x] Privacy policy page (public URL): admin-web `/privacy` (+ `/terms`), linked from login, consent screen and app Profile. Institute name/contact from Settings. Have a lawyer read it once.
 - [x] Account deletion (in-app + web URL): app Profile → Delete my account, public `/delete-account`, admin web → Deletion Requests (deletes personal data, keeps anonymous scores)
-- [ ] Data safety form
-- [ ] Content rating
-- [ ] Target audience (13+) declared
-- [ ] Reviewer demo credentials added
+- [ ] Data safety form (answers ready: [play-store/data-safety.md](../play-store/data-safety.md))
+- [ ] Content rating (answers: [play-store/app-content.md](../play-store/app-content.md))
+- [ ] Target audience declared (recommend 18+: AIAPGET/AMO students are BAMS graduates)
+- [ ] Reviewer demo credentials added ([play-store/app-access.md](../play-store/app-access.md); Settings → Play Store review mode)
 - [x] No pricing/pay UI in app (payments policy check)
-- [ ] Store listing assets
+- [x] **Course catalog (2026-10-10):** app mein saare courses dikhte hain (Home → Courses, `GET /courses/catalog`): naam, category, syllabus, counts. **Price, offer, buy, WhatsApp/website link kabhi nahi**; jo course student ka nahi uspe sirf "Not in your batch". Admin course form mein bhi yahi warning hai.
+- [x] App sign-up mein course dropdown nahi (2026-10-10); app mein koi WhatsApp "buy" link bhi nahi (steering bhi policy violation hai)
+- [ ] Store listing assets (text, icon, feature graphic ready in [play-store/](../play-store/README.md); screenshots pending)
 - [ ] Internal → closed testing
 - [ ] Pre-launch report clean
 - [ ] Staged production rollout

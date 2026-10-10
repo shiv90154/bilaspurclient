@@ -104,7 +104,7 @@ export default async function HomePage() {
       {plans.length > 0 && (
         <Section className="py-16 lg:py-24">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionTitle eyebrow="Courses" title="Join a course" text="Pay securely online. Your course opens in the app as soon as the payment goes through." />
+            <SectionTitle eyebrow="Courses" title="Join a course" text="Press Buy now to message us on WhatsApp. Your course opens in the app as soon as the fee is paid." />
             <Link href="/courses" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary hover:underline">
               All courses <ArrowRight size={16} />
             </Link>

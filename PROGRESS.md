@@ -159,7 +159,7 @@ Smoke tests demo seed ke users use karte hain aur sessions/devices ki rows banat
 
 ## Baaki hai (is order mein)
 
-1. **Play Store se pehle:** final package id (abhi `com.edumanage.student_app`), release signing key + AAB, apna domain, Settings mein institute ka email/phone/address, privacy policy lawyer se ek baar check, Data safety form + listing ([docs/13](docs/13-play-store-compliance.md)).
+1. **Play Store se pehle:** final package id `com.dhiayurved.app` (done; Firebase app pending), release signing key + AAB, apna domain, Settings mein institute ka email/phone/address, privacy policy lawyer se ek baar check, Data safety form + listing ([docs/13](docs/13-play-store-compliance.md)).
 2. **Server:** naya code deploy + naya APK; production.env mein `BACKUP_PASSPHRASE` daalo, phir `deploy.sh backup` + `deploy.sh restore-test`. Firewall/SSH hardening owner ke saath (shared VPS).
 3. **Jaan-boojh kar baad mein:** recorded lectures (video upload + HLS), fees/Razorpay, apna live system (BBB/LiveKit), OTP/email se khud password reset.
 4. Infra: CI, Sentry/uptime alerts.
@@ -169,7 +169,7 @@ Smoke tests demo seed ke users use karte hain aur sessions/devices ki rows banat
 - **`admin-web/.git` nested repo hai.** `create-next-app` ne bana diya (sirf "Initial commit from Create Next App"). Poore project ke liye ek hi repo chahiye, to root par `git init` se pehle isse hatao: `Remove-Item -Recurse -Force admin-web\.git`. Maine delete nahi kiya (auto-mode ne roka).
 - **Flutter PATH mein nahi hai.** Use karne ke liye `C:\src\flutter\bin\flutter.bat` ya PATH mein `C:\src\flutter\bin` jodo.
 - **Android build abhi nahi chalega:** `flutter doctor` ke hisaab se Android SDK mein *cmdline-tools* nahi hai aur licenses accept nahi hain. Android Studio → SDK Manager → "Android SDK Command-line Tools" install karo, phir `flutter doctor --android-licenses`. (Licenses aapko khud accept karne hain.)
-- **`applicationId` = `com.edumanage.student_app`** abhi sirf placeholder hai. Play Store par publish hone ke baad badal nahi sakta — institute ke naam se final karke hi release karo.
+- **`applicationId` = `com.dhiayurved.app`** (final, 2026-10-10). Play Store ka saara material: [play-store/](play-store/README.md).
 - **Demo passwords** (`ChangeMe@123`, `Demo@12345`) kisi bhi server par mat chalao; `SEED_ADMIN_*` env se alag do ya seed ke baad badlo. `SEED_DEMO=false` rakho production mein.
 - `backend/.env` mein local random JWT secret hai; `.env*` git mein nahi jaane chahiye (root [.gitignore](.gitignore) bana diya hai).
 - Web proxy `x-forwarded-for` aage bhejta hai; Nginx ke peeche isse overwrite karna (client ka bheja hua mat maanna), warna IP rate-limit bypass ho sakta hai. Account lockout phir bhi kaam karta hai.

@@ -113,6 +113,45 @@ export class ReportsController {
     );
   }
 
+  @Roles(Role.ADMIN)
+  @Get('fees')
+  fees(@CurrentUser() user: AuthUser, @Query() q: DateRangeQueryDto) {
+    return this.reports.fees(user, q);
+  }
+
+  @Roles(Role.ADMIN)
+  @Get('fees/csv')
+  async feesCsv(
+    @CurrentUser() user: AuthUser,
+    @Query() q: DateRangeQueryDto,
+    @Res() res: Response,
+  ) {
+    const r = await this.reports.fees(user, q);
+    await this.reports.logExport(user, 'fee-collection', { ...q });
+    sendCsv(
+      res,
+      'fee-collection',
+      ['Paid on', 'Receipt no', 'Name', 'Phone', 'Admission no', 'Course', 'Fee', 'Mode', 'Status', 'Amount (Rs)', 'Recorded by'],
+      r.rows.map((x) => [
+        istDateTime(x.paidAt), x.receiptNo, x.name, x.phone, x.admissionNo, x.course, x.plan, x.mode, x.status, x.amount, x.recordedBy,
+      ]),
+    );
+  }
+
+  /** Balances due today; not limited by dates. */
+  @Roles(Role.ADMIN)
+  @Get('fees/dues/csv')
+  async feeDuesCsv(@CurrentUser() user: AuthUser, @Res() res: Response) {
+    const r = await this.reports.fees(user, {});
+    await this.reports.logExport(user, 'fee-dues', {});
+    sendCsv(
+      res,
+      'fee-dues',
+      ['Name', 'Phone', 'Admission no', 'Course', 'Fee', 'Fee amount (Rs)', 'Paid (Rs)', 'Due (Rs)', 'Last paid on'],
+      r.dues.map((x) => [x.name, x.phone, x.admissionNo, x.course, x.plan, x.fee, x.paid, x.due, istDate(x.lastPaidAt)]),
+    );
+  }
+
   @Get('materials')
   materials(@CurrentUser() user: AuthUser, @Query() q: DateRangeQueryDto) {
     return this.reports.materials(user, q);

@@ -2,11 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CheckCircle2, GraduationCap, Receipt } from "lucide-react";
+import { CheckCircle2, GraduationCap, MessageCircle, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { api, inr, PAYMENT_MODE_LABEL, type MyFeePlan, type Payment } from "@/lib/api";
 import { OfferCountdown } from "@/components/site/offer-countdown";
+import { whatsappBuyHref } from "@/lib/site";
 import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, ListSkeleton } from "@/components/ui";
 
 interface OrderResponse {
@@ -94,7 +95,11 @@ export function StudentFees({ highlight }: { highlight?: string }) {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-[20px] font-bold">Fees</h1>
-        <p className="mt-1 text-[13px] text-sub">Pay for a course here. It opens in the app as soon as the payment goes through.</p>
+        <p className="mt-1 text-[13px] text-sub">
+          {plans.data && !plans.data.onlinePayments
+            ? "Press Buy on WhatsApp to get the payment details. The course opens in the app once the institute confirms your payment."
+            : "Pay for a course here. It opens in the app as soon as the payment goes through."}
+        </p>
       </div>
 
       {paidPlan && (
@@ -114,11 +119,6 @@ export function StudentFees({ highlight }: { highlight?: string }) {
         {plans.isPending && <ListSkeleton rows={2} />}
         {plans.data?.plans.length === 0 && (
           <EmptyState icon={GraduationCap} title="No courses open right now" text="The institute has not opened any course for online payment yet." />
-        )}
-        {plans.data && !plans.data.onlinePayments && plans.data.plans.length > 0 && (
-          <p className="rounded-[10px] bg-accent-tint px-3 py-2 text-[12.5px] text-accent-ink">
-            Online payment is not switched on yet. Please pay at the institute for now.
-          </p>
         )}
         {plans.data?.plans.map((p) => {
           const due = Number(p.due);
@@ -164,10 +164,19 @@ export function StudentFees({ highlight }: { highlight?: string }) {
               <div className="mt-3">
                 {done ? (
                   <Badge tone="green">Joined</Badge>
+                ) : !plans.data.onlinePayments ? (
+                  <a
+                    href={whatsappBuyHref(p, inr(due))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={btnPrimary + " w-full sm:w-auto"}
+                  >
+                    <MessageCircle size={16} aria-hidden="true" /> Buy on WhatsApp
+                  </a>
                 ) : (
                   <button
                     className={btnPrimary + " w-full sm:w-auto"}
-                    disabled={!plans.data.onlinePayments || pay.isPending}
+                    disabled={pay.isPending}
                     onClick={() => pay.mutate(p)}
                   >
                     {pay.isPending && pay.variables?.id === p.id ? "Opening payment…" : `Pay ${inr(due)}`}
@@ -178,8 +187,10 @@ export function StudentFees({ highlight }: { highlight?: string }) {
           );
         })}
         <p className="text-[11.5px] text-sub">
-          Payments are handled by Razorpay (UPI, cards, net banking). We never see your card or UPI PIN. See the{" "}
-          <Link href="/terms" className="underline">terms and refund policy</Link>.
+          {plans.data?.onlinePayments
+            ? "Payments are handled by Razorpay (UPI, cards, net banking). We never see your card or UPI PIN."
+            : "Pay only to the UPI ID or bank account the institute shares from its official number. We never ask for your UPI PIN or OTP."}{" "}
+          See the <Link href="/terms" className="underline">terms and refund policy</Link>.
         </p>
       </section>
 

@@ -18,7 +18,7 @@ export default async function TermsPage() {
 
       <Section title="Your account">
         <ul className="list-disc space-y-1 pl-5">
-          <li>Accounts are given by the institute to enrolled students and staff only.</li>
+          <li>Students may register in the app or on this website; full access opens when the institute approves the admission or the fee is paid. Staff accounts are given by the institute.</li>
           <li>Keep your password secret. Do not share your account; it works on one phone at a time and logging in elsewhere logs out the other phone.</li>
           <li>Tell the institute if you think someone else used your account.</li>
         </ul>
@@ -42,14 +42,15 @@ export default async function TermsPage() {
       <Section title="Fees, payments and refunds">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            Course fees are paid on this website (Fees section after signing in) through Razorpay, or at the institute.
-            The app itself does not sell anything. Prices are in Indian rupees and include taxes.
+            To buy a course, message the institute on WhatsApp from the course page on this website. We share the payment
+            details (UPI or bank transfer) in the chat; you can also pay at the institute. The app itself does not sell
+            anything. Prices are in Indian rupees and include taxes.
           </li>
-          <li>Card, UPI and bank details are entered on Razorpay&apos;s secure page; we never see or store them.</li>
-          <li>When a payment goes through, the course opens in the app at once and a receipt is available on the website.</li>
+          <li>Pay only to the UPI ID or bank account the institute shares from its official number. We never ask for your UPI PIN or OTP.</li>
+          <li>Once the institute confirms the payment, the course opens in the app and a receipt is available on the website.</li>
           <li>
-            If money is taken but the course does not open, contact us with the payment ID; it is settled within 2 working
-            days, or refunded.
+            If you paid but the course does not open, message us with the payment screenshot or transaction ID; it is
+            settled within 2 working days, or refunded.
           </li>
           <li>
             Fees are not refundable once the course has started or study content has been opened, except when the

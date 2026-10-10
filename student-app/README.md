@@ -1,6 +1,6 @@
 # student-app — DHĪ Android app (Flutter)
 
-**Status: empty Flutter project only.** `flutter create` was run (Flutter 3.47.6 / Dart 3.13.5, Android only, id `com.edumanage.student_app`); no packages added, no app code written, nothing has been analyzed or run yet. See [../PROGRESS.md](../PROGRESS.md).
+**Status: empty Flutter project only.** `flutter create` was run (Flutter 3.47.6 / Dart 3.13.5, Android only, id was `com.edumanage.student_app`, now `com.dhiayurved.app`); no packages added, no app code written, nothing has been analyzed or run yet. See [../PROGRESS.md](../PROGRESS.md).
 
 ## Set up this machine first
 

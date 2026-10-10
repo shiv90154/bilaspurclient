@@ -84,8 +84,8 @@ Server par git, docker + compose v2, openssl, nginx, certbot hone chahiye. Poori
 
 ## F. Play Store / release se pehle (important)
 
-- [ ] **Package id final karo** (abhi `com.edumanage.student_app` placeholder hai). Play Store par jaane ke baad badal nahi sakta. Badalna ho to **pehle mujhe bolo**; phir Firebase mein naya Android app banana padega aur nayi `google-services.json` chahiye.
-- [ ] **Release signing key banao.** Abhi release build debug key se sign hota hai — Play Store ye nahi lega. `keytool` se keystore banao aur uska **backup aur password surakshit rakho** (kho gaya to app update nahi kar paoge). Mujhe bolo, main gradle mein signing set kar dunga.
+- [x] **Package id final:** `com.dhiayurved.app` (2026-10-10). Firebase mein naya Android app + nayi `google-services.json` chahiye: [play-store/RELEASE.md](play-store/RELEASE.md).
+- [ ] **Release signing key banao** (gradle ready hai, steps: [play-store/RELEASE.md](play-store/RELEASE.md)). Abhi release build debug key se sign hota hai — Play Store ye nahi lega. `keytool` se keystore banao aur uska **backup aur password surakshit rakho** (kho gaya to app update nahi kar paoge). Mujhe bolo, main gradle mein signing set kar dunga.
 - [ ] Production API ke saath release APK:
   ```powershell
   cd student-app

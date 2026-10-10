@@ -1,4 +1,4 @@
-package com.edumanage.student_app
+package com.dhiayurved.app
 
 import android.content.pm.ApplicationInfo
 import android.os.Build

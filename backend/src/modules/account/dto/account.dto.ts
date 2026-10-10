@@ -31,9 +31,10 @@ export class RegisterStartDto {
   @Matches(PASSWORD_RULE, { message: PASSWORD_RULE_MESSAGE })
   password!: string;
 
-  @ApiProperty({ description: 'Course the student wants to join (from GET /courses/public)' })
+  @ApiPropertyOptional({ description: 'Course the student wants to join (from GET /courses/public). The app does not ask for it (Play policy: no course list in the app).' })
+  @IsOptional()
   @IsUUID()
-  courseId!: string;
+  courseId?: string;
 
   @ApiPropertyOptional({ enum: ['APP', 'WEB'], default: 'APP' })
   @IsOptional()

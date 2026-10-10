@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { ArrowRight, BadgeCheck, CirclePlay, ClipboardCheck, Download, FileText, MessageCircle, ShieldCheck, Timer, UserPlus, Video } from "lucide-react";
 import { inr, type PlanOffer } from "@/lib/api";
 import { OfferCountdown } from "./offer-countdown";
-import { FOUNDER, SITE } from "@/lib/site";
+import { FOUNDER, SITE, whatsappBuyHref } from "@/lib/site";
 
 /** An open course fee from GET /fee-plans/public. */
 export interface PublicPlan {
@@ -103,7 +103,7 @@ export const FEATURES = [
 export const STEPS = [
   { icon: Download, title: "Download the app", text: "Get the DHĪ app from the Google Play Store." },
   { icon: UserPlus, title: "Register", text: "Sign up with your name, phone and email. Verify with a one-time code." },
-  { icon: BadgeCheck, title: "Start learning", text: "Pay the course fee on this website (or at the institute) and your batch’s classes, notes and tests open up." },
+  { icon: BadgeCheck, title: "Start learning", text: "Press Buy now on a course to message us on WhatsApp. Once the fee is paid, your batch’s classes, notes and tests open up." },
 ];
 
 export const btn = "inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold transition";
@@ -234,12 +234,24 @@ export function CourseCard({ plan }: { plan: PublicPlan }) {
         <p className="mt-1.5 text-[12px] text-sub">One-time fee, taxes included</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Link href={href} className={`${btnOutline} !h-11 !px-3 !text-[14px]`}>View details</Link>
-          <Link href={`/learn/fees?plan=${plan.id}`} className={`${btnSolid} !h-11 !px-3 !text-[14px]`}>
-            Join now <ArrowRight size={16} />
-          </Link>
+          <BuyButton plan={plan} className="!h-11 !px-3 !text-[14px]" />
         </div>
       </div>
     </article>
+  );
+}
+
+/** "Buy now": opens WhatsApp with the course already named, so the visitor needs no account first. */
+export function BuyButton({ plan, className = "", children = "Buy now" }: { plan: PublicPlan; className?: string; children?: ReactNode }) {
+  return (
+    <a
+      href={whatsappBuyHref(plan, inr(plan.offer?.price ?? plan.total))}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${btn} bg-[#1f8f4e] text-white hover:bg-[#187540] ${className}`}
+    >
+      <MessageCircle size={17} aria-hidden="true" /> {children}
+    </a>
   );
 }
 

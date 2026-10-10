@@ -23,6 +23,12 @@ class ContentApi {
     }
   }
 
+  // ── course catalog (no prices) ──
+  Future<List<CatalogCourse>> catalog() => _run(() async {
+        final res = await _dio.get<List<dynamic>>('/courses/catalog');
+        return [for (final c in res.data!) CatalogCourse.fromJson(c as Map<String, dynamic>)];
+      });
+
   // ── notes ──
   Future<List<Note>> notes() => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/materials', queryParameters: {'limit': 100});

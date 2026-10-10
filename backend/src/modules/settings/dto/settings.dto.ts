@@ -48,4 +48,9 @@ export class UpdateSettingsDto {
   @IsString()
   @MaxLength(300)
   maintenanceMessage?: string;
+
+  @ApiPropertyOptional({ description: 'Play Store review: app allows emulators and Developer options, no new-device limit' })
+  @IsOptional()
+  @IsBoolean()
+  playReviewMode?: boolean;
 }

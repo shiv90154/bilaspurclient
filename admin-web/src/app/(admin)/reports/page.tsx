@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/server/session";
 
 export const metadata: Metadata = { title: "Reports" };
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const user = await requireUser(["ADMIN", "FACULTY"]);
-  return <ReportsView isAdmin={user.role === "ADMIN"} />;
+  return <ReportsView isAdmin={user.role === "ADMIN"} initialTab={(await searchParams).tab} />;
 }

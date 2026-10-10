@@ -3,20 +3,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Download } from "lucide-react";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
   api,
   csvHref,
+  inr,
+  PAYMENT_MODE_LABEL,
   qs,
   type Batch,
   type Paginated,
+  type PaymentMode,
   type StudentStatus,
   type TestResults,
   type TestRow,
 } from "@/lib/api";
 import { Badge, btnGhost, ErrorNote, Field, inputCls, PageHeader } from "@/components/ui";
 
-type Tab = "attendance" | "tests" | "students" | "enquiries" | "materials";
+type Tab = "attendance" | "tests" | "students" | "fees" | "enquiries" | "materials";
 
 interface AttendanceReport {
   summary: { classes: number; averagePercentage: number };
@@ -33,6 +37,23 @@ interface EnquiryReport {
   bySource: { name: string; total: number; converted: number; conversion: number }[];
   byCourse: { name: string; total: number; converted: number; conversion: number }[];
 }
+interface FeeReport {
+  summary: { collected: number; payments: number; average: number; refunded: number; due: number; dueStudents: number };
+  byMode: { mode: PaymentMode; amount: number; count: number }[];
+  byMonth: { month: string; amount: number; count: number }[];
+  byPlan: { planId: string; name: string; course: string; amount: number; count: number }[];
+  dues: {
+    studentFeeId: string;
+    studentId: string;
+    name: string;
+    phone: string;
+    plan: string;
+    fee: number;
+    paid: number;
+    due: number;
+    lastPaidAt: string | null;
+  }[];
+}
 interface MaterialReport {
   summary: { materials: number; views: number };
   rows: { materialId: string; title: string; subject: string | null; batches: string; views: number; students: number; lastViewedAt: string | null }[];
@@ -42,13 +63,13 @@ const STATUSES: StudentStatus[] = ["PENDING", "ACTIVE", "INACTIVE", "COMPLETED",
 const when = (d: string | null) => (d ? format(new Date(d), "d MMM yyyy, h:mm a") : "—");
 const tone = (p: number) => (p >= 75 ? "green" : p >= 50 ? "amber" : "red");
 
-export function ReportsView({ isAdmin }: { isAdmin: boolean }) {
-  const [tab, setTab] = useState<Tab>("attendance");
+export function ReportsView({ isAdmin, initialTab }: { isAdmin: boolean; initialTab?: string }) {
+  const [tab, setTab] = useState<Tab>(initialTab === "fees" && isAdmin ? "fees" : "attendance");
   const tabs: { id: Tab; label: string }[] = [
     { id: "attendance", label: "Attendance" },
     { id: "tests", label: "Test results" },
     { id: "students", label: "Student list" },
-    ...(isAdmin ? [{ id: "enquiries" as const, label: "Enquiries" }] : []),
+    ...(isAdmin ? [{ id: "fees" as const, label: "Fees" }, { id: "enquiries" as const, label: "Enquiries" }] : []),
     { id: "materials", label: "Study material" },
   ];
 
@@ -74,6 +95,7 @@ export function ReportsView({ isAdmin }: { isAdmin: boolean }) {
         {tab === "attendance" && <AttendanceReportPanel />}
         {tab === "tests" && <TestReportPanel />}
         {tab === "students" && <StudentListPanel />}
+        {tab === "fees" && isAdmin && <FeeReportPanel />}
         {tab === "enquiries" && isAdmin && <EnquiryReportPanel />}
         {tab === "materials" && <MaterialReportPanel />}
       </div>
@@ -367,6 +389,124 @@ function EnquiryReportPanel() {
             {breakdown("By source", r.data.bySource)}
             {breakdown("By course", r.data.byCourse)}
           </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Tile({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
+  return (
+    <div className="rounded-[14px] border border-line bg-surface p-3.5 sm:p-4">
+      <div className="text-[12px] font-semibold text-sub">{label}</div>
+      <div className="mt-1.5 font-display text-[22px] font-extrabold">{value}</div>
+      {note && <div className="mt-0.5 text-[11.5px] text-sub">{note}</div>}
+    </div>
+  );
+}
+
+const monthName = (m: string) => format(new Date(`${m}-01T00:00:00`), "MMM yyyy");
+
+function FeeReportPanel() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const params = { from, to };
+  const r = useQuery({
+    queryKey: ["report-fees", params],
+    queryFn: () => api<FeeReport>(`/reports/fees${qs(params)}`),
+  });
+  const collected = r.data?.summary.collected ?? 0;
+  const sums = (title: string, head: string, rows: { key: string; label: ReactNode; amount: number; count: number }[]) => (
+    <Card title={title}>
+      <div className="overflow-x-auto">
+        <table className="rtable w-full text-left text-[13px]">
+          <thead className="border-y border-line text-[11.5px] uppercase tracking-wide text-sub">
+            <tr><th className={th}>{head}</th><th className={th}>Payments</th><th className={th}>Amount</th><th className={th}>Share</th></tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((x) => (
+              <tr key={x.key}>
+                <td className={td + " font-semibold"}>{x.label}</td>
+                <td data-label="Payments" className={td}>{x.count}</td>
+                <td data-label="Amount" className={td + " font-semibold"}>{inr(x.amount)}</td>
+                <td data-label="Share" className={td + " text-sub"}>{collected ? Math.round((x.amount / collected) * 100) : 0}%</td>
+              </tr>
+            ))}
+            {rows.length === 0 && <Empty cols={4} text="No payments in this period." />}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
+        <div className="flex items-end"><CsvButton href={csvHref("/reports/fees/csv", params)} /></div>
+      </div>
+      <ErrorNote error={r.error} />
+      {r.isPending && <p className="text-[13px] text-sub">Loading…</p>}
+      {r.data && (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Tile label="Collected" value={inr(r.data.summary.collected)} note={from || to ? "in these dates" : "all time"} />
+            <Tile
+              label="Payments"
+              value={r.data.summary.payments}
+              note={r.data.summary.payments > 0 && `average ${inr(r.data.summary.average)}`}
+            />
+            <Tile label="Balance due" value={inr(r.data.summary.due)} note={`${r.data.summary.dueStudents} part-paid, as of today`} />
+            <Tile label="Refunded" value={inr(r.data.summary.refunded)} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {sums("By payment mode", "Mode", r.data.byMode.map((x) => ({ key: x.mode, label: PAYMENT_MODE_LABEL[x.mode], amount: x.amount, count: x.count })))}
+            {sums("By month", "Month", r.data.byMonth.map((x) => ({ key: x.month, label: monthName(x.month), amount: x.amount, count: x.count })))}
+          </div>
+          {sums(
+            "By course fee",
+            "Course",
+            r.data.byPlan.map((x) => ({
+              key: x.planId,
+              label: <>{x.name}<span className="block text-[12px] font-normal text-sub">{x.course}</span></>,
+              amount: x.amount,
+              count: x.count,
+            })),
+          )}
+          <Card
+            title={`Balance due${r.data.dues.length ? ` · ${r.data.dues.length} students` : ""}`}
+            action={<CsvButton href={csvHref("/reports/fees/dues/csv", {})} />}
+          >
+            <p className="px-4 text-[12.5px] text-sub sm:px-5">
+              Students who paid part of a fee. Record the rest under Fees &amp; payments → Record payment.
+            </p>
+            <div className="mt-2 overflow-x-auto">
+              <table className="rtable w-full min-w-[640px] text-left text-[13px]">
+                <thead className="border-y border-line text-[11.5px] uppercase tracking-wide text-sub">
+                  <tr>
+                    <th className={th}>Student</th><th className={th}>Course fee</th><th className={th}>Fee</th>
+                    <th className={th}>Paid</th><th className={th}>Due</th><th className={th}>Last paid</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {r.data.dues.map((x) => (
+                    <tr key={x.studentFeeId}>
+                      <td className={td + " font-semibold"}>
+                        <Link href={`/students/${x.studentId}`} className="hover:text-primary hover:underline">{x.name}</Link>
+                        <span className="block text-[12px] font-normal text-sub">{x.phone}</span>
+                      </td>
+                      <td data-label="Course fee" className={td + " text-sub"}>{x.plan}</td>
+                      <td data-label="Fee" className={td}>{inr(x.fee)}</td>
+                      <td data-label="Paid" className={td}>{inr(x.paid)}</td>
+                      <td data-label="Due" className={td}><Badge tone="amber">{inr(x.due)}</Badge></td>
+                      <td data-label="Last paid" className={td + " text-sub"}>{x.lastPaidAt ? format(new Date(x.lastPaidAt), "d MMM yyyy") : "—"}</td>
+                    </tr>
+                  ))}
+                  {r.data.dues.length === 0 && <Empty cols={6} text="No balances due." />}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </>
       )}
     </div>

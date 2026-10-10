@@ -25,8 +25,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _code = TextEditingController();
-  late final Future<List<PublicCourse>> _courses = ref.read(accountApiProvider).courses();
-  String? _courseId;
   bool _agree = false;
   bool _hide = true;
   bool _busy = false;
@@ -67,7 +65,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             phone: _phone.text.trim(),
             email: _email.text.trim(),
             password: _pass.text,
-            courseId: _courseId!,
           );
       setState(() => _sentTo = sentTo);
     });
@@ -131,24 +128,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               border: OutlineInputBorder(),
             ),
             validator: (v) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((v ?? '').trim()) ? null : 'Enter a valid email',
-          ),
-          const SizedBox(height: 14),
-          FutureBuilder(
-            future: _courses,
-            builder: (context, snap) => DropdownButtonFormField<String>(
-              initialValue: _courseId,
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: 'Course you want to join',
-                border: const OutlineInputBorder(),
-                errorText: snap.hasError ? 'Could not load courses. Check your internet.' : null,
-              ),
-              items: [
-                for (final c in snap.data ?? const <PublicCourse>[]) DropdownMenuItem(value: c.id, child: Text(c.name)),
-              ],
-              onChanged: (v) => setState(() => _courseId = v),
-              validator: (v) => v == null ? 'Choose a course' : null,
-            ),
           ),
           const SizedBox(height: 14),
           TextFormField(

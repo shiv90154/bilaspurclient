@@ -91,7 +91,7 @@ export function CoursesView({ canEdit }: { canEdit: boolean }) {
                 {canEdit && (
                   <div className="flex gap-2">
                     <button className={btnGhost + " !h-8 !px-3"} onClick={() => setDialog({ kind: "page", course: c })}>
-                      Website page
+                      Website & app page
                     </button>
                     <button className={btnGhost + " !h-8 !px-3"} onClick={() => setDialog({ kind: "batch", courseId: c.id })}>
                       Add batch
@@ -211,6 +211,7 @@ function CoursePageForm({ course, onClose }: { course: Course; onClose: () => vo
     save.mutate({
       name: val(f, "name"),
       description: String(f.get("description") ?? "").trim(),
+      category: String(f.get("category") ?? "").trim(),
       tagline: String(f.get("tagline") ?? "").trim(),
       language: String(f.get("language") ?? "").trim(),
       duration: String(f.get("duration") ?? "").trim(),
@@ -222,13 +223,20 @@ function CoursePageForm({ course, onClose }: { course: Course; onClose: () => vo
   };
   const area = inputCls + " h-auto py-2";
   return (
-    <Modal title={`Website page: ${course.name}`} onClose={onClose}>
+    <Modal title={`Website & app page: ${course.name}`} onClose={onClose}>
       <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
         <p className="text-[12.5px] text-sub">
           Shown on the course page of the website. Empty sections are hidden. The syllabus comes from the subjects and topics of
           this course, and the counts of classes, notes and tests are added by themselves.
         </p>
+        <p className="rounded-[10px] bg-accent-tint px-3 py-2 text-[12.5px] text-accent-ink">
+          The Android app shows the same text (without the FAQs) in its course list. Do not write prices, offers, &quot;buy&quot;
+          or WhatsApp/payment details here: Google Play removes apps that sell outside Play. Prices belong only in Fees &amp; payments.
+        </p>
         <Field label="Course name *">{(id) => <input id={id} name="name" required maxLength={100} defaultValue={course.name} className={inputCls} />}</Field>
+        <Field label="Category in the app (e.g. AIAPGET, AMO, BAMS)">
+          {(id) => <input id={id} name="category" maxLength={40} defaultValue={course.category ?? ""} placeholder="AIAPGET" className={inputCls} />}
+        </Field>
         <Field label="One-line tagline">
           {(id) => <input id={id} name="tagline" maxLength={160} defaultValue={course.tagline ?? ""} placeholder="Crack AIAPGET with concept-first preparation" className={inputCls} />}
         </Field>

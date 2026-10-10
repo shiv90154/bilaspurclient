@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight,
   CalendarDays,
   Check,
   ClipboardCheck,
@@ -17,7 +16,7 @@ import {
   UserRound,
   Video,
 } from "lucide-react";
-import { btnSolid, CtaBand, PriceTag, Section, type PublicPlan } from "@/components/site/site-ui";
+import { BuyButton, CtaBand, PriceTag, Section, type PublicPlan } from "@/components/site/site-ui";
 import { plural } from "@/lib/format";
 import { backendRequest } from "@/lib/server/session";
 import { FOUNDER, SITE } from "@/lib/site";
@@ -64,9 +63,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 const date = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 const PAYMENT_FAQ = [
-  { q: "How do I pay?", a: "Register, log in on this website and press Join now. Pay with UPI, card or net banking through Razorpay, or pay at the institute." },
-  { q: "When does the course open?", a: "As soon as the payment goes through. Sign in to the DHĪ app again and your classes, notes and tests are there." },
-  { q: "Do I get a receipt?", a: "Yes. Every payment has a receipt under Fees, which you can print or save as PDF." },
+  { q: "How do I buy this course?", a: "Press Buy now. WhatsApp opens with the course name already typed; send the message and we reply with the payment details (UPI or bank transfer). You can also pay at the institute." },
+  { q: "When does the course open?", a: "As soon as we confirm your payment. Sign in to the DHĪ app again and your classes, notes and tests are there." },
+  { q: "Do I get a receipt?", a: "Yes. Every payment has a receipt under Fees on this website, which you can print or save as PDF." },
 ];
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +73,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   if (!c) notFound();
   const { course, counts } = c;
   const topics = course.subjects.reduce((n, s) => n + s.topics.length, 0);
-  const joinHref = `/learn/fees?plan=${c.id}`;
 
   const includes = [
     counts.classes > 0 && { icon: Video, text: `${plural(counts.classes, "live class", "live classes")} scheduled` },
@@ -93,11 +91,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     <div className="rounded-2xl border border-line bg-surface p-6 shadow-xl shadow-primary/10">
       <PriceTag total={c.total} mrp={c.mrp} offer={c.offer} big />
       <p className="mt-2 text-[12.5px] text-sub">One-time fee, taxes included</p>
-      <Link href={joinHref} className={`${btnSolid} mt-5 w-full`}>
-        Join now <ArrowRight size={18} />
-      </Link>
+      <BuyButton plan={c} className="mt-5 w-full">Buy now on WhatsApp</BuyButton>
       <p className="mt-3 text-center text-[12px] text-sub">
-        {c.onlinePayments ? "Pay securely with UPI, card or net banking" : "Online payment opens soon. You can pay at the institute."}
+        Message us and we share the payment details. Your course opens in the app once the fee is paid.
       </p>
       <ul className="mt-5 flex flex-col gap-2.5 border-t border-line pt-5 text-[13.5px]">
         {c.batch.startDate && (
@@ -107,14 +103,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         {course.language && <li className="flex items-center gap-2.5"><Languages size={16} className="text-primary" /> {course.language}</li>}
         <li className="flex items-center gap-2.5"><UserRound size={16} className="text-primary" /> Batch: {c.batch.name}</li>
       </ul>
-      <a
-        href={SITE.whatsappHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-5 flex items-center justify-center gap-2 text-[13px] font-semibold text-primary hover:underline"
-      >
-        <MessageCircle size={15} /> Questions? Ask on WhatsApp
-      </a>
     </div>
   );
 
@@ -281,9 +269,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       {/* Sticky join bar on phones */}
       <div className="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
         <PriceTag total={c.total} mrp={c.mrp} offer={c.offer} compact />
-        <Link href={joinHref} className={`${btnSolid} !h-11 shrink-0`}>
-          Join now
-        </Link>
+        <BuyButton plan={c} className="!h-11 shrink-0 !px-4" />
       </div>
 
       <CtaBand />

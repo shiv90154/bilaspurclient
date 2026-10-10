@@ -18,14 +18,15 @@ export default async function PrivacyPage() {
 
       <Section title="Who can use the app">
         <p>
-          Accounts are created only by the institute for enrolled students and staff. There is no public sign-up.
+          Students can create an account themselves in the app or on this website (confirmed with a code sent to their
+          email); the institute approves their admission. Teacher and staff accounts are created by the institute.
           If a student is under 18, a parent or guardian must agree to this policy and the terms before the app is used.
         </p>
       </Section>
 
       <Section title="What we collect">
         <ul className="list-disc space-y-1 pl-5">
-          <li><b>Account:</b> name, mobile number, email (optional), password (stored only as a one-way hash).</li>
+          <li><b>Account:</b> name, mobile number, email, password (stored only as a one-way hash).</li>
           <li><b>Profile, entered by the institute:</b> date of birth, gender, address, city, guardian name and phone, previous school, class and marks, target exam, photo, and documents such as ID proof or marksheets.</li>
           <li><b>Learning records:</b> batches and courses, test answers and scores, class attendance (when you join a live class), doubts you ask and the replies, and which study notes you open.</li>
           <li><b>Device and security:</b> a device identifier and model (one account works on one phone at a time), a notification token, IP address and login times.</li>
@@ -48,6 +49,7 @@ export default async function PrivacyPage() {
           <li>our server hosting provider, where the data is stored;</li>
           <li>Google Firebase Cloud Messaging, to deliver notifications (it receives the notification token and the message);</li>
           <li>Zoom or Google Meet, only when you open a live class link (their own privacy policies apply there).</li>
+          <li>WhatsApp, only when you choose to message us there, for example to buy a course (WhatsApp&apos;s own privacy policy applies).</li>
         </ul>
         <p>Teachers see data only for the batches they teach. We disclose data to authorities only when the law requires it.</p>
       </Section>

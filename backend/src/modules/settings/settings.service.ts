@@ -19,6 +19,11 @@ const DEFAULTS = {
   maintenanceMode: false,
   /** Optional note on the maintenance screen, e.g. "Back by 6 pm". */
   maintenanceMessage: '',
+  /**
+   * While Google reviews the app: the app also runs on emulators and with Developer options on,
+   * and students may sign in on any number of new phones. Switch it off after approval.
+   */
+  playReviewMode: false,
 };
 
 /** The settings anyone may read (public legal pages, the app's about/consent screens). */
@@ -30,6 +35,7 @@ export const PUBLIC_KEYS = [
   'blockDeveloperOptions',
   'maintenanceMode',
   'maintenanceMessage',
+  'playReviewMode',
 ] as const;
 
 export type AppSettings = typeof DEFAULTS;

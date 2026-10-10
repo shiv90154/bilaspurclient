@@ -33,6 +33,13 @@ export class CoursesController {
     return this.courses.list(q);
   }
 
+  /** All open courses for the student app's catalog (no prices). Declared before `:id`. */
+  @Roles(Role.STUDENT)
+  @Get('catalog')
+  catalog(@CurrentUser() user: AuthUser) {
+    return this.courses.catalog(user);
+  }
+
   @Roles(Role.ADMIN, Role.FACULTY)
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {

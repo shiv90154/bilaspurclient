@@ -7,18 +7,18 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Courses",
-  description: "Ayurveda courses with live classes, notes and test series. See fees and join online.",
+  description: "Ayurveda courses with live classes, notes and test series. See fees and buy on WhatsApp.",
   alternates: { canonical: "/courses" },
 };
 
 const FAQ = [
   {
-    q: "How do I pay?",
-    a: "Register, log in on this website and open Fees. Pay with UPI, card or net banking through Razorpay. You can also pay at the institute.",
+    q: "How do I buy a course?",
+    a: "Press Buy now on the course. WhatsApp opens with the course name already typed; send it and we reply with the payment details (UPI or bank transfer). You can also pay at the institute.",
   },
   {
     q: "When does my course open?",
-    a: "As soon as the payment goes through. Open the DHĪ app and sign in again to see your classes, notes and tests.",
+    a: "As soon as we confirm your payment. Open the DHĪ app and sign in again to see your classes, notes and tests.",
   },
   {
     q: "Do I get a receipt?",
@@ -26,7 +26,7 @@ const FAQ = [
   },
   {
     q: "Can I get a refund?",
-    a: "See the refund rules in our terms. If money was taken but the course did not open, contact us with the payment ID.",
+    a: "See the refund rules in our terms. If you paid but the course did not open, message us on WhatsApp with the payment screenshot.",
   },
 ];
 
@@ -37,7 +37,7 @@ export default async function CoursesPage() {
       <PageHero
         eyebrow="Courses"
         title="Choose your course"
-        text="Live classes, PDF notes, test series and doubt solving in every course. Pay online and start the same day."
+        text="Live classes, PDF notes, test series and doubt solving in every course. Message us on WhatsApp to buy and start the same day."
       />
 
       <Section className="py-16 lg:py-20">
@@ -60,7 +60,7 @@ export default async function CoursesPage() {
           </div>
         )}
         <p className="mt-6 text-[14px] text-sub">
-          New here? <Link href="/register" className="font-semibold text-primary">Register first</Link>, then log in and pay under Fees.
+          New here? Press Buy now and send us the message, then <Link href="/register" className="font-semibold text-primary">register</Link> in the app or on this website with the same phone number.
         </p>
       </Section>
 

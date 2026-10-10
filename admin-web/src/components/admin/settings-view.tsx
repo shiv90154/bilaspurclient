@@ -108,6 +108,7 @@ function AppSwitches() {
   const pending = save.isPending ? save.variables : undefined;
   const watermark = pending?.watermarkEnabled ?? settings.data?.watermarkEnabled;
   const devBlock = pending?.blockDeveloperOptions ?? settings.data?.blockDeveloperOptions;
+  const review = pending?.playReviewMode ?? settings.data?.playReviewMode;
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -147,6 +148,26 @@ function AppSwitches() {
           onChange={(v) => save.mutate({ blockDeveloperOptions: v })}
         />
       </div>
+      <div className="mt-5 flex items-start justify-between gap-4 border-t border-line pt-5">
+        <div>
+          <p id="review-label" className="text-[13.5px] font-semibold">Play Store review mode</p>
+          <p id="review-help" className="mt-1 max-w-md text-[12.5px] text-sub">
+            Turn on while Google reviews a new version. Google tests the app on emulators and phones with Developer options
+            on, from many devices, which the app normally refuses. While on, the app opens on those too and the limit on
+            new phones per student is lifted. Rooted phones stay blocked. Turn it off once the update is approved.
+          </p>
+        </div>
+        <Switch
+          checked={review ?? false}
+          disabled={settings.isPending || save.isPending}
+          labelledBy="review-label"
+          describedBy="review-help"
+          onChange={(v) => save.mutate({ playReviewMode: v })}
+        />
+      </div>
+      {review && (
+        <p className="mt-3 text-[12.5px] font-semibold text-danger">On: emulators and new phones are allowed. Turn off after approval.</p>
+      )}
       <div className="mt-2">
         <ErrorNote error={settings.error ?? save.error} />
       </div>

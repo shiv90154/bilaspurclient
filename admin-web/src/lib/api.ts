@@ -63,7 +63,8 @@ export interface Course {
   description: string | null;
   active: boolean;
   _count?: { batches: number };
-  // public course page
+  // public course page (and the app's course catalog)
+  category?: string | null;
   tagline?: string | null;
   language?: string | null;
   duration?: string | null;
@@ -290,6 +291,7 @@ export interface ClassAttendance {
 export interface AppSettings {
   watermarkEnabled: boolean;
   blockDeveloperOptions: boolean;
+  playReviewMode: boolean;
   instituteName: string;
   contactEmail: string;
   contactPhone: string;

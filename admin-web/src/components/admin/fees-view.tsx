@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { IndianRupee, Plus, Receipt, Tag } from "lucide-react";
+import { BarChart3, IndianRupee, Plus, Receipt, Tag } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import {
@@ -51,7 +51,10 @@ export function FeesView() {
         title="Fees & payments"
         subtitle="Course fees shown on the website, online payments and cash/UPI entries"
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link href="/reports?tab=fees" className={btnGhost}>
+              <BarChart3 size={16} /> Reports
+            </Link>
             <button className={btnGhost} onClick={() => setDialog("plan")}>
               <Plus size={16} /> Course fee
             </button>

@@ -5,6 +5,8 @@ import {
   ClassStatus,
   EnquiryStatus,
   EnrollmentStatus,
+  FeeStatus,
+  PaymentStatus,
   Role,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -17,6 +19,11 @@ import type {
 } from './dto/report.dto.js';
 
 const DAY_MS = 24 * 3600_000;
+/** Money is added up in paise (integers) and handed out in rupees, so sums never drift. */
+const paise = (v: { toString(): string } | null | undefined) => Math.round(Number(v?.toString() ?? 0) * 100);
+const rupees = (p: number) => p / 100;
+/** "2026-10" in India time, for the month-wise totals. */
+const istMonth = (d: Date) => new Date(d.getTime() + 330 * 60_000).toISOString().slice(0, 7);
 const pct = (part: number, whole: number) => (whole ? +((part / whole) * 100).toFixed(1) : 0);
 
 /**
@@ -207,6 +214,120 @@ export class ReportsService {
         assignedTo: e.assignedTo?.name ?? null,
         createdAt: e.createdAt,
       })),
+    };
+  }
+
+  /**
+   * Fee collection: money received in the period by mode, month and course, every payment
+   * (for the CSV), and the balances still due today (part-paid fees; not limited by the dates).
+   */
+  async fees(user: AuthUser, q: DateRangeQueryDto) {
+    if (user.role !== Role.ADMIN) throw new ForbiddenException();
+    const approvedAt = this.range(q);
+    const [payments, open] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { status: { in: [PaymentStatus.PAID, PaymentStatus.REFUNDED] }, ...(approvedAt && { approvedAt }) },
+        orderBy: { approvedAt: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          mode: true,
+          status: true,
+          receiptNo: true,
+          approvedAt: true,
+          createdAt: true,
+          approvedBy: { select: { name: true } },
+          studentFee: {
+            select: {
+              plan: { select: { id: true, name: true, course: { select: { name: true } } } },
+              student: { select: { admissionNo: true, user: { select: { name: true, phone: true } } } },
+            },
+          },
+        },
+      }),
+      this.prisma.studentFee.findMany({
+        where: { status: { in: [FeeStatus.PENDING, FeeStatus.PARTIAL] }, student: { deletedAt: null } },
+        select: {
+          id: true,
+          total: true,
+          discount: true,
+          plan: { select: { name: true, course: { select: { name: true } } } },
+          student: { select: { id: true, admissionNo: true, user: { select: { name: true, phone: true } } } },
+          payments: { where: { status: PaymentStatus.PAID }, select: { amount: true, approvedAt: true } },
+        },
+      }),
+    ]);
+
+    type Sum = { amount: number; count: number };
+    const add = <K>(map: Map<K, Sum>, key: K, amount: number) => {
+      const row = map.get(key) ?? { amount: 0, count: 0 };
+      row.amount += amount;
+      row.count++;
+      map.set(key, row);
+    };
+    const byMode = new Map<string, Sum>();
+    const byMonth = new Map<string, Sum>();
+    const byPlan = new Map<string, Sum>();
+    const planName = new Map<string, { name: string; course: string }>();
+    const paid = payments.filter((p) => p.status === PaymentStatus.PAID);
+    for (const p of paid) {
+      const amount = paise(p.amount);
+      add(byMode, p.mode, amount);
+      add(byMonth, istMonth(p.approvedAt ?? p.createdAt), amount);
+      add(byPlan, p.studentFee.plan.id, amount);
+      planName.set(p.studentFee.plan.id, { name: p.studentFee.plan.name, course: p.studentFee.plan.course.name });
+    }
+    const out = (r: Sum) => ({ amount: rupees(r.amount), count: r.count });
+
+    // A fee row is opened as soon as checkout starts, so only part-paid fees are real balances due.
+    const dues = open
+      .map((f) => ({
+        studentFeeId: f.id,
+        studentId: f.student.id,
+        admissionNo: f.student.admissionNo,
+        name: f.student.user.name,
+        phone: f.student.user.phone,
+        plan: f.plan.name,
+        course: f.plan.course.name,
+        fee: paise(f.total) - paise(f.discount),
+        paid: f.payments.reduce((n, p) => n + paise(p.amount), 0),
+        lastPaidAt: f.payments.reduce<Date | null>((d, p) => (p.approvedAt && (!d || p.approvedAt > d) ? p.approvedAt : d), null),
+      }))
+      .filter((f) => f.paid > 0 && f.fee > f.paid)
+      .sort((a, b) => b.fee - b.paid - (a.fee - a.paid))
+      .map((f) => ({ ...f, fee: rupees(f.fee), paid: rupees(f.paid), due: rupees(f.fee - f.paid) }));
+
+    const collected = paid.reduce((n, p) => n + paise(p.amount), 0);
+    const refunded = payments.filter((p) => p.status === PaymentStatus.REFUNDED).reduce((n, p) => n + paise(p.amount), 0);
+    return {
+      summary: {
+        collected: rupees(collected),
+        payments: paid.length,
+        average: paid.length ? rupees(Math.round(collected / paid.length)) : 0,
+        refunded: rupees(refunded),
+        due: rupees(dues.reduce((n, d) => n + paise(d.due), 0)),
+        dueStudents: dues.length,
+      },
+      byMode: [...byMode].map(([mode, r]) => ({ mode, ...out(r) })).sort((a, b) => b.amount - a.amount),
+      byMonth: [...byMonth].map(([month, r]) => ({ month, ...out(r) })).sort((a, b) => b.month.localeCompare(a.month)),
+      byPlan: [...byPlan]
+        .map(([planId, r]) => ({ planId, ...planName.get(planId)!, ...out(r) }))
+        .sort((a, b) => b.amount - a.amount),
+      rows: payments.map((p) => ({
+        id: p.id,
+        paidAt: p.approvedAt ?? p.createdAt,
+        receiptNo: p.receiptNo,
+        name: p.studentFee.student.user.name,
+        phone: p.studentFee.student.user.phone,
+        admissionNo: p.studentFee.student.admissionNo,
+        plan: p.studentFee.plan.name,
+        course: p.studentFee.plan.course.name,
+        mode: p.mode,
+        status: p.status,
+        amount: rupees(paise(p.amount)),
+        recordedBy: p.approvedBy?.name ?? null,
+      })),
+      dues,
     };
   }
 

@@ -8,11 +8,29 @@ export const SITE = {
   whatsappHref: "https://wa.me/918091334667",
   email: "dr.pardeuman@gmail.com",
   location: "Himachal Pradesh, India",
-  playStore: "https://play.google.com/store/apps/details?id=com.edumanage.student_app",
+  playStore: "https://play.google.com/store/apps/details?id=com.dhiayurved.app",
   youtube: "https://youtube.com/@ayurveda-classroom",
   facebook: "https://www.facebook.com/share/1AoyiXEE2W/",
   instagram: "https://www.instagram.com/pardeumansingh",
 } as const;
+
+/** Website address, for links put inside WhatsApp messages. */
+const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://dhiayurved.com";
+
+/**
+ * WhatsApp chat with the institute, with "I want to buy this course" already typed.
+ * Replaces Razorpay checkout (its fees were too high for the client): the institute shares
+ * payment details in the chat and records the payment, which opens the course in the app.
+ */
+export function whatsappBuyHref(plan: { id: string; name: string; course: { name: string } }, price?: string) {
+  const lines = [
+    "Hello, I want to buy this course:",
+    `${plan.course.name} · ${plan.name}`,
+    price ? `Fee: ${price}` : null,
+    `${SITE_URL}/courses/${plan.id}`,
+  ];
+  return `${SITE.whatsappHref}?text=${encodeURIComponent(lines.filter(Boolean).join("\n"))}`;
+}
 
 /** Founder profile (from Dr. Pardeuman Singh, Oct 2026). */
 export const FOUNDER = {

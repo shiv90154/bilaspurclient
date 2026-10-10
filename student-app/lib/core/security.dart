@@ -17,12 +17,14 @@ class Security {
       if (await SafeDevice.isJailBroken) {
         return 'This device is rooted. For content safety the app cannot run on rooted devices.';
       }
-      if (!kDebugMode && !await SafeDevice.isRealDevice) {
+      final flags = kDebugMode ? (blockDev: false, review: false) : await _serverFlags();
+      // Play review mode (admin Settings): Google tests on emulators and with Developer options on.
+      if (!kDebugMode && !flags.review && !await SafeDevice.isRealDevice) {
         return 'Emulators are not supported. Please use a real phone.';
       }
       // Developer options / USB debugging let tools record or inspect the screen and fake the
       // device. Debug builds skip this so development on a phone stays possible.
-      final blockDev = !kDebugMode && await _blockDeveloperOptions();
+      final blockDev = flags.blockDev && !flags.review;
       if (blockDev && await SafeDevice.isDevelopmentModeEnable) {
         return 'Developer options are turned on.\n\nTo use the app, open Settings → System → '
             'Developer options and switch it off, then tap "Check again".';
@@ -38,15 +40,15 @@ class Security {
     return null;
   }
 
-  /// The admin can switch the Developer options block off in Settings. If the server cannot be
-  /// reached the block stays on (safer; the app needs the server anyway).
-  static Future<bool> _blockDeveloperOptions() async {
+  /// The admin's switches in Settings: the Developer options block and Play review mode. If the
+  /// server cannot be reached the checks stay on (safer; the app needs the server anyway).
+  static Future<({bool blockDev, bool review})> _serverFlags() async {
     try {
       final res = await Dio(BaseOptions(baseUrl: apiUrl, connectTimeout: const Duration(seconds: 8), receiveTimeout: const Duration(seconds: 8)))
           .get<Map<String, dynamic>>('/privacy/info');
-      return res.data?['blockDeveloperOptions'] != false;
+      return (blockDev: res.data?['blockDeveloperOptions'] != false, review: res.data?['playReviewMode'] == true);
     } catch (_) {
-      return true;
+      return (blockDev: true, review: false);
     }
   }
 }

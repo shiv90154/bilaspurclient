@@ -7,6 +7,7 @@
 - Sab website (Next.js) par hoga.
 - **Admin approval** offline ke liye; online payment hote hi access khul jaata hai (2026-10-08 decision).
 - **Razorpay** website par.
+- **2026-10-10:** client ko Razorpay mehenga laga. Website ka **Buy now** ab WhatsApp kholta hai (course naam + fee + link pehle se likha), login ki zaroorat nahi. Admin payment milne par **Record payment** (offline) karta hai → batch khulta hai. Student panel Fees pe bhi Razorpay keys na hon to "Buy on WhatsApp" dikhta hai. Razorpay code hata nahi, keys daalne par student Fees pe wapas chalu.
 
 ## Scope
 - Fee structure: course/batch ke hisaab se total fee, installments, due dates, discount.
