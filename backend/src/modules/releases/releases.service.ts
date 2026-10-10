@@ -91,6 +91,13 @@ export class ReleasesService {
     return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size, version: r.version };
   }
 
+  /** What the app asks at start-up to decide whether to show "update available". */
+  async latestInfo() {
+    const r = await this.prisma.appRelease.findFirst({ orderBy: { createdAt: 'desc' }, select: SELECT });
+    if (!r) throw new NotFoundException('No app build uploaded yet');
+    return { version: r.version, notes: r.notes, size: r.size };
+  }
+
   async remove(user: AuthUser, id: string) {
     const r = await this.prisma.appRelease.findUnique({ where: { id } });
     if (!r) throw new NotFoundException('Release not found');

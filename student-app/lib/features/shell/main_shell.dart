@@ -1,14 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/update_check.dart';
+
 /// The signed-in frame: a bottom bar that switches between the main tabs. Each tab keeps its own
 /// scroll position and stack. Full-screen flows (a note, an exam, a doubt thread) sit outside it.
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
 
   @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  /// Ask about a new version once per app start, not on every sign-in.
+  static bool _updateChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_updateChecked) return;
+    _updateChecked = true;
+    checkForUpdate().then((update) {
+      if (update != null && mounted) showUpdateDialog(context, update);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final shell = widget.shell;
     return PopScope(
       // Back from any other tab returns to Home first; only Home lets the app close.
       canPop: shell.currentIndex == 0,

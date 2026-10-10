@@ -65,6 +65,14 @@ export class ReleasesController {
     return this.releases.latestDownloadUrl();
   }
 
+  /** The app's "update available" check: newest version number and its notes, no login. */
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Get('latest')
+  latest() {
+    return this.releases.latestInfo();
+  }
+
   @Get(':id/download-url')
   downloadUrl(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.releases.downloadUrl(user, id);
