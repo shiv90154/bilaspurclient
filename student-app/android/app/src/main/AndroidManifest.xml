@@ -1,5 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- safe_device asks for location only for its mock-location check, which we never turn on
+         (no SafeDevice.init). Removed so the app asks for no location, as the privacy policy and
+         the Play data safety form say. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove"/>
     <!-- Android 13+: needed to show class reminders and doubt replies. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Lets MainActivity hide other apps' overlay windows over DHĪ (Android 12+, no user prompt). -->
