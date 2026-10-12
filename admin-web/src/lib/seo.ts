@@ -42,7 +42,7 @@ export function siteJsonLd() {
         url: `${SITE_URL}/about`,
         worksFor: { "@id": ORG_ID },
         alumniOf: FOUNDER.education.map((e) => ({ "@type": "CollegeOrUniversity", name: e.place.split(",")[0] })),
-        sameAs: [SITE.youtube, SITE.instagram],
+        sameAs: [SITE.youtube, SITE.founderInstagram],
       },
       {
         "@type": "WebSite",

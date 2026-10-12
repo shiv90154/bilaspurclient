@@ -13,7 +13,9 @@ export const SITE = {
   playStoreLive: false,
   youtube: "https://youtube.com/@ayurveda-classroom",
   facebook: "https://www.facebook.com/share/1AoyiXEE2W/",
-  instagram: "https://www.instagram.com/pardeumansingh",
+  instagram: "https://www.instagram.com/dhiayurved",
+  /** The founder's own profile; the institute's is `instagram`. */
+  founderInstagram: "https://www.instagram.com/pardeumansingh",
 } as const;
 
 /** Website address, for links put inside WhatsApp messages. */

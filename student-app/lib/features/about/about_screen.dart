@@ -34,7 +34,7 @@ abstract final class Founder {
     (Icons.call, 'Call', 'tel:+918091334667'),
     (Icons.chat, 'WhatsApp', 'https://wa.me/918091334667'),
     (Icons.smart_display, 'YouTube', 'https://youtube.com/@ayurveda-classroom'),
-    (Icons.camera_alt, 'Instagram', 'https://www.instagram.com/pardeumansingh'),
+    (Icons.camera_alt, 'Instagram', 'https://www.instagram.com/dhiayurved'),
     (Icons.facebook, 'Facebook', 'https://www.facebook.com/share/1AoyiXEE2W/'),
   ];
 }
