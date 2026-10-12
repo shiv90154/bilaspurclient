@@ -63,12 +63,12 @@ To add more names to the certificate (for example once `theaadhyaayurved.com` po
 certbot --nginx --cert-name dhiayurved.com --expand -d dhiayurved.com -d www.dhiayurved.com -d api.dhiayurved.com -d theaadhyaayurved.com -d www.theaadhyaayurved.com
 ```
 
-## Still to set in production.env
+## Email and payments
 
-- `SMTP_HOST=smtp.gmail.com` and `SMTP_PASS` (a Gmail **app password** of dhiayurved@gmail.com). Until then, email OTP (registration, forgot password) does not work.
+- Email OTP (registration, forgot password) goes through Gmail `dhiayurved@gmail.com` with an app password (`SMTP_*` in production.env), working since 2026-10-12.
 - Razorpay keys stay empty: fees are bought through WhatsApp.
 
-After a change: `./deploy/deploy.sh up`.
+After changing production.env: `./deploy/deploy.sh up`.
 
 ## Android app
 
