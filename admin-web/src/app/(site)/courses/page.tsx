@@ -6,8 +6,8 @@ import { getOpenPlans } from "@/lib/server/public-plans";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Courses",
-  description: "Ayurveda courses with live classes, notes and test series. See fees and buy on WhatsApp.",
+  title: "AIAPGET, AMO and BAMS Courses",
+  description: "Online Ayurveda courses for AIAPGET, AMO and BAMS exams with Dr. Pardeuman Singh: live classes, PDF notes and test series. See fees and buy on WhatsApp.",
   alternates: { canonical: "/courses" },
 };
 

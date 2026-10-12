@@ -20,6 +20,8 @@ import { BuyButton, CtaBand, PriceTag, Section, type PublicPlan } from "@/compon
 import { plural } from "@/lib/format";
 import { backendRequest } from "@/lib/server/session";
 import { FOUNDER, SITE } from "@/lib/site";
+import { courseJsonLd } from "@/lib/seo";
+import { JsonLd } from "@/components/site/json-ld";
 
 interface CoursePage extends Omit<PublicPlan, "course" | "batch"> {
   batch: { id: string; name: string; startDate: string | null; endDate: string | null };
@@ -108,6 +110,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   return (
     <>
+      <JsonLd data={courseJsonLd(c)} />
       {/* Title band */}
       <section className="bg-primary-dark px-4 py-12 text-white sm:px-6 lg:py-16">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_360px]">

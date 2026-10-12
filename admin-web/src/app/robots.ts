@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const SITE_URL = process.env.PUBLIC_ORIGIN ?? "https://dhiayurved.com";
+import { SITE_URL } from "@/lib/seo";
 
 /** Search engines may read the public website; the panels behind login stay out. */
 export default function robots(): MetadataRoute.Robots {

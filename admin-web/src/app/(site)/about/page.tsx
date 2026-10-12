@@ -4,7 +4,7 @@ import { CtaBand, FounderPhoto, FounderStats, PageHero, Section, SectionTitle, S
 import { FOUNDER, SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About Dr. Pardeuman Singh",
   description: `${SITE.founder}, ${FOUNDER.degrees}, ${FOUNDER.role}: 15+ years of teaching, about 400 students selected in AIAPGET and AMO exams.`,
   alternates: { canonical: "/about" },
 };

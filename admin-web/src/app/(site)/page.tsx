@@ -17,11 +17,13 @@ import {
   Steps,
   YoutubeIcon,
 } from "@/components/site/site-ui";
+import { JsonLd } from "@/components/site/json-ld";
+import { siteJsonLd } from "@/lib/seo";
 import { getOpenPlans } from "@/lib/server/public-plans";
 import { FOUNDER, SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: { absolute: "DHĪ · Ayurveda Classroom by Dr. Pardeuman Singh" },
+  title: { absolute: "DHĪ Ayurveda Classroom | AIAPGET & AMO Coaching by Dr. Pardeuman Singh" },
   alternates: { canonical: "/" },
 };
 
@@ -31,6 +33,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={siteJsonLd()} />
       {/* Hero */}
       <Section className="relative pb-16 pt-10 sm:pt-16 lg:pb-24">
         <div className="pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full bg-primary-tint/60 blur-3xl" aria-hidden="true" />
