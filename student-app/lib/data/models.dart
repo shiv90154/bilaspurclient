@@ -58,6 +58,9 @@ class TestSummary {
     required this.attemptId,
     required this.score,
     this.seriesName,
+    this.maxLeaves = 0,
+    this.writtenQuestions = 0,
+    this.awaitingCheck = false,
   });
 
   factory TestSummary.fromJson(Map<String, dynamic> j) {
@@ -81,6 +84,9 @@ class TestSummary {
       attemptId: attempt?['id'] as String?,
       score: attempt?['score'] == null ? null : _num(attempt!['score']),
       seriesName: (j['series'] as Map?)?['name'] as String?,
+      maxLeaves: j['maxLeaves'] as int? ?? 0,
+      writtenQuestions: j['writtenQuestions'] as int? ?? 0,
+      awaitingCheck: attempt?['evaluation'] == 'PENDING',
     );
   }
 
@@ -98,6 +104,43 @@ class TestSummary {
 
   /// The test series it belongs to ("NEET Mock Series 2027"), or null for a stand-alone test.
   final String? seriesName;
+
+  /// Times the student may leave the app mid-test; one more submits it. 0 = only counted.
+  final int maxLeaves;
+
+  /// Questions answered in writing (typed or photos), checked by a teacher.
+  final int writtenQuestions;
+
+  /// Submitted, but the teacher has not finished checking the written answers.
+  final bool awaitingCheck;
+}
+
+/// A photo of a written answer, already uploaded.
+class AnswerImage {
+  const AnswerImage(this.id, this.url);
+  factory AnswerImage.fromJson(Map<String, dynamic> j) => AnswerImage(j['id'] as String, j['url'] as String);
+
+  final String id;
+
+  /// Server-relative signed link (needs [absoluteUrl]).
+  final String url;
+}
+
+List<AnswerImage> answerImages(Object? list) =>
+    [for (final i in (list as List? ?? const [])) AnswerImage.fromJson(i as Map<String, dynamic>)];
+
+/// What the server says after the student came back to the app mid-test.
+class LeaveResult {
+  const LeaveResult({required this.leaves, required this.maxLeaves, required this.submitted});
+  factory LeaveResult.fromJson(Map<String, dynamic> j) => LeaveResult(
+        leaves: j['leaves'] as int? ?? 0,
+        maxLeaves: j['maxLeaves'] as int? ?? 0,
+        submitted: j['submitted'] as bool? ?? false,
+      );
+
+  final int leaves;
+  final int maxLeaves;
+  final bool submitted;
 }
 
 class PaperOption {
@@ -116,12 +159,18 @@ class PaperQuestion {
     required this.selected,
     required this.marked,
     this.imageUrl,
-  });
+    this.written = false,
+    this.textAnswer = '',
+    List<AnswerImage>? images,
+  }) : images = images ?? [];
 
   factory PaperQuestion.fromJson(Map<String, dynamic> j) => PaperQuestion(
         id: j['id'] as String,
         text: j['text'] as String,
         multiple: j['type'] == 'MULTIPLE',
+        written: j['type'] == 'SUBJECTIVE',
+        textAnswer: j['textAnswer'] as String? ?? '',
+        images: answerImages(j['images']),
         marks: _num(j['marks']),
         options: [
           for (final o in j['options'] as List) PaperOption((o as Map)['id'] as String, o['text'] as String),
@@ -140,6 +189,13 @@ class PaperQuestion {
   final List<PaperOption> options;
   final Set<String> selected;
   bool marked;
+
+  /// Answered in writing: typed text and/or photos of the answer sheet. No options.
+  final bool written;
+  String textAnswer;
+  List<AnswerImage> images;
+
+  bool get answered => written ? textAnswer.trim().isNotEmpty || images.isNotEmpty : selected.isNotEmpty;
 }
 
 class Paper {
@@ -150,6 +206,8 @@ class Paper {
     required this.deadline,
     required this.clockOffset,
     required this.questions,
+    this.maxLeaves = 0,
+    this.leaves = 0,
   });
 
   factory Paper.fromJson(Map<String, dynamic> j) {
@@ -163,10 +221,14 @@ class Paper {
       // Phone clocks drift; every countdown is measured against the server's clock.
       clockOffset: serverNow.difference(DateTime.now().toUtc()),
       questions: [for (final q in j['questions'] as List) PaperQuestion.fromJson(q as Map<String, dynamic>)],
+      maxLeaves: test['maxLeaves'] as int? ?? 0,
+      leaves: j['leaves'] as int? ?? 0,
     );
   }
 
   final String attemptId;
+  final int maxLeaves;
+  int leaves;
   final String title;
   final double negativeMark;
   final DateTime deadline;
@@ -194,10 +256,20 @@ class ReviewQuestion {
     required this.selected,
     required this.options,
     this.imageUrl,
+    this.written = false,
+    this.textAnswer,
+    this.images = const [],
+    this.awardedMarks,
+    this.feedback,
   });
 
   factory ReviewQuestion.fromJson(Map<String, dynamic> j) => ReviewQuestion(
         text: j['text'] as String,
+        written: j['type'] == 'SUBJECTIVE',
+        textAnswer: j['textAnswer'] as String?,
+        images: answerImages(j['images']),
+        awardedMarks: j['awardedMarks'] == null ? null : _num(j['awardedMarks']),
+        feedback: j['feedback'] as String?,
         marks: _num(j['marks']),
         explanation: j['explanation'] as String?,
         imageUrl: j['imageUrl'] as String?,
@@ -214,6 +286,15 @@ class ReviewQuestion {
   final String? imageUrl;
   final Set<String> selected;
   final List<ReviewOption> options;
+  final bool written;
+  final String? textAnswer;
+  final List<AnswerImage> images;
+
+  /// Marks the teacher gave a written answer.
+  final double? awardedMarks;
+  final String? feedback;
+
+  bool get skipped => written ? (textAnswer ?? '').trim().isEmpty && images.isEmpty : selected.isEmpty;
 
   bool get isCorrect {
     final right = {for (final o in options) if (o.isCorrect) o.id};
@@ -232,6 +313,8 @@ class TestResult {
     required this.unanswered,
     required this.autoSubmitted,
     required this.review,
+    this.leftApp = false,
+    this.awaitingCheck = false,
     this.rank,
     this.participants,
     this.average,
@@ -244,13 +327,16 @@ class TestResult {
     final review = j['review'] as List?;
     return TestResult(
       title: test['title'] as String,
-      score: _num(j['score']),
+      // While written answers wait for the teacher there is no score yet.
+      score: j['score'] == null ? 0 : _num(j['score']),
       totalMarks: _num(test['totalMarks']),
-      percentage: _num(j['percentage']),
-      correct: j['correct'] as int,
-      incorrect: j['incorrect'] as int,
-      unanswered: j['unanswered'] as int,
+      percentage: j['percentage'] == null ? 0 : _num(j['percentage']),
+      correct: j['correct'] as int? ?? 0,
+      incorrect: j['incorrect'] as int? ?? 0,
+      unanswered: j['unanswered'] as int? ?? 0,
       autoSubmitted: j['status'] == 'AUTO_SUBMITTED',
+      leftApp: j['endReason'] == 'LEFT_APP',
+      awaitingCheck: j['evaluation'] == 'PENDING',
       rank: j['rank'] as int?,
       participants: j['participants'] as int?,
       average: j['average'] == null ? null : _num(j['average']),
@@ -272,6 +358,12 @@ class TestResult {
   final int incorrect;
   final int unanswered;
   final bool autoSubmitted;
+
+  /// Submitted automatically because the student left the app too many times.
+  final bool leftApp;
+
+  /// Written answers are not checked yet: no score, rank or review.
+  final bool awaitingCheck;
 
   /// Null until the test window is over (answers must not leak to other students).
   final List<ReviewQuestion>? review;

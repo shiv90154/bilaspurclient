@@ -24,6 +24,7 @@ interface Picked {
   questionId: string;
   text: string;
   marks: number;
+  written?: boolean;
 }
 
 export function TestBuilder({ id }: { id: string }) {
@@ -75,7 +76,8 @@ export function TestBuilder({ id }: { id: string }) {
             <Badge tone={STATUS_TONE[t.status]}>{t.status}</Badge>
           </div>
           <p className="mt-1 text-[13px] text-sub">
-            {t.durationMin} min · {Number(t.totalMarks)} marks · negative {Number(t.negativeMark)}
+            {t.durationMin} min · {Number(t.totalMarks)} marks · negative {Number(t.negativeMark)} ·{" "}
+            {t.maxLeaves > 0 ? `${t.maxLeaves} warnings for leaving the app, then auto-submit` : "leaving the app is only counted"}
             {t.startAt && ` · opens ${format(new Date(t.startAt), "d MMM yyyy, h:mm a")}`}
             {t.endAt && ` · closes ${format(new Date(t.endAt), "d MMM yyyy, h:mm a")}`}
           </p>
@@ -128,10 +130,16 @@ export function TestBuilder({ id }: { id: string }) {
 }
 
 function QuestionsSection({ test, locked, onSaved }: { test: TestDetail; locked: boolean; onSaved: () => void }) {
-  const initial: Picked[] = test.questions.map((q) => ({ questionId: q.questionId, text: q.question.text, marks: Number(q.marks) }));
+  const initial: Picked[] = test.questions.map((q) => ({
+    questionId: q.questionId,
+    text: q.question.text,
+    marks: Number(q.marks),
+    written: q.question.type === "SUBJECTIVE",
+  }));
   const [picked, setPicked] = useState(initial);
   const [adding, setAdding] = useState(false);
-  const dirty = JSON.stringify(picked) !== JSON.stringify(initial);
+  const key = (p: Picked[]) => JSON.stringify(p.map(({ questionId, marks }) => [questionId, marks]));
+  const dirty = key(picked) !== key(initial);
 
   const save = useMutation({
     mutationFn: () => api(`/tests/${test.id}/questions`, { method: "PUT", body: { questions: picked.map(({ questionId, marks }) => ({ questionId, marks })) } }),
@@ -169,6 +177,7 @@ function QuestionsSection({ test, locked, onSaved }: { test: TestDetail; locked:
           <li key={q.questionId} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-[10px] border border-line px-3 py-2 text-[13px]">
             <span className="w-6 shrink-0 text-sub">{i + 1}.</span>
             <span className="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-0 sm:truncate" title={q.text}>{q.text}</span>
+            {q.written && <Badge tone="amber">Written</Badge>}
             {!locked ? (
               <>
                 <span className="ml-8 flex items-center gap-1 sm:ml-0"><input aria-label={`Marks for question ${i + 1}`} type="number" min={0.25} max={100} step="0.25" value={q.marks}
@@ -187,7 +196,13 @@ function QuestionsSection({ test, locked, onSaved }: { test: TestDetail; locked:
       {adding && (
         <BankPicker
           already={new Set(picked.map((p) => p.questionId))}
-          onAdd={(qs_) => { setPicked((p) => [...p, ...qs_.map((q) => ({ questionId: q.id, text: q.text, marks: 1 }))]); setAdding(false); }}
+          onAdd={(qs_) => {
+            setPicked((p) => [
+              ...p,
+              ...qs_.map((q) => ({ questionId: q.id, text: q.text, marks: q.type === "SUBJECTIVE" ? 5 : 1, written: q.type === "SUBJECTIVE" })),
+            ]);
+            setAdding(false);
+          }}
           onClose={() => setAdding(false)}
         />
       )}
@@ -226,7 +241,9 @@ function BankPicker({ already, onAdd, onClose }: { already: Set<string>; onAdd: 
                   onChange={(e) => setSel((m) => { const n = new Map(m); if (e.target.checked) n.set(q.id, q); else n.delete(q.id); return n; })} />
                 <span>
                   {q.text}
-                  <span className="block text-[11.5px] text-sub">{q.topic.subject.name} › {q.topic.name} · {q.difficulty}</span>
+                  <span className="block text-[11.5px] text-sub">
+                    {q.topic.subject.name} › {q.topic.name} · {q.difficulty}{q.type === "SUBJECTIVE" && " · written answer"}
+                  </span>
                 </span>
               </label>
             </li>
@@ -280,6 +297,11 @@ function ResultsSection({ id }: { id: string }) {
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
       <h2 className="text-[15px] font-bold">Results</h2>
+      {!!r?.summary.toCheck && (
+        <p className="mt-2 rounded-[10px] bg-accent-tint px-3 py-2 text-[12.5px] text-accent-ink">
+          {r.summary.toCheck} answer sheet{r.summary.toCheck > 1 ? "s" : ""} to check. Students see their result only after you finish checking.
+        </p>
+      )}
       <ErrorNote error={res.error} />
       {r && (
         <>
@@ -292,20 +314,35 @@ function ResultsSection({ id }: { id: string }) {
             ))}
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="rtable w-full min-w-[640px] text-left text-[13px]">
+            <table className="rtable w-full min-w-[720px] text-left text-[13px]">
               <thead className="text-[11.5px] uppercase text-sub">
-                <tr><th className="py-2">#</th><th>Student</th><th>Score</th><th>%</th><th>✓ / ✗ / –</th><th>Time</th><th>Left app</th></tr>
+                <tr><th className="py-2">#</th><th>Student</th><th>Score</th><th>%</th><th>✓ / ✗ / –</th><th>Time</th><th>Left app</th><th>Written</th></tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {r.rows.map((x) => (
                   <tr key={x.attemptId}>
-                    <td className="py-2"><span className="md:hidden">#</span>{x.rank}<span className="font-semibold md:hidden"> · {x.name}</span></td>
+                    <td className="py-2"><span className="md:hidden">#</span>{x.rank ?? "–"}<span className="font-semibold md:hidden"> · {x.name}</span></td>
                     <td data-label="Student"><span className="hidden md:inline">{x.name}</span><span className="block text-[11.5px] text-sub">{x.phone}</span></td>
-                    <td data-label="Score" className="font-semibold">{x.score} / {r.test.totalMarks}</td>
-                    <td data-label="%">{x.percentage}%</td>
+                    <td data-label="Score" className="font-semibold">
+                      {x.evaluation === "PENDING" ? <span className="font-normal text-sub">after checking</span> : <>{x.score} / {r.test.totalMarks}</>}
+                    </td>
+                    <td data-label="%">{x.evaluation === "PENDING" ? "–" : `${x.percentage}%`}</td>
                     <td data-label="✓ / ✗ / –">{x.correct} / {x.incorrect} / {x.unanswered}</td>
-                    <td data-label="Time">{mmss(x.timeTakenSec)}{x.status === "AUTO_SUBMITTED" && <span className="ml-1 text-[11px] text-accent-ink">auto</span>}</td>
+                    <td data-label="Time">
+                      {mmss(x.timeTakenSec)}
+                      {x.endReason === "TIME_UP" && <span className="ml-1 text-[11px] text-accent-ink">time up</span>}
+                      {x.endReason === "LEFT_APP" && <span className="ml-1 text-[11px] font-semibold text-danger">left app</span>}
+                    </td>
                     <td data-label="Left app" className={x.backgroundHits > 2 ? "font-semibold text-danger" : ""}>{x.backgroundHits}×</td>
+                    <td data-label="Written">
+                      {x.evaluation === "AUTO" ? (
+                        <span className="text-sub">–</span>
+                      ) : (
+                        <Link href={`/tests/${id}/check/${x.attemptId}`} className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
+                          {x.evaluation === "PENDING" ? <Badge tone="amber">Check</Badge> : <><Badge tone="green">Checked</Badge> <span className="text-[12px]">Open</span></>}
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

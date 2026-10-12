@@ -5,7 +5,11 @@ export const TEMPLATE = [
   "subject,topic,question,option_a,option_b,option_c,option_d,correct,difficulty,explanation",
   'Physics,Kinematics,"A car goes from rest to 20 m/s in 5 s. Its acceleration is?",2 m/s²,4 m/s²,5 m/s²,10 m/s²,B,easy,a = Δv / t = 20 / 5',
   'Chemistry,Atomic Structure,Which of these are noble gases?,Helium,Oxygen,Neon,Nitrogen,"A,C",medium,Helium and neon are in group 18',
+  'Physics,Kinematics,Explain the difference between speed and velocity.,,,,,written,medium,"Speed is how fast; velocity is speed with a direction"',
 ].join("\n");
+
+/** Value of the `correct` column for a written-answer question (no options; explanation = model answer). */
+const WRITTEN = new Set(["written", "subjective"]);
 
 const LETTERS = "abcdefgh";
 export const MAX_ROWS = 2000;
@@ -43,7 +47,7 @@ export interface ParsedQuestion {
   topic: string;
   text: string;
   options: { text: string; isCorrect: boolean }[];
-  type: "SINGLE" | "MULTIPLE";
+  type: "SINGLE" | "MULTIPLE" | "SUBJECTIVE";
   difficulty: "EASY" | "MEDIUM" | "HARD";
   explanation?: string;
 }
@@ -87,21 +91,35 @@ export function parseQuestions(rows: string[][], subjects: Subject[]): ParseResu
       return fail(`Subject “${subjectName}” does not exist. Add it under Subjects & topics first.`);
     }
 
+    const diff = get(r, "difficulty").toUpperCase();
+    if (diff && !["EASY", "MEDIUM", "HARD"].includes(diff)) return fail(`Difficulty “${get(r, "difficulty")}” must be easy, medium or hard (or blank).`);
+
     // Keep the letter of every option so "correct = C" still points at the right one when a middle option is blank.
     const options = optionCols
       .map((c, i) => ({ letter: LETTERS[i]!, text: (r[c] ?? "").trim() }))
       .filter((o) => o.text !== "");
-    if (options.length < 2) return fail("A question needs at least two options.");
+    if (WRITTEN.has(get(r, "correct").toLowerCase())) {
+      if (options.length > 0) return fail("A written-answer question has no options: leave option_a, option_b … empty.");
+      result.questions.push({
+        line,
+        subject: subjectByName.get(subjectName.toLowerCase())!.name,
+        topic,
+        text,
+        options: [],
+        type: "SUBJECTIVE",
+        difficulty: (diff || "MEDIUM") as ParsedQuestion["difficulty"],
+        explanation: get(r, "explanation") || undefined,
+      });
+      return;
+    }
+    if (options.length < 2) return fail("A question needs at least two options (or write “written” in the correct column).");
 
     const letters = get(r, "correct").toLowerCase().split(/[\s,;/&]+/).filter(Boolean);
-    if (letters.length === 0) return fail("The correct column is empty (use A, B, C … or A,C for several).");
+    if (letters.length === 0) return fail("The correct column is empty (use A, B, C …, A,C for several, or “written”).");
     const known = new Set(options.map((o) => o.letter));
     const unknown = letters.filter((l) => !known.has(l));
     if (unknown.length) return fail(`Correct answer “${unknown.join(",").toUpperCase()}” does not match any filled option.`);
     const right = new Set(letters);
-
-    const diff = get(r, "difficulty").toUpperCase();
-    if (diff && !["EASY", "MEDIUM", "HARD"].includes(diff)) return fail(`Difficulty “${get(r, "difficulty")}” must be easy, medium or hard (or blank).`);
 
     result.questions.push({
       line,

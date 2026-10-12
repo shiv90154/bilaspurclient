@@ -17,10 +17,12 @@ ok("blank lines are ignored", parseCsv("a,b\n\n\n1,2\n").length === 2);
 
 // the shipped template must itself import cleanly
 const t = run(TEMPLATE);
-ok("the downloadable template has no errors", t.errors.length === 0 && t.questions.length === 2, t.errors);
+ok("the downloadable template has no errors", t.errors.length === 0 && t.questions.length === 3, t.errors);
 ok("template: single answer B", t.questions[0].type === "SINGLE" && t.questions[0].options.filter((o) => o.isCorrect).map((o) => o.text).join() === "4 m/s²", t.questions[0]);
 ok('template: "A,C" makes it a multiple-answer question', t.questions[1].type === "MULTIPLE" && t.questions[1].options.filter((o) => o.isCorrect).length === 2, t.questions[1]);
 ok("template: unknown topic is allowed (it is created on import)", t.questions[1].topic === "Atomic Structure");
+
+ok("template: written question has no options", t.questions[2].type === "SUBJECTIVE" && t.questions[2].options.length === 0 && !!t.questions[2].explanation, t.questions[2]);
 
 const head = "subject,topic,question,option_a,option_b,option_c,option_d,correct,difficulty,explanation\n";
 // validation
@@ -55,6 +57,11 @@ r = run(many);
 ok("more than 2000 rows is refused", r.errors.length === 1 && /Too many/.test(r.errors[0].message), r.errors[0]);
 r = run(head + "Physics,Kinematics,Good,1,2,3,4,A,,\nPhysics,Kinematics,Bad,1,,,,A,,\nPhysics,Kinematics,Good2,1,2,3,4,B,,");
 ok("good rows survive next to a bad one", r.questions.length === 2 && r.errors.length === 1 && r.errors[0].line === 3, r);
+
+r = run(head + "Physics,Kinematics,Explain,,,,,Written,,model");
+ok("written: case-insensitive, no options", r.errors.length === 0 && r.questions[0].type === "SUBJECTIVE", r);
+r = run(head + "Physics,Kinematics,Explain,a,b,,,written,,");
+ok("written with options is an error", /no options/.test(r.errors[0]?.message ?? ""), r.errors);
 
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

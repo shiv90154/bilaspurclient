@@ -43,6 +43,11 @@ export function imageExt(buf: Buffer): StoredExt | null {
 
 /** Rules every question must satisfy, whatever route it came in through. */
 export function validateOptions(type: QuestionType, options: OptionDto[]): void {
+  if (type === QuestionType.SUBJECTIVE) {
+    if (options.length > 0) throw new BadRequestException('A written-answer question has no options');
+    return;
+  }
+  if (options.length < 2) throw new BadRequestException('Add at least two options');
   const correct = options.filter((o) => o.isCorrect).length;
   if (correct === 0) throw new BadRequestException('Mark at least one option as correct');
   if (type === QuestionType.SINGLE && correct !== 1) {

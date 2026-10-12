@@ -25,7 +25,7 @@ class AttemptSession {
 
   bool get hasUnsaved => _dirty.isNotEmpty;
 
-  int get answered => paper.questions.where((q) => q.selected.isNotEmpty).length;
+  int get answered => paper.questions.where((q) => q.answered).length;
   int get markedCount => paper.questions.where((q) => q.marked).length;
 
   void select(PaperQuestion q, String optionId) {
@@ -43,6 +43,11 @@ class AttemptSession {
 
   void clear(PaperQuestion q) {
     q.selected.clear();
+    _touch(q);
+  }
+
+  void write(PaperQuestion q, String text) {
+    q.textAnswer = text;
     _touch(q);
   }
 

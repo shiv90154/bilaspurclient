@@ -161,7 +161,7 @@ export interface Subject {
 }
 
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
-export type QuestionType = "SINGLE" | "MULTIPLE";
+export type QuestionType = "SINGLE" | "MULTIPLE" | "SUBJECTIVE";
 export interface Question {
   id: string;
   text: string;
@@ -186,6 +186,7 @@ export interface TestRow {
   endAt: string | null;
   status: TestStatus;
   isDemo?: boolean;
+  maxLeaves: number;
   course: { id: string; name: string } | null;
   series?: { id: string; name: string } | null;
   _count: { questions: number; attempts: number; batches: number };
@@ -209,9 +210,10 @@ export interface TestDetail extends Omit<TestRow, "_count"> {
 }
 export interface TestResults {
   test: { id: string; title: string; totalMarks: number };
-  summary: { attempts: number; average: number; highest: number; lowest: number };
+  summary: { attempts: number; average: number; highest: number; lowest: number; toCheck: number };
   rows: {
-    rank: number;
+    /** null while written answers wait for checking */
+    rank: number | null;
     attemptId: string;
     name: string;
     phone: string;
@@ -222,7 +224,42 @@ export interface TestResults {
     unanswered: number;
     backgroundHits: number;
     status: string;
+    endReason: EndReason | null;
+    evaluation: EvalStatus;
     timeTakenSec: number | null;
+  }[];
+}
+
+export type EndReason = "SUBMIT" | "TIME_UP" | "LEFT_APP";
+export type EvalStatus = "AUTO" | "PENDING" | "DONE";
+/** One student's written answers, for the teacher to give marks. */
+export interface AnswerSheet {
+  attempt: {
+    id: string;
+    name: string;
+    phone: string;
+    status: string;
+    endReason: EndReason | null;
+    evaluation: EvalStatus;
+    leaves: number;
+    submittedAt: string | null;
+    correct: number;
+    incorrect: number;
+    score: number;
+    checkedAt: string | null;
+  };
+  test: { id: string; title: string; totalMarks: number };
+  questions: {
+    questionId: string;
+    text: string;
+    imageUrl: string | null;
+    modelAnswer: string | null;
+    maxMarks: number;
+    answered: boolean;
+    textAnswer: string | null;
+    images: string[];
+    awardedMarks: number | null;
+    feedback: string | null;
   }[];
 }
 

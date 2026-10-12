@@ -15,6 +15,7 @@ MCQs, multiple options, answer keys, subject/topic/course categorization, timed 
 - Auto evaluation: marks, percentage, correct/incorrect/unanswered count.
 - Result analysis: topic-wise performance, rank in batch.
 - Bulk question import (CSV/Excel) — Phase 2 end.
+- **Written-answer (subjective) questions:** student types the answer and/or takes camera photos of the answer sheet (max 5 per question). Teacher gives marks + feedback on the check page; the result (score, rank, review) shows only after checking.
 
 ## Database tables
 - `subjects` (id, course_id, name), `topics` (id, subject_id, name)
@@ -50,21 +51,32 @@ MCQs, multiple options, answer keys, subject/topic/course categorization, timed 
 10. Tests: negative marking edge cases, resume, double submit, time-up.
 
 ## Progress
-- [ ] Subjects / topics / questions API
-- [ ] Options + answer key
-- [ ] Image upload for questions
-- [ ] Test builder API
-- [ ] Attempt start/autosave/submit
-- [ ] Server-side timer + auto-submit
-- [ ] Evaluation + negative marking
-- [ ] Result + topic analysis
-- [ ] Leaderboard
-- [ ] Admin web: question bank UI
-- [ ] Admin web: test builder + results
-- [ ] Android: test screen
-- [ ] Android: result screen
-- [ ] CSV import
-- [ ] Tests
+- [x] Subjects / topics / questions API
+- [x] Options + answer key
+- [x] Image upload for questions
+- [x] Test builder API
+- [x] Attempt start/autosave/submit
+- [x] Server-side timer + auto-submit
+- [x] Evaluation + negative marking
+- [x] Result + topic analysis
+- [x] Leaderboard
+- [x] Admin web: question bank UI
+- [x] Admin web: test builder + results
+- [x] Android: test screen
+- [x] Android: result screen
+- [x] CSV import
+- [x] Tests
+
+- [x] Written-answer questions: typed + photos, teacher checking (`PUT /tests/:id/attempts/:attemptId/marks`)
+- [x] Exam security: leave limit + auto-submit, no paste, no split screen (`npm run smoke:subjective`)
+
+## Exam security (app)
+- **Leaving the app** (home button, other app, call) is reported when the student comes back (`POST /attempts/:id/background`). Each test has `maxLeaves` (default 3): that many warnings, one more auto-submits the test (`endReason = LEFT_APP`). 0 = only counted. Reopening a test after the app was killed also counts as a leave.
+- Camera trips for answer photos are not counted (up to 3 minutes).
+- **No copy/paste:** the answer box has no selection/context menu, no suggestions, and rejects text that arrives in one go (keyboard clipboard paste). The clipboard is cleared at start and on every return.
+- **No split screen / pop-up window:** `resizeableActivity="false"`. Screenshots and recording: FLAG_SECURE (whole app). Overlays hidden on Android 12+.
+- **Time:** the server owns the clock; deadline = min(start + duration, window end). Autosave until deadline + 10 s, auto-submit by the cron and on every read.
+- Limits: nothing in the app can stop a second phone or a book. Calls count as leaving; the rules screen tells students to turn on Do Not Disturb.
 
 ## Notes
 - Answer key student API se kabhi mat bhejo jab tak test khatam na ho.

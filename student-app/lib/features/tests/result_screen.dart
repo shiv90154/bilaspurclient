@@ -8,8 +8,9 @@ import '../../widgets/async_view.dart';
 import '../../widgets/question_image.dart';
 import 'tests_screen.dart';
 
-final resultProvider =
-    FutureProvider.autoDispose.family<TestResult, String>((ref, id) => ref.watch(contentApiProvider).result(id));
+final resultProvider = FutureProvider.autoDispose.family<TestResult, String>(
+  (ref, id) => ref.watch(contentApiProvider).result(id),
+);
 
 class ResultScreen extends ConsumerWidget {
   const ResultScreen({super.key, required this.attemptId});
@@ -46,51 +47,70 @@ class ResultScreen extends ConsumerWidget {
               if (r.autoSubmitted)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text('Submitted automatically when time ran out.', style: Theme.of(context).textTheme.bodySmall),
-                ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Text('${fmtMarks(r.score)} / ${fmtMarks(r.totalMarks)}',
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800)),
-                      Text('${r.percentage.toStringAsFixed(1)}%'),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _Stat('Correct', r.correct, Colors.green.shade700),
-                          _Stat('Wrong', r.incorrect, Theme.of(context).colorScheme.error),
-                          _Stat('Skipped', r.unanswered, Theme.of(context).colorScheme.outline),
-                        ],
-                      ),
-                    ],
+                  child: Text(
+                    r.leftApp
+                        ? 'Submitted automatically because you left the test app too many times.'
+                        : 'Submitted automatically when time ran out.',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: r.leftApp ? Theme.of(context).colorScheme.error : null),
                   ),
                 ),
-              ),
-              if (r.rank != null && r.participants != null) ...[
-                const SizedBox(height: 12),
-                _Standing(r: r),
-              ],
-              if (r.subjects.length > 1 || (r.subjects.length == 1 && r.subjects.first.questions > 0)) ...[
-                const SizedBox(height: 12),
-                _SubjectCard(subjects: r.subjects),
-              ],
               const SizedBox(height: 16),
-              if (r.review == null)
+              if (r.awaitingCheck)
                 const Card(
                   child: ListTile(
-                    leading: Icon(Icons.lock_clock_outlined),
-                    title: Text('Answers unlock later'),
-                    subtitle: Text('Correct answers and explanations appear after the test window closes for everyone.'),
+                    leading: Icon(Icons.rate_review_outlined),
+                    title: Text('Your answers are submitted'),
+                    subtitle: Text(
+                      'Your teacher is checking the written answers. Your marks, rank and answers will appear here when checking is done. You will get a notification.',
+                    ),
                   ),
                 )
               else ...[
-                Text('Review', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                for (var i = 0; i < r.review!.length; i++) _ReviewCard(index: i + 1, q: r.review![i]),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${fmtMarks(r.score)} / ${fmtMarks(r.totalMarks)}',
+                          style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        Text('${r.percentage.toStringAsFixed(1)}%'),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _Stat('Correct', r.correct, Colors.green.shade700),
+                            _Stat('Wrong', r.incorrect, Theme.of(context).colorScheme.error),
+                            _Stat('Skipped', r.unanswered, Theme.of(context).colorScheme.outline),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (r.rank != null && r.participants != null) ...[const SizedBox(height: 12), _Standing(r: r)],
+                if (r.subjects.length > 1 || (r.subjects.length == 1 && r.subjects.first.questions > 0)) ...[
+                  const SizedBox(height: 12),
+                  _SubjectCard(subjects: r.subjects),
+                ],
+                const SizedBox(height: 16),
+                if (r.review == null)
+                  const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.lock_clock_outlined),
+                      title: Text('Answers unlock later'),
+                      subtitle: Text(
+                        'Correct answers and explanations appear after the test window closes for everyone.',
+                      ),
+                    ),
+                  )
+                else ...[
+                  Text('Review', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  for (var i = 0; i < r.review!.length; i++) _ReviewCard(index: i + 1, q: r.review![i]),
+                ],
               ],
             ],
           ),
@@ -108,11 +128,14 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          Text('$value', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w800)),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      );
+    children: [
+      Text(
+        '$value',
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.w800),
+      ),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
 }
 
 class _ReviewCard extends StatelessWidget {
@@ -122,6 +145,7 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (q.written) return _WrittenReviewCard(index: index, q: q);
     final skipped = q.selected.isEmpty;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -134,11 +158,15 @@ class _ReviewCard extends StatelessWidget {
               children: [
                 Icon(
                   skipped ? Icons.remove_circle_outline : (q.isCorrect ? Icons.check_circle : Icons.cancel),
-                  color: skipped ? Colors.grey : (q.isCorrect ? Colors.green.shade700 : Theme.of(context).colorScheme.error),
+                  color: skipped
+                      ? Colors.grey
+                      : (q.isCorrect ? Colors.green.shade700 : Theme.of(context).colorScheme.error),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                Expanded(child: Text('$index. ${q.text}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                Expanded(
+                  child: Text('$index. ${q.text}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
               ],
             ),
             if (q.imageUrl != null) QuestionImage(path: q.imageUrl!),
@@ -153,8 +181,8 @@ class _ReviewCard extends StatelessWidget {
                   color: o.isCorrect
                       ? Colors.green.shade50
                       : q.selected.contains(o.id)
-                          ? Theme.of(context).colorScheme.errorContainer
-                          : null,
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : null,
                   border: Border.all(color: o.isCorrect ? Colors.green.shade400 : Theme.of(context).dividerColor),
                 ),
                 child: Text('${o.text}${q.selected.contains(o.id) ? '   (your answer)' : ''}'),
@@ -162,6 +190,66 @@ class _ReviewCard extends StatelessWidget {
             if (q.explanation != null && q.explanation!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Explanation: ${q.explanation}', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A written answer after checking: what the student wrote, the marks and the teacher's note.
+class _WrittenReviewCard extends StatelessWidget {
+  const _WrittenReviewCard({required this.index, required this.q});
+  final int index;
+  final ReviewQuestion q;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.edit_note, color: scheme.primary, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('$index. ${q.text}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${fmtMarks(q.awardedMarks ?? 0)} / ${fmtMarks(q.marks)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            if (q.imageUrl != null) QuestionImage(path: q.imageUrl!),
+            const SizedBox(height: 8),
+            Text('Your answer', style: text.labelMedium),
+            if (q.skipped) Text('Not answered', style: text.bodySmall),
+            if ((q.textAnswer ?? '').trim().isNotEmpty) Text(q.textAnswer!),
+            if (q.images.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [for (final img in q.images) QuestionImage(path: img.url, thumbSize: const Size(96, 120))],
+              ),
+            ],
+            if ((q.feedback ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Teacher: ${q.feedback}', style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            ],
+            if ((q.explanation ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('Model answer: ${q.explanation}', style: text.bodySmall),
             ],
           ],
         ),
@@ -195,7 +283,10 @@ class _Standing extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Rank ${r.rank} of ${r.participants}', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                    'Rank ${r.rank} of ${r.participants}',
+                    style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     'Average score ${fmtMarks(r.average ?? 0)} · Top score ${fmtMarks(r.highest ?? 0)}',
@@ -232,7 +323,9 @@ class _SubjectCard extends StatelessWidget {
             for (final s in subjects) ...[
               Row(
                 children: [
-                  Expanded(child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(
+                    child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
                   Text('${fmtMarks(s.score)} / ${fmtMarks(s.total)}', style: text.bodySmall),
                 ],
               ),
@@ -242,15 +335,14 @@ class _SubjectCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: s.accuracy,
                   minHeight: 8,
-                  color: s.accuracy >= 0.6 ? Colors.green.shade600 : (s.accuracy >= 0.4 ? Colors.orange.shade600 : Theme.of(context).colorScheme.error),
+                  color: s.accuracy >= 0.6
+                      ? Colors.green.shade600
+                      : (s.accuracy >= 0.4 ? Colors.orange.shade600 : Theme.of(context).colorScheme.error),
                   backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                '${s.correct} correct · ${s.incorrect} wrong · ${s.skipped} skipped',
-                style: text.bodySmall,
-              ),
+              Text('${s.correct} correct · ${s.incorrect} wrong · ${s.skipped} skipped', style: text.bodySmall),
               const SizedBox(height: 12),
             ],
             if (weakest != null)

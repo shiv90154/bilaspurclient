@@ -123,6 +123,7 @@ class _TestCard extends ConsumerWidget {
       TestState.open when test.endAt != null => 'Open until ${f.format(test.endAt!)}',
       TestState.open => 'Open now',
       TestState.inProgress => 'In progress',
+      TestState.attempted when test.awaitingCheck => 'Submitted · result after your teacher checks the written answers',
       TestState.attempted => 'Score ${fmtMarks(test.score ?? 0)} / ${fmtMarks(test.totalMarks)}',
       TestState.ended => 'Ended',
     };
@@ -137,7 +138,15 @@ class _TestCard extends ConsumerWidget {
       if (!context.mounted) return;
       await context.push<void>('/tests/take', extra: paper);
     } on ApiException catch (e) {
-      if (context.mounted) showError(context, e);
+      if (!context.mounted) return;
+      // Coming back after closing the app counts as leaving it; past the limit the test was submitted.
+      if (e.code == 'LEFT_TOO_OFTEN' && test.attemptId != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ref.invalidate(testsProvider);
+        await context.push<void>('/tests/result/${test.attemptId}');
+        return;
+      }
+      showError(context, e);
     }
     ref.invalidate(testsProvider);
   }
@@ -211,14 +220,27 @@ class _StartDialog extends StatelessWidget {
             line(Icons.timer_outlined, '${test.durationMin} minutes. The timer starts now and keeps running even if you close the app.'),
             if (test.negativeMark > 0)
               line(Icons.remove_circle_outline, '${fmtMarks(test.negativeMark)} mark is deducted for each wrong answer. Skipped questions lose nothing.'),
+            if (test.writtenQuestions > 0)
+              line(Icons.edit_note, '${test.writtenQuestions} question(s) need a written answer: type it, or write on paper and add photos with the camera. Your teacher checks them before the result comes out.'),
             line(Icons.looks_one_outlined, 'You can attempt this test only once.'),
             line(Icons.cloud_done_outlined, 'Your answers are saved as you go.'),
+            const Divider(height: 20),
+            Text('Exam rules', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            line(
+              Icons.phonelink_lock_outlined,
+              test.maxLeaves > 0
+                  ? 'Stay in the app. Going to the home screen, opening another app or taking a call counts as leaving. '
+                      'You get ${test.maxLeaves} warning(s); leaving once more submits your test automatically.'
+                  : 'Stay in the app. Every time you leave it (home screen, another app, a call) is recorded and shown to your teacher.',
+            ),
+            line(Icons.content_paste_off_outlined, 'Copy, paste and screenshots are blocked.'),
+            line(Icons.notifications_off_outlined, 'Turn on Do Not Disturb so a call does not interrupt your test.'),
           ],
         ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Start test')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('I agree, start')),
       ],
     );
   }

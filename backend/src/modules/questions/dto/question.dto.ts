@@ -63,9 +63,8 @@ export class CreateQuestionDto {
   @MaxLength(4000)
   explanation?: string;
 
-  @ApiProperty({ type: [OptionDto] })
+  @ApiProperty({ type: [OptionDto], description: 'Empty for SUBJECTIVE questions' })
   @IsArray()
-  @ArrayMinSize(2)
   @ArrayMaxSize(8)
   @ValidateNested({ each: true })
   @Type(() => OptionDto)
@@ -109,7 +108,6 @@ export class UpdateQuestionDto {
   @ApiPropertyOptional({ type: [OptionDto], description: 'Replaces all options' })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(2)
   @ArrayMaxSize(8)
   @ValidateNested({ each: true })
   @Type(() => OptionDto)

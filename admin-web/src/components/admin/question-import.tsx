@@ -89,7 +89,8 @@ export function QuestionImport({ subjects, onClose }: { subjects: Subject[]; onC
       <div className="flex flex-col gap-4">
         <p className="text-[13px] text-sub">
           Fill the template in Excel or Google Sheets, save it as <b>CSV</b>, and upload it here. One row per question; the
-          <b> correct</b> column holds the letter (B) or letters (A,C) of the right option(s).
+          <b> correct</b> column holds the letter (B) or letters (A,C) of the right option(s). For a written-answer question
+          leave the options empty, write <b>written</b> in the correct column and the model answer in explanation.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={btnGhost} onClick={downloadTemplate}><Download size={15} /> Download template</button>

@@ -144,6 +144,7 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={TONE[q.difficulty]}>{q.difficulty}</Badge>
                 {q.type === "MULTIPLE" && <Badge tone="blue">Multi</Badge>}
+                {q.type === "SUBJECTIVE" && <Badge tone="amber">Written</Badge>}
                 <button aria-label="Edit question" className="rounded-lg p-1.5 text-sub hover:bg-bg" onClick={() => setEditing(q)}>
                   <Pencil size={15} />
                 </button>
@@ -167,7 +168,11 @@ export function QuestionBankView({ isAdmin }: { isAdmin: boolean }) {
                 </li>
               ))}
             </ul>
-            {q.explanation && <p className="mt-2 text-[12.5px] text-sub">Explanation: {q.explanation}</p>}
+            {q.explanation && (
+              <p className="mt-2 text-[12.5px] text-sub">
+                {q.type === "SUBJECTIVE" ? "Model answer" : "Explanation"}: {q.explanation}
+              </p>
+            )}
           </li>
         ))}
       </ul>
@@ -262,9 +267,10 @@ function QuestionForm({ subjects, question, onClose }: { subjects: Subject[]; qu
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const filled = options.filter((o) => o.text.trim());
-    if (filled.length < 2) return setLocalError("Add at least two options");
-    if (!filled.some((o) => o.isCorrect)) return setLocalError("Mark the correct option");
+    const written = type === "SUBJECTIVE";
+    const filled = written ? [] : options.filter((o) => o.text.trim());
+    if (!written && filled.length < 2) return setLocalError("Add at least two options");
+    if (!written && !filled.some((o) => o.isCorrect)) return setLocalError("Mark the correct option");
     setLocalError("");
     save.mutate({
       topicId: String(f.get("topicId")),
@@ -330,6 +336,7 @@ function QuestionForm({ subjects, question, onClose }: { subjects: Subject[]; qu
               <select id={id} value={type} onChange={(e) => changeType(e.target.value as QuestionType)} className={inputCls}>
                 <option value="SINGLE">Single correct</option>
                 <option value="MULTIPLE">Multiple correct</option>
+                <option value="SUBJECTIVE">Written answer</option>
               </select>
             )}
           </Field>
@@ -344,6 +351,11 @@ function QuestionForm({ subjects, question, onClose }: { subjects: Subject[]; qu
           </Field>
         </div>
 
+        {type === "SUBJECTIVE" ? (
+          <p className="rounded-[10px] bg-bg px-3 py-2 text-[12.5px] text-sub">
+            Students type the answer or upload photos of their answer sheet. You give the marks after the test.
+          </p>
+        ) : (
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-[12px] font-semibold text-sub">
             Options — tick the correct {type === "SINGLE" ? "one" : "ones"}
@@ -369,13 +381,14 @@ function QuestionForm({ subjects, question, onClose }: { subjects: Subject[]; qu
             </div>
           ))}
         </fieldset>
-        {editing && (
+        )}
+        {editing && type !== "SUBJECTIVE" && (
           <p className="text-[11.5px] text-sub">
             If students have already answered this question you can fix the wording, but not which option is correct.
           </p>
         )}
 
-        <Field label="Explanation (shown after the test)">
+        <Field label={type === "SUBJECTIVE" ? "Model answer / checking guide (shown to students after checking)" : "Explanation (shown after the test)"}>
           {(id) => <textarea id={id} name="explanation" rows={2} maxLength={4000} defaultValue={question?.explanation ?? ""} className={inputCls + " h-auto py-2"} />}
         </Field>
         <ErrorNote error={localError ? new Error(localError) : save.error} />

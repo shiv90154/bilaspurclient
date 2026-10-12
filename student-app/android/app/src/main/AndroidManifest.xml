@@ -14,10 +14,14 @@
         android:label="DHĪ"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- resizeableActivity=false: no split screen or pop-up window, so a test cannot be taken
+             next to a browser or notes app. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:resizeableActivity="false"
+            tools:ignore="DiscouragedApi"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

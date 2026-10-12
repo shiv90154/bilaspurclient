@@ -83,6 +83,7 @@ enum DocumentType {
 enum QuestionType {
   SINGLE
   MULTIPLE
+  SUBJECTIVE // written answer (typed and/or photos of the answer sheet), checked by a teacher
 }
 
 enum Difficulty {
@@ -101,6 +102,13 @@ enum AttemptStatus {
   IN_PROGRESS
   SUBMITTED
   AUTO_SUBMITTED
+}
+
+/// Teacher checking of written answers. AUTO: nothing to check (MCQ only).
+enum EvalStatus {
+  AUTO
+  PENDING
+  DONE
 }
 
 enum ContentStatus {
@@ -508,6 +516,7 @@ model Test {
   shuffleQuestions Boolean    @default(false)
   shuffleOptions   Boolean    @default(false)
   isDemo           Boolean    @default(false) // free sample test for demo (not yet approved) students
+  maxLeaves        Int        @default(3) // leaving the app this many times auto-submits; 0 = only count
   startAt          DateTime?
   endAt            DateTime?
   status           TestStatus @default(DRAFT)
@@ -562,7 +571,11 @@ model Attempt {
   correct        Int           @default(0)
   incorrect      Int           @default(0)
   unanswered     Int           @default(0)
-  backgroundHits Int           @default(0) // times the app went to background during the test
+  backgroundHits Int           @default(0) // times the student left the app during the test
+  endReason      String? // SUBMIT | TIME_UP | LEFT_APP
+  evaluation     EvalStatus    @default(AUTO)
+  checkedAt      DateTime?
+  checkedById    String?
 
   test    Test            @relation(fields: [testId], references: [id])
   student Student         @relation(fields: [studentId], references: [id])
@@ -577,6 +590,10 @@ model AttemptAnswer {
   attemptId         String
   questionId        String
   selectedOptionIds String[]
+  textAnswer        String? // SUBJECTIVE only
+  imageKeys         String[] // SUBJECTIVE only: photos of the written answer
+  awardedMarks      Decimal? @db.Decimal(5, 2) // SUBJECTIVE only, set by the teacher
+  feedback          String?
   markedForReview   Boolean  @default(false)
   answeredAt        DateTime @default(now())
 

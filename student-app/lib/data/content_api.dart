@@ -67,18 +67,36 @@ class ContentApi {
         await _dio.put<void>('/attempts/$attemptId/answers', data: {
           'answers': [
             for (final q in changed)
-              {'questionId': q.id, 'selectedOptionIds': q.selected.toList(), 'markedForReview': q.marked},
+              {
+                'questionId': q.id,
+                'selectedOptionIds': q.selected.toList(),
+                if (q.written) 'textAnswer': q.textAnswer,
+                'markedForReview': q.marked,
+              },
           ],
         });
       });
 
-  Future<void> reportBackground(String attemptId) async {
-    try {
-      await _dio.post<void>('/attempts/$attemptId/background');
-    } catch (_) {
-      // Best effort: a failed anti-cheat ping must never disturb the student.
-    }
-  }
+  /// The student came back after leaving the app mid-test. Past the test's limit the server submits it.
+  Future<LeaveResult> reportLeave(String attemptId) => _run(() async {
+        final res = await _dio.post<Map<String, dynamic>>('/attempts/$attemptId/background');
+        return LeaveResult.fromJson(res.data!);
+      });
+
+  /// Uploads one photo of a written answer; returns all photos of that question.
+  Future<List<AnswerImage>> uploadAnswerImage(String attemptId, String questionId, String path) => _run(() async {
+        final res = await _dio.post<Map<String, dynamic>>(
+          '/attempts/$attemptId/answers/$questionId/images',
+          data: FormData.fromMap({'file': await MultipartFile.fromFile(path, filename: 'answer.jpg')}),
+          options: Options(sendTimeout: const Duration(minutes: 2), receiveTimeout: const Duration(minutes: 2)),
+        );
+        return answerImages(res.data!['images']);
+      });
+
+  Future<List<AnswerImage>> removeAnswerImage(String attemptId, String questionId, String imageId) => _run(() async {
+        final res = await _dio.delete<Map<String, dynamic>>('/attempts/$attemptId/answers/$questionId/images/$imageId');
+        return answerImages(res.data!['images']);
+      });
 
   Future<TestResult> submit(String attemptId) => _run(() async {
         final res = await _dio.post<Map<String, dynamic>>('/attempts/$attemptId/submit');

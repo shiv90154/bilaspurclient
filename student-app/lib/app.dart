@@ -43,7 +43,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = _buildRouter(ref, refresh);
   // Tapping a push opens what it is about: a doubt reply opens that thread, a class reminder /
-  // reschedule / cancel opens the classes list.
+  // reschedule / cancel opens the classes list, a checked test opens its result.
   final tapSub = PushService.instance.taps.listen((data) {
     if (ref.read(authProvider).status != AuthStatus.loggedIn) return;
     final doubtId = data['doubtId'];
@@ -53,6 +53,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       router.push('/doubts/$doubtId');
     } else if (type is String && type.startsWith('class_')) {
       router.push('/classes');
+    } else if (type == 'test_result' && data['attemptId'] is String) {
+      router.go('/tests/result/${data['attemptId']}');
     }
   });
   ref.onDispose(tapSub.cancel);

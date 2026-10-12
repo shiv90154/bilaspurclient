@@ -60,6 +60,13 @@ export class CreateTestDto {
   @IsBoolean()
   shuffleOptions?: boolean;
 
+  @ApiPropertyOptional({ description: 'Times a student may leave the app mid-test; one more auto-submits. 0 = only count', default: 3 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  maxLeaves?: number;
+
   @ApiPropertyOptional({ description: 'Window opens' })
   @IsOptional()
   @IsDateString()
@@ -107,6 +114,13 @@ export class UpdateTestDto {
   @IsOptional()
   @IsBoolean()
   shuffleOptions?: boolean;
+
+  @ApiPropertyOptional({ description: 'Times a student may leave the app mid-test; one more auto-submits. 0 = only count', default: 3 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  maxLeaves?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -172,6 +186,12 @@ export class SaveAnswerDto {
   @IsUUID('all', { each: true })
   selectedOptionIds!: string[];
 
+  @ApiPropertyOptional({ description: 'Written-answer questions only; omit to keep the saved text' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  textAnswer?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
@@ -191,4 +211,35 @@ export class SetTestDemoDto {
   @ApiProperty({ description: 'Free demo test: every student (also not yet approved ones) can take it' })
   @IsBoolean()
   isDemo!: boolean;
+}
+
+export class QuestionMarkDto {
+  @ApiProperty()
+  @IsUUID()
+  questionId!: string;
+
+  @ApiProperty({ description: 'Marks for the written answer, 0 up to the question marks' })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
+  awarded!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  feedback?: string | null;
+}
+
+export class SaveMarksDto {
+  @ApiProperty({ type: [QuestionMarkDto] })
+  @IsArray()
+  @ArrayMaxSize(300)
+  @ValidateNested({ each: true })
+  @Type(() => QuestionMarkDto)
+  marks!: QuestionMarkDto[];
+
+  @ApiProperty({ description: 'true: checking is finished, publish the result to the student' })
+  @IsBoolean()
+  done!: boolean;
 }

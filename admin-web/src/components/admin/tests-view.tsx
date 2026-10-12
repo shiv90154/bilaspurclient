@@ -124,6 +124,7 @@ function CreateTest({ series, onClose }: { series: TestSeries[]; onClose: () => 
       negativeMark: Number(f.get("negativeMark") || 0),
       shuffleQuestions: f.get("shuffleQuestions") === "on",
       shuffleOptions: f.get("shuffleOptions") === "on",
+      maxLeaves: Number(f.get("maxLeaves") ?? 3),
       startAt: when("startAt"),
       endAt: when("endAt"),
     });
@@ -144,6 +145,8 @@ function CreateTest({ series, onClose }: { series: TestSeries[]; onClose: () => 
         <div className="grid gap-3.5 sm:grid-cols-2">
           <Field label="Duration (minutes) *">{(id) => <input id={id} name="durationMin" type="number" min={1} max={600} required defaultValue={60} className={inputCls} />}</Field>
           <Field label="Negative marks per wrong answer">{(id) => <input id={id} name="negativeMark" type="number" min={0} max={99} step="0.25" defaultValue={0} className={inputCls} />}</Field>
+          <Field label="Leaving the app allowed (times)">{(id) => <input id={id} name="maxLeaves" type="number" min={0} max={20} defaultValue={3} className={inputCls} />}</Field>
+          <p className="self-end pb-2 text-[11.5px] text-sub">One more time auto-submits the test. 0 = only count it.</p>
           <Field label="Opens at">{(id) => <input id={id} name="startAt" type="datetime-local" className={inputCls} />}</Field>
           <Field label="Closes at">{(id) => <input id={id} name="endAt" type="datetime-local" className={inputCls} />}</Field>
         </div>

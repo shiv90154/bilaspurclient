@@ -8,16 +8,20 @@ import {
 import type { Paginated } from '../../common/dto/pagination.dto.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { Role, TestStatus } from '../../generated/prisma/enums.js';
+import { AttemptStatus, EvalStatus, QuestionType, Role, TestStatus } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import type {
   CreateTestDto,
   ListTestsQueryDto,
+  SaveMarksDto,
   SetTestBatchesDto,
   SetTestQuestionsDto,
   UpdateTestDto,
 } from './dto/test.dto.js';
+import { grade, hasWrittenAnswer } from './grading.js';
 
 const DETAIL_INCLUDE = {
   course: { select: { id: true, name: true } },
@@ -46,6 +50,8 @@ export class TestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly storage: StorageService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Faculty manage only the tests they created; admin sees everything. */
@@ -97,6 +103,7 @@ export class TestsService {
         negativeMark: dto.negativeMark,
         shuffleQuestions: dto.shuffleQuestions,
         shuffleOptions: dto.shuffleOptions,
+        maxLeaves: dto.maxLeaves,
         startAt: dto.startAt ? new Date(dto.startAt) : undefined,
         endAt: dto.endAt ? new Date(dto.endAt) : undefined,
         createdById: user.id,
@@ -223,11 +230,19 @@ export class TestsService {
         unanswered: a.unanswered,
         backgroundHits: a.backgroundHits,
         status: a.status,
+        endReason: a.endReason,
+        evaluation: a.evaluation,
         timeTakenSec: a.submittedAt ? Math.round((a.submittedAt.getTime() - a.startedAt.getTime()) / 1000) : null,
       }))
-      .sort((a, b) => b.score - a.score || (a.timeTakenSec ?? Infinity) - (b.timeTakenSec ?? Infinity))
-      .map((r, i) => ({ rank: i + 1, ...r }));
-    const scores = rows.map((r) => r.score);
+      // Unchecked attempts go last: their score is only the MCQ part so far.
+      .sort(
+        (a, b) =>
+          Number(a.evaluation === EvalStatus.PENDING) - Number(b.evaluation === EvalStatus.PENDING) ||
+          b.score - a.score ||
+          (a.timeTakenSec ?? Infinity) - (b.timeTakenSec ?? Infinity),
+      )
+      .map((r, i) => ({ rank: r.evaluation === EvalStatus.PENDING ? null : i + 1, ...r }));
+    const scores = rows.filter((r) => r.evaluation !== EvalStatus.PENDING).map((r) => r.score);
     return {
       test: { id: test.id, title: test.title, totalMarks: Number(test.totalMarks) },
       summary: {
@@ -235,9 +250,153 @@ export class TestsService {
         average: scores.length ? +(scores.reduce((s, v) => s + v, 0) / scores.length).toFixed(2) : 0,
         highest: scores.length ? Math.max(...scores) : 0,
         lowest: scores.length ? Math.min(...scores) : 0,
+        toCheck: rows.filter((r) => r.evaluation === EvalStatus.PENDING).length,
       },
       rows,
     };
+  }
+
+  private async finishedAttempt(user: AuthUser, testId: string, attemptId: string) {
+    await this.get(user, testId); // ownership
+    const attempt = await this.prisma.attempt.findFirst({
+      where: { id: attemptId, testId, status: { not: AttemptStatus.IN_PROGRESS } },
+      include: { test: true, student: { select: { userId: true, user: { select: { name: true, phone: true } } } } },
+    });
+    if (!attempt) throw new NotFoundException('Submitted attempt not found');
+    return attempt;
+  }
+
+  private writtenRows(testId: string) {
+    return this.prisma.testQuestion.findMany({
+      where: { testId, question: { type: QuestionType.SUBJECTIVE } },
+      orderBy: { position: 'asc' },
+      select: {
+        questionId: true,
+        marks: true,
+        question: { select: { text: true, imageKey: true, explanation: true } },
+      },
+    });
+  }
+
+  /** One student's written answers with the model answer, for the teacher to give marks. */
+  async answerSheet(user: AuthUser, testId: string, attemptId: string) {
+    const attempt = await this.finishedAttempt(user, testId, attemptId);
+    const [rows, answers] = await Promise.all([
+      this.writtenRows(testId),
+      this.prisma.attemptAnswer.findMany({ where: { attemptId } }),
+    ]);
+    const answerOf = new Map(answers.map((a) => [a.questionId, a]));
+    const link = (key: string, name: string) => this.storage.signedUrl(key, name, 'inline', 3600);
+    return {
+      attempt: {
+        id: attempt.id,
+        name: attempt.student.user.name,
+        phone: attempt.student.user.phone,
+        status: attempt.status,
+        endReason: attempt.endReason,
+        evaluation: attempt.evaluation,
+        leaves: attempt.backgroundHits,
+        submittedAt: attempt.submittedAt,
+        correct: attempt.correct,
+        incorrect: attempt.incorrect,
+        score: Number(attempt.score ?? 0),
+        checkedAt: attempt.checkedAt,
+      },
+      test: { id: attempt.test.id, title: attempt.test.title, totalMarks: Number(attempt.test.totalMarks) },
+      questions: rows.map((r) => {
+        const a = answerOf.get(r.questionId);
+        return {
+          questionId: r.questionId,
+          text: r.question.text,
+          imageUrl: r.question.imageKey ? link(r.question.imageKey, 'question-image') : null,
+          modelAnswer: r.question.explanation,
+          maxMarks: Number(r.marks),
+          answered: hasWrittenAnswer(a),
+          textAnswer: a?.textAnswer ?? null,
+          images: (a?.imageKeys ?? []).map((k) => link(k, 'answer-image')),
+          awardedMarks: a?.awardedMarks == null ? null : Number(a.awardedMarks),
+          feedback: a?.feedback ?? null,
+        };
+      }),
+    };
+  }
+
+  /**
+   * Save the teacher's marks. With `done`, every answered written question must have marks; the
+   * final score is worked out again and the student is told the result is out.
+   */
+  async saveMarks(user: AuthUser, testId: string, attemptId: string, dto: SaveMarksDto) {
+    const attempt = await this.finishedAttempt(user, testId, attemptId);
+    if (attempt.evaluation === EvalStatus.AUTO) {
+      throw new ConflictException('This attempt has no written answers to check');
+    }
+    const written = await this.writtenRows(testId);
+    const maxOf = new Map(written.map((r) => [r.questionId, Number(r.marks)]));
+    for (const m of dto.marks) {
+      const max = maxOf.get(m.questionId);
+      if (max === undefined) throw new BadRequestException('Not a written-answer question of this test');
+      if (m.awarded > max) throw new BadRequestException(`Marks cannot be more than ${max} for this question`);
+    }
+
+    await this.prisma.$transaction(
+      dto.marks.map((m) =>
+        this.prisma.attemptAnswer.upsert({
+          where: { attemptId_questionId: { attemptId, questionId: m.questionId } },
+          create: {
+            attemptId,
+            questionId: m.questionId,
+            selectedOptionIds: [],
+            awardedMarks: m.awarded,
+            feedback: m.feedback ?? null,
+          },
+          update: { awardedMarks: m.awarded, feedback: m.feedback ?? null },
+        }),
+      ),
+    );
+
+    if (dto.done) {
+      const [rows, answers] = await Promise.all([
+        this.prisma.testQuestion.findMany({
+          where: { testId },
+          select: {
+            questionId: true,
+            marks: true,
+            question: { select: { type: true, options: { select: { id: true, isCorrect: true } } } },
+          },
+        }),
+        this.prisma.attemptAnswer.findMany({ where: { attemptId } }),
+      ]);
+      const answerOf = new Map(answers.map((a) => [a.questionId, a]));
+      const unchecked = written.filter((r) => {
+        const a = answerOf.get(r.questionId);
+        return hasWrittenAnswer(a) && a?.awardedMarks == null;
+      }).length;
+      if (unchecked > 0) throw new BadRequestException(`Give marks to every answer first (${unchecked} left)`);
+
+      const { score } = grade(rows, answers, Number(attempt.test.negativeMark));
+      const total = Number(attempt.test.totalMarks);
+      const percentage = total > 0 ? Math.max(0, (score / total) * 100) : 0;
+      const firstTime = attempt.evaluation === EvalStatus.PENDING;
+      await this.prisma.attempt.update({
+        where: { id: attemptId },
+        data: {
+          score: +score.toFixed(2),
+          percentage: +percentage.toFixed(2),
+          evaluation: EvalStatus.DONE,
+          checkedAt: new Date(),
+          checkedById: user.id,
+        },
+      });
+      await this.activity.log({ actorId: user.id, action: 'attempt.checked', entity: 'attempt', entityId: attemptId });
+      if (firstTime) {
+        void this.notifications.sendToUsers([attempt.student.userId], {
+          title: 'Test result is out',
+          body: `${attempt.test.title}: your answers have been checked.`,
+          data: { type: 'test_result', attemptId },
+        });
+      }
+    }
+    return this.answerSheet(user, testId, attemptId);
   }
 
   private assertEditable(test: { status: TestStatus; _count: { attempts: number } }) {
