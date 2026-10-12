@@ -13,7 +13,7 @@ import type {
   RegisterVerifyDto,
   ResetPasswordWithOtpDto,
 } from './dto/account.dto.js';
-import { escapeHtml, maskEmail, OtpService } from './otp.service.js';
+import { maskEmail, OtpService } from './otp.service.js';
 
 interface PendingSignup {
   name: string;
@@ -197,14 +197,24 @@ export class AccountService {
   /** Best effort: an email to the institute's contact address about a new sign-up. */
   private async tellInstitute(name: string, phone: string, course: string) {
     try {
-      const { contactEmail, instituteName } = await this.settings.publicInfo();
-      if (!contactEmail || !this.mail.enabled) return;
-      await this.mail.send({
-        to: contactEmail,
-        subject: `New registration: ${name}`,
-        text: `${name} (${phone}) registered for ${course || 'a course'}.\nOpen the admin panel → Registrations to approve them.`,
-        html: `<p><b>${escapeHtml(name)}</b> (${escapeHtml(phone)}) registered for <b>${escapeHtml(course || 'a course')}</b> at ${escapeHtml(instituteName)}.</p><p>Open the admin panel → Registrations to approve them.</p>`,
-      });
+      const info = await this.settings.publicInfo();
+      if (!info.contactEmail || !this.mail.enabled) return;
+      await this.mail.sendBranded(
+        info.contactEmail,
+        `New registration: ${name}`,
+        {
+          preheader: `${name} registered for ${course || 'a course'}.`,
+          heading: 'New student registration',
+          paragraphs: ['A new student has signed up and is waiting for your approval.'],
+          rows: [
+            { label: 'Name', value: name },
+            { label: 'Mobile', value: phone },
+            { label: 'Course', value: course || 'Not chosen' },
+          ],
+          button: { label: 'Open Registrations', url: `${this.mail.site}/registrations` },
+        },
+        info,
+      );
     } catch (err) {
       this.logger.warn(`Could not email the institute about a registration: ${String(err)}`);
     }

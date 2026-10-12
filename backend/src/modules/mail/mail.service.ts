@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { Env } from '../../config/env.js';
+import { type EmailContent, renderEmail } from './mail-layout.js';
 
 export interface Mail {
   to: string;
@@ -21,9 +22,12 @@ export class MailService {
   private readonly transport?: Transporter;
   private readonly from: string;
   private readonly isProd: boolean;
+  /** Website origin for the logo and links: the first allowed CORS origin is the web panel. */
+  readonly site: string;
 
   constructor(config: ConfigService<Env, true>) {
     this.isProd = config.get('NODE_ENV', { infer: true }) === 'production';
+    this.site = config.get('CORS_ORIGINS', { infer: true }).split(',')[0].trim().replace(/\/$/, '');
     const host = config.get('SMTP_HOST', { infer: true })?.trim();
     const port = config.get('SMTP_PORT', { infer: true });
     const user = config.get('SMTP_USER', { infer: true })?.trim();
@@ -47,6 +51,16 @@ export class MailService {
 
   get enabled(): boolean {
     return !!this.transport;
+  }
+
+  /** Sends `content` in the institute's email layout (HTML + plain text). */
+  sendBranded(
+    to: string,
+    subject: string,
+    content: EmailContent,
+    info: { instituteName: string; contactEmail?: string; contactPhone?: string },
+  ): Promise<void> {
+    return this.send({ to, subject, ...renderEmail(content, { ...info, site: this.site }) });
   }
 
   async send(mail: Mail): Promise<void> {

@@ -17,6 +17,10 @@ const SUBJECT: Record<OtpPurpose, string> = {
   REGISTER: 'Your sign-up code',
   RESET_PASSWORD: 'Your password reset code',
 };
+const HEADING: Record<OtpPurpose, string> = {
+  REGISTER: 'Confirm your email',
+  RESET_PASSWORD: 'Reset your password',
+};
 const LINE: Record<OtpPurpose, string> = {
   REGISTER: 'Use this code to confirm your email and finish creating your account.',
   RESET_PASSWORD: 'Use this code to set a new password. If you did not ask for this, ignore this email; your password stays the same.',
@@ -71,9 +75,9 @@ export class OtpService {
         select: { id: true },
       }),
     ]);
-    const { instituteName } = await this.settings.publicInfo();
+    const info = await this.settings.publicInfo();
     try {
-      await this.sendCode(email, purpose, code, instituteName);
+      await this.sendCode(email, purpose, code, info);
     } catch (err) {
       // Not delivered: forget it so the resend cooldown does not lock the person out.
       await this.prisma.emailOtp.delete({ where: { id: row.id } });
@@ -82,17 +86,24 @@ export class OtpService {
     return true;
   }
 
-  private sendCode(email: string, purpose: OtpPurpose, code: string, instituteName: string) {
-    return this.mail.send({
-      to: email,
-      subject: `${SUBJECT[purpose]}: ${code}`,
-      text: `${instituteName}\n\n${LINE[purpose]}\n\nCode: ${code}\n\nThe code works for 10 minutes. Never share it with anyone, not even the institute staff.`,
-      html: `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1f2937">
-<p style="font-size:17px;font-weight:bold">${escapeHtml(instituteName)}</p>
-<p>${LINE[purpose]}</p>
-<p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:18px 0">${code}</p>
-<p style="color:#6b7280">The code works for 10 minutes. Never share it with anyone, not even the institute staff.</p></div>`,
-    });
+  private sendCode(
+    email: string,
+    purpose: OtpPurpose,
+    code: string,
+    info: { instituteName: string; contactEmail?: string; contactPhone?: string },
+  ) {
+    return this.mail.sendBranded(
+      email,
+      `${SUBJECT[purpose]}: ${code}`,
+      {
+        preheader: `Your code is ${code}. It works for 10 minutes.`,
+        heading: HEADING[purpose],
+        paragraphs: [LINE[purpose]],
+        code,
+        footnote: 'The code works for 10 minutes. Never share it with anyone, not even the institute staff.',
+      },
+      info,
+    );
   }
 
   /** Checks the newest code. Wrong tries count; the code is single use. Returns its payload. */
@@ -119,10 +130,6 @@ export class OtpService {
     if (!count) throw invalid('The code was already used. Ask for a new one.');
     return otp.payload;
   }
-}
-
-export function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
 /** "r****@gmail.com" */

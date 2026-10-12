@@ -22,7 +22,6 @@ import {
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
-import { escapeHtml } from '../account/otp.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { StorageService } from '../storage/storage.service.js';
@@ -114,9 +113,11 @@ export class StudentsService {
       this.prisma.student.update({ where: { id }, data: { status: StudentStatus.ACTIVE, reviewNote: null } }),
     ]);
     await this.activity.log({ actorId: admin.id, action: 'student.approve', entity: 'student', entityId: id, meta: { batchIds: unique } });
-    void this.notify(s.user.email, s.user.name, 'Your admission is approved', [
-      'Your admission has been approved. Open the app again to see your classes, notes and tests.',
-    ]);
+    void this.notify(s.user.email, s.user.name, 'Your admission is approved', {
+      heading: 'Welcome! Your admission is approved',
+      paragraphs: ['Your admission has been approved. Open the DHĪ app again to see your classes, notes and tests.'],
+      button: { label: 'Open DHĪ', url: `${this.mail.site}/login` },
+    });
     return this.get(admin, id);
   }
 
@@ -136,25 +137,33 @@ export class StudentsService {
       }),
     ]);
     await this.activity.log({ actorId: admin.id, action: 'student.reject', entity: 'student', entityId: id });
-    void this.notify(s.user.email, s.user.name, 'About your registration', [
-      'Your registration could not be approved.',
-      ...(note?.trim() ? [`Note from the institute: ${note.trim()}`] : []),
-      'For questions, contact the institute.',
-    ]);
+    void this.notify(s.user.email, s.user.name, 'About your registration', {
+      heading: 'About your registration',
+      paragraphs: [
+        'Your registration could not be approved.',
+        ...(note?.trim() ? [`Note from the institute: ${note.trim()}`] : []),
+        'For questions, contact the institute.',
+      ],
+    });
     return { id, status: StudentStatus.DROPPED };
   }
 
   /** Best effort email to the student; a mail problem never fails the admin's action. */
-  private async notify(to: string | null, name: string, subject: string, lines: string[]) {
+  private async notify(
+    to: string | null,
+    name: string,
+    subject: string,
+    content: { heading: string; paragraphs: string[]; button?: { label: string; url: string } },
+  ) {
     if (!to || !this.mail.enabled) return;
     try {
-      const { instituteName } = await this.settings.publicInfo();
-      await this.mail.send({
+      const info = await this.settings.publicInfo();
+      await this.mail.sendBranded(
         to,
-        subject: `${instituteName}: ${subject}`,
-        text: [`Hello ${name},`, '', ...lines, '', instituteName].join('\n'),
-        html: `<p>Hello ${escapeHtml(name)},</p>${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}<p>${escapeHtml(instituteName)}</p>`,
-      });
+        `${info.instituteName}: ${subject}`,
+        { preheader: content.paragraphs[0], greeting: `Hello ${name},`, ...content },
+        info,
+      );
     } catch {
       // logged by MailService
     }

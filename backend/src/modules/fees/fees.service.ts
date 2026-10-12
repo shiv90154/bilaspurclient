@@ -22,7 +22,6 @@ import {
   VideoStatus,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { escapeHtml } from '../account/otp.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -501,18 +500,28 @@ export class FeesService {
     try {
       const s = await this.prisma.student.findUnique({ where: { id: studentId }, select: { user: { select: { name: true, email: true } } } });
       if (!s?.user.email) return;
-      const { instituteName } = await this.settings.publicInfo();
-      const lines = [
-        `We received your payment of ₹${amount} for ${planName}. Thank you.`,
-        unlocked ? 'Your course is now open. Sign in to the app again to see your classes, notes and tests.' : 'The balance can be paid later.',
-        'Your receipt is in the Fees section of the web panel.',
-      ];
-      await this.mail.send({
-        to: s.user.email,
-        subject: `${instituteName}: payment received`,
-        text: [`Hello ${s.user.name},`, '', ...lines, '', instituteName].join('\n'),
-        html: `<p>Hello ${escapeHtml(s.user.name)},</p>${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}<p>${escapeHtml(instituteName)}</p>`,
-      });
+      const info = await this.settings.publicInfo();
+      await this.mail.sendBranded(
+        s.user.email,
+        `${info.instituteName}: payment received`,
+        {
+          preheader: `We received ₹${amount} for ${planName}.`,
+          heading: 'Payment received',
+          greeting: `Hello ${s.user.name},`,
+          paragraphs: [
+            'Thank you. We have received your payment.',
+            unlocked
+              ? 'Your course is now open. Sign in to the DHĪ app again to see your classes, notes and tests.'
+              : 'The balance can be paid later.',
+          ],
+          rows: [
+            { label: 'Amount', value: `₹${amount}` },
+            { label: 'Course', value: planName },
+          ],
+          button: { label: 'View receipt', url: `${this.mail.site}/learn/fees` },
+        },
+        info,
+      );
     } catch {
       // logged by MailService; a mail problem never undoes a payment
     }
