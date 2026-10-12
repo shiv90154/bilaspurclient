@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Contact, LegalPage, Section } from "@/components/legal";
 import { getPublicInfo } from "@/lib/server/public-info";
 
-export const metadata: Metadata = { title: "Terms of use" };
+export const metadata: Metadata = {
+  title: "Terms of use",
+  description: "Rules for using the DHĪ app and website, course fees and refunds.",
+  alternates: { canonical: "/terms" },
+};
 
 export default async function TermsPage() {
   const info = await getPublicInfo();

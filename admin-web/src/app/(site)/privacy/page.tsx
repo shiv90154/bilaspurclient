@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Contact, LegalPage, Section } from "@/components/legal";
 import { getPublicInfo } from "@/lib/server/public-info";
 
-export const metadata: Metadata = { title: "Privacy policy" };
+export const metadata: Metadata = {
+  title: "Privacy policy",
+  description: "What personal data DHĪ collects from students, why, how long it is kept and how to ask for it to be deleted.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default async function PrivacyPage() {
   const info = await getPublicInfo();

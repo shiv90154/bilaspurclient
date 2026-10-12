@@ -100,7 +100,7 @@ export function SiteFooter() {
 
       <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-2 border-t border-line py-6 text-[12.5px] text-sub sm:flex-row sm:justify-between">
         <p>© {year} DHĪ Ayurveda Classroom. All rights reserved.</p>
-        <p>Payments secured by Razorpay · Made in India</p>
+        <p>Made in India</p>
       </div>
     </footer>
   );

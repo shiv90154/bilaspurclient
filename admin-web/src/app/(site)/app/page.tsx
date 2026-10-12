@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Apple, ShieldCheck, Smartphone } from "lucide-react";
+import { SITE } from "@/lib/site";
 import { btnOutline, PageHero, PlayStoreButton, Section, SectionTitle, Steps } from "@/components/site/site-ui";
 
 export const metadata: Metadata = {
   title: "Get the app",
-  description: "Download the DHĪ app from Google Play. iPhone users can log in on the website.",
+  description: "Download the DHĪ app for Android. iPhone users can log in on the website.",
   alternates: { canonical: "/app" },
 };
 
 const NOTES = [
-  { icon: Smartphone, title: "Any recent Android phone", text: "Install free from Google Play. Updates arrive automatically." },
+  { icon: Smartphone, title: "Any recent Android phone", text: SITE.playStoreLive ? "Install free from Google Play. Updates arrive automatically." : "Free download. If Android asks, allow installing apps from your browser. The app tells you when an update is ready." },
   { icon: ShieldCheck, title: "One phone per student", text: "Logging in on a new phone logs out the old one. Rooted phones and emulators are not supported." },
   { icon: Apple, title: "On an iPhone?", text: "Log in on this website for live classes, doubts, fees and your profile." },
 ];
@@ -21,7 +22,7 @@ export default function AppPage() {
       <PageHero
         eyebrow="App"
         title="Your classroom, in your pocket"
-        text="Live classes, notes, tests and doubts in one app. Download it free from Google Play."
+        text={`Live classes, notes, tests and doubts in one app. Download it free${SITE.playStoreLive ? " from Google Play" : " for Android"}.`}
       >
         <div className="flex flex-col gap-3 sm:flex-row">
           <PlayStoreButton />

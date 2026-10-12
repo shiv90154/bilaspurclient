@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { AuthCard } from "@/components/auth-card";
 import { RegisterForm } from "./register-form";
 
-export const metadata: Metadata = { title: "Register" };
+export const metadata: Metadata = {
+  title: "Register",
+  description: "Create your DHĪ student account with your name, phone and email.",
+  alternates: { canonical: "/register" },
+};
 
 export default function RegisterPage() {
   return (

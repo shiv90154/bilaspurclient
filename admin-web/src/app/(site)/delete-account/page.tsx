@@ -3,7 +3,11 @@ import { Contact, LegalPage, Section } from "@/components/legal";
 import { getPublicInfo } from "@/lib/server/public-info";
 import { DeletionForm } from "./deletion-form";
 
-export const metadata: Metadata = { title: "Delete my account" };
+export const metadata: Metadata = {
+  title: "Delete my account",
+  description: "Ask DHĪ to delete your student account and personal data.",
+  alternates: { canonical: "/delete-account" },
+};
 
 export default async function DeleteAccountPage() {
   const info = await getPublicInfo();

@@ -101,7 +101,7 @@ export const FEATURES = [
 ];
 
 export const STEPS = [
-  { icon: Download, title: "Download the app", text: "Get the DHĪ app from the Google Play Store." },
+  { icon: Download, title: "Download the app", text: SITE.playStoreLive ? "Get the DHĪ app from the Google Play Store." : "Download the DHĪ app for Android from this website." },
   { icon: UserPlus, title: "Register", text: "Sign up with your name, phone and email. Verify with a one-time code." },
   { icon: BadgeCheck, title: "Start learning", text: "Press Buy now on a course to message us on WhatsApp. Once the fee is paid, your batch’s classes, notes and tests open up." },
 ];
@@ -158,21 +158,21 @@ export function PageHero({ eyebrow, title, text, children }: { eyebrow: string; 
   );
 }
 
-/** "Get it on Google Play" button, styled like the official badge. */
+/** "Get it on Google Play" button, styled like the official badge. Downloads the APK until the listing is live. */
 export function PlayStoreButton({ light = false }: { light?: boolean }) {
+  const live = SITE.playStoreLive;
   return (
     <a
-      href={SITE.playStore}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={live ? SITE.playStore : "/download"}
+      {...(live ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
       className={`inline-flex h-14 items-center justify-center gap-3 rounded-xl px-5 transition ${
         light ? "bg-white text-ink hover:bg-white/90" : "bg-ink text-white hover:bg-black"
       }`}
     >
-      <GooglePlayIcon size={26} />
+      {live ? <GooglePlayIcon size={26} /> : <Download size={24} />}
       <span className="flex flex-col text-left leading-none">
-        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">Get it on</span>
-        <span className="mt-1 text-[18px] font-semibold">Google Play</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">{live ? "Get it on" : "Download for"}</span>
+        <span className="mt-1 text-[18px] font-semibold">{live ? "Google Play" : "Android"}</span>
       </span>
     </a>
   );
