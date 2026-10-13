@@ -29,6 +29,7 @@ export const ErrorCode = {
   WRONG_PASSWORD: 'WRONG_PASSWORD',
   STAFF_USE_WEB: 'STAFF_USE_WEB', // admin/faculty tried to log in to the student app
   MAINTENANCE: 'MAINTENANCE', // the admin switched on maintenance mode; students are kept out
+  OTP_REQUIRED: 'OTP_REQUIRED', // two-step login: a code was emailed, send it back with the password
   DEMO_ACCOUNT: 'DEMO_ACCOUNT', // feature needs an approved (ACTIVE) student // change-password: the current password does not match
 } as const;
 

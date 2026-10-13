@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Env } from '../../config/env.js';
@@ -13,6 +13,7 @@ import { hashPassword, verifyPassword } from '../../common/password.util.js';
 import type { AccessTokenPayload, AuthUser } from '../../common/types/auth-user.js';
 import {
   DeviceStatus,
+  OtpPurpose,
   Platform,
   Role,
   SessionRevokeReason,
@@ -20,7 +21,9 @@ import {
   UserStatus,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { maskEmail, OtpService } from '../account/otp.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { MailService } from '../mail/mail.service.js';
 import { PrivacyService } from '../privacy/privacy.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
@@ -61,6 +64,8 @@ export interface AuthProfile {
   demo: boolean;
   /** The course a demo student asked to join. */
   requestedCourse: { id: string; name: string } | null;
+  /** Staff: login also needs a code emailed to them. */
+  twoFactorEnabled: boolean;
 }
 
 export interface LoginResult extends TokenPair {
@@ -71,6 +76,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private dummyHash?: Promise<string>;
 
   constructor(
@@ -80,6 +86,8 @@ export class AuthService {
     private readonly activity: ActivityService,
     private readonly settings: SettingsService,
     private readonly privacy: PrivacyService,
+    private readonly otp: OtpService,
+    private readonly mail: MailService,
   ) {}
 
   async login(dto: LoginDto, meta: RequestMeta): Promise<LoginResult> {
@@ -140,6 +148,24 @@ export class AuthService {
         ErrorCode.STAFF_USE_WEB,
         'This app is for students. Admins and teachers use the web panel.',
       );
+    }
+
+    // Two-step login (staff who switched it on): the password alone only gets a code emailed.
+    if (user.twoFactorEnabled && user.role !== Role.STUDENT && user.email) {
+      if (!this.mail.canDeliver) {
+        // Never lock the admin out because email was switched off on the server.
+        this.logger.warn(`Two-step login skipped for ${user.id}: email is not set up`);
+      } else if (!dto.otp) {
+        await this.otp.issue(user.email, OtpPurpose.LOGIN_2FA);
+        throw new UnauthorizedException({
+          statusCode: 401,
+          code: ErrorCode.OTP_REQUIRED,
+          message: `We emailed a 6-digit code to ${maskEmail(user.email)}. Enter it to finish signing in.`,
+          email: maskEmail(user.email),
+        });
+      } else {
+        await this.otp.verify(user.email, OtpPurpose.LOGIN_2FA, dto.otp);
+      }
     }
 
     const isStudent = user.role === Role.STUDENT;
@@ -383,6 +409,45 @@ export class AuthService {
     });
   }
 
+  // ───────────── two-step login (staff) ─────────────
+
+  /** Step 1 of switching it on: checks the password and emails a code (proves the email works). */
+  async twoFactorStart(user: AuthUser, password: string) {
+    const record = await this.staffForTwoFactor(user, password);
+    if (!this.mail.canDeliver) throw badRequest(ErrorCode.WRONG_PASSWORD, 'Email is not set up on the server, so two-step login cannot be used yet');
+    await this.otp.issue(record.email!, OtpPurpose.ENABLE_2FA);
+    return { email: maskEmail(record.email!) };
+  }
+
+  /** Step 2: the code from that email turns it on. */
+  async twoFactorEnable(user: AuthUser, code: string, meta: RequestMeta) {
+    const record = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { email: true } });
+    if (!record.email) throw badRequest(ErrorCode.WRONG_PASSWORD, 'Add an email to your account first');
+    await this.otp.verify(record.email, OtpPurpose.ENABLE_2FA, code);
+    await this.prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true } });
+    await this.activity.log({ actorId: user.id, action: 'auth.2fa-on', entity: 'user', entityId: user.id, ip: meta.ip });
+    return { twoFactorEnabled: true };
+  }
+
+  async twoFactorDisable(user: AuthUser, password: string, meta: RequestMeta) {
+    await this.staffForTwoFactor(user, password);
+    await this.prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: false } });
+    await this.activity.log({ actorId: user.id, action: 'auth.2fa-off', entity: 'user', entityId: user.id, ip: meta.ip });
+    return { twoFactorEnabled: false };
+  }
+
+  private async staffForTwoFactor(user: AuthUser, password: string) {
+    const record = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { passwordHash: true, email: true, role: true },
+    });
+    if (record.role === Role.STUDENT) throw forbidden(ErrorCode.FORBIDDEN_ROLE, 'Two-step login is for admins and teachers');
+    // 400, not 401: clients treat a 401 as "session gone".
+    if (!(await verifyPassword(record.passwordHash, password))) throw badRequest(ErrorCode.WRONG_PASSWORD, 'Password is wrong');
+    if (!record.email) throw badRequest(ErrorCode.WRONG_PASSWORD, 'Add an email to your account first');
+    return record;
+  }
+
   // ───────────── helpers ─────────────
 
   private async issueTokens(
@@ -410,6 +475,7 @@ export class AuthService {
     phone: string;
     email: string | null;
     role: Role;
+    twoFactorEnabled: boolean;
     student?: { id: string; status: StudentStatus; requestedCourse: { id: string; name: string } | null } | null;
   }): Promise<AuthProfile> {
     const demo = user.role === Role.STUDENT && user.student?.status === StudentStatus.PENDING;
@@ -428,6 +494,7 @@ export class AuthService {
       consentRequired: await this.privacy.consentRequired(user.id, user.role),
       demo,
       requestedCourse: demo ? (user.student?.requestedCourse ?? null) : null,
+      twoFactorEnabled: user.twoFactorEnabled,
     };
   }
 

@@ -316,6 +316,8 @@ export interface ClassRow {
   joinUrl?: string | null;
   batch: { id: string; name: string };
   faculty: { id: string; user: { name: string } } | null;
+  /** Zoom cloud recordings imported for this class (they appear under Recorded videos). */
+  recordings?: { videoId: string | null; durationSec: number | null }[];
 }
 export interface ClassAttendance {
   expected: number;

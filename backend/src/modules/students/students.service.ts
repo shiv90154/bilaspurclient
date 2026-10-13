@@ -2,9 +2,13 @@ import { randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { type CsvCell, istDate, istDateTime } from '../../common/csv.js';
 import type { Paginated } from '../../common/dto/pagination.dto.js';
 import { hashPassword } from '../../common/password.util.js';
@@ -25,12 +29,12 @@ import { ActivityService } from '../activity/activity.service.js';
 import { MailService } from '../mail/mail.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { StorageService } from '../storage/storage.service.js';
-import type {
+import {
   CreateStudentDto,
-  ListRegistrationsQueryDto,
-  ListStudentsQueryDto,
-  StudentFilters,
-  UpdateStudentDto,
+  type ListRegistrationsQueryDto,
+  type ListStudentsQueryDto,
+  type StudentFilters,
+  type UpdateStudentDto,
 } from './dto/student.dto.js';
 
 const toDate = (v?: string) => (v ? new Date(v) : undefined);
@@ -54,6 +58,8 @@ const LIST_SELECT = {
 
 @Injectable()
 export class StudentsService {
+  private readonly logger = new Logger(StudentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
@@ -474,6 +480,44 @@ export class StudentsService {
     } catch (err) {
       throw this.mapError(err);
     }
+  }
+
+  /**
+   * Bulk add from the admin's Excel/CSV (already turned into rows by the browser). Each row is
+   * checked and saved on its own, so one bad row never blocks the rest; the answer says, per row,
+   * what happened and the temporary password of every new login (shown only this once).
+   */
+  async importMany(admin: AuthUser, rows: Record<string, unknown>[]) {
+    const results: { row: number; status: 'created' | 'skipped' | 'error'; message?: string; name?: string; phone?: string; temporaryPassword?: string }[] = [];
+    for (const [i, raw] of rows.entries()) {
+      const dto = plainToInstance(CreateStudentDto, raw);
+      const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+      if (errors.length) {
+        const message = errors.flatMap((e) => Object.values(e.constraints ?? { x: `${e.property} is invalid` })).join('; ');
+        results.push({ row: i, status: 'error', message, name: dto.name, phone: dto.phone });
+        continue;
+      }
+      try {
+        const created = (await this.create(admin, dto)) as { temporaryPassword?: string };
+        results.push({ row: i, status: 'created', name: dto.name, phone: dto.phone, temporaryPassword: created.temporaryPassword });
+      } catch (err) {
+        const already = err instanceof ConflictException;
+        results.push({
+          row: i,
+          status: already ? 'skipped' : 'error',
+          message: err instanceof HttpException ? String((err.getResponse() as { message?: string }).message ?? err.message) : 'Could not save this row',
+          name: dto.name,
+          phone: dto.phone,
+        });
+        if (!already && !(err instanceof HttpException)) this.logger.error(`student import row ${i} failed`, err as Error);
+      }
+    }
+    return {
+      created: results.filter((r) => r.status === 'created').length,
+      skipped: results.filter((r) => r.status === 'skipped').length,
+      errors: results.filter((r) => r.status === 'error').length,
+      results,
+    };
   }
 
   async update(admin: AuthUser, id: string, dto: UpdateStudentDto) {

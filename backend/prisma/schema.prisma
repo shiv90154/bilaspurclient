@@ -181,6 +181,7 @@ model User {
   lockedUntil      DateTime?
   lastLoginAt      DateTime?
   emailVerifiedAt  DateTime? // set when an email OTP was confirmed (self-registration)
+  twoFactorEnabled Boolean    @default(false) // staff: login also needs a code sent to their email
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   deletedAt        DateTime?
@@ -683,7 +684,8 @@ model Video {
   topicId      String?
   durationSec  Int?
   status       VideoStatus @default(UPLOADING)
-  sourceKey    String? // original upload
+  sourceKey    String? // original upload / imported recording (mp4)
+  sourceStore  String? // where sourceKey lives: "local" (STORAGE_DIR) or "r2"
   hlsKey       String? // HLS manifest (AES-128 encrypted)
   externalUrl  String? // for now: a YouTube (unlisted) / Drive / any https link the app opens
   isDemo       Boolean     @default(false) // free sample for not-yet-approved students
@@ -693,11 +695,13 @@ model Video {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  subject  Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  topic    Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  batches  VideoBatch[]
-  progress VideoProgress[]
-  classes  LiveClass[]
+  subject    Subject?          @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic      Topic?            @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  batches    VideoBatch[]
+  progress   VideoProgress[]
+  classes    LiveClass[]
+  recordings ClassRecording[]
+  imports    RecordingImport[]
 
   @@index([status])
   @@map("videos")
@@ -739,7 +743,7 @@ model LiveClass {
   startAt        DateTime
   endAt          DateTime
   joinUrl        String? // Zoom / Meet link
-  meetingId      String? // provider meeting id (BBB / LiveKit room)
+  meetingId      String? // Zoom meeting number (from joinUrl) / BBB / LiveKit room
   videoId        String? // for PREMIERE (recorded video played as live)
   status         ClassStatus @default(SCHEDULED)
   seriesId       String? // groups recurring classes
@@ -754,6 +758,7 @@ model LiveClass {
   video      Video?            @relation(fields: [videoId], references: [id], onDelete: SetNull)
   attendance ClassAttendance[]
   recordings ClassRecording[]
+  imports    RecordingImport[]
   doubts     Doubt[]
 
   @@index([batchId, startAt])
@@ -779,12 +784,52 @@ model ClassRecording {
   id          String   @id @default(uuid())
   classId     String
   fileKey     String
+  videoId     String? // the Video students watch (batch = the class's batch)
   durationSec Int?
   createdAt   DateTime @default(now())
 
   class LiveClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  video Video?    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
+  @@index([classId])
   @@map("class_recordings")
+}
+
+enum RecordingImportStatus {
+  PENDING
+  DOWNLOADING
+  DONE
+  FAILED
+  SKIPPED // nothing to import (no MP4 in the recording)
+}
+
+/**
+ * One Zoom cloud recording (one meeting instance) to copy into our storage. Doubles as the job
+ * queue (cron retries FAILED rows) and the idempotency key (Zoom resends webhooks).
+ */
+model RecordingImport {
+  id            String                @id @default(uuid())
+  provider      String                @default("zoom")
+  recordingUuid String                @unique // Zoom meeting instance uuid
+  meetingId     String
+  topic         String?
+  startedAt     DateTime?
+  durationSec   Int?
+  status        RecordingImportStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  error         String?
+  classId       String? // matched class (null = no class with this meeting id at that time)
+  videoId       String?
+  payload       Json // the recording object from Zoom (files, download urls)
+  downloadToken String? // from the webhook, valid 24h; used when no API credentials are set
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  class LiveClass? @relation(fields: [classId], references: [id], onDelete: SetNull)
+  video Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@map("recording_imports")
 }
 
 // ───────────── Student doubts (doc 05) ─────────────
@@ -835,19 +880,19 @@ model DoubtMessage {
 // ───────────── Fees & payments — website only (doc 12) ─────────────
 
 model FeePlan {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
   courseId     String
   batchId      String?
-  total        Decimal  @db.Decimal(10, 2)
-  mrp          Decimal? @db.Decimal(10, 2) // optional "was" price shown struck through
+  total        Decimal   @db.Decimal(10, 2)
+  mrp          Decimal?  @db.Decimal(10, 2) // optional "was" price shown struck through
   // Limited-time offer: while it runs, students pay offerPrice instead of total.
   offerPrice   Decimal?  @db.Decimal(10, 2)
   offerLabel   String? // e.g. "Diwali offer"
   offerEndsAt  DateTime? // null = until the admin removes it
   installments Json? // [{ "label": "1st", "amount": 5000, "dueDate": "2026-11-01" }]
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
 
   course Course       @relation(fields: [courseId], references: [id])
   batch  Batch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
@@ -1027,6 +1072,8 @@ model TestSeries {
 enum OtpPurpose {
   REGISTER
   RESET_PASSWORD
+  LOGIN_2FA
+  ENABLE_2FA
 }
 
 model EmailOtp {

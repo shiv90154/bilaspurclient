@@ -20,10 +20,12 @@ import 'features/home/home_screen.dart';
 import 'features/notes/note_viewer_screen.dart';
 import 'features/notes/notes_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/search/search_screen.dart';
 import 'features/shell/main_shell.dart';
 import 'features/tests/result_screen.dart';
 import 'features/tests/take_test_screen.dart';
 import 'features/tests/tests_screen.dart';
+import 'features/videos/video_player_screen.dart';
 import 'features/videos/videos_screen.dart';
 import 'widgets/watermark.dart';
 
@@ -53,6 +55,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       router.push('/doubts/$doubtId');
     } else if (type is String && type.startsWith('class_')) {
       router.push('/classes');
+    } else if (type == 'video_ready') {
+      router.push('/videos');
     } else if (type == 'test_result' && data['attemptId'] is String) {
       router.go('/tests/result/${data['attemptId']}');
     }
@@ -120,6 +124,11 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
       ),
       GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
       GoRoute(path: '/videos', builder: (_, _) => const VideosScreen()),
+      GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+      GoRoute(
+        path: '/videos/:id',
+        builder: (_, state) => VideoPlayerScreen(video: state.extra! as VideoItem),
+      ),
       GoRoute(path: '/courses', builder: (_, _) => const CoursesScreen()),
       GoRoute(
         path: '/courses/:id',

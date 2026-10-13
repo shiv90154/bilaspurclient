@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarDays, CalendarPlus, ExternalLink, Pencil, Users, XCircle } from "lucide-react";
+import { CalendarDays, CalendarPlus, CloudDownload, ExternalLink, Pencil, Users, XCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   api,
@@ -60,6 +60,20 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["classes"] }),
   });
 
+  // Zoom normally sends the recording by itself; this asks Zoom right now.
+  const [fetchNote, setFetchNote] = useState<string | null>(null);
+  const fetchRecording = useMutation({
+    mutationFn: (id: string) => api<{ found: number }>(`/classes/${id}/fetch-recording`, { method: "POST" }),
+    onSuccess: (r) => {
+      setFetchNote(
+        r.found
+          ? "Zoom recording found. It is being copied and will appear under Recorded videos in a few minutes."
+          : "Zoom has no cloud recording for this class yet. Recording must be “In the cloud”; Zoom needs some time after the class ends.",
+      );
+      void qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+
   const switchTab = (t: "upcoming" | "past") => {
     setTab(t);
     setPage(1);
@@ -93,7 +107,8 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
         </select>
       </div>
 
-      <ErrorNote error={list.error ?? cancel.error} />
+      <ErrorNote error={list.error ?? cancel.error ?? fetchRecording.error} />
+      {fetchNote && <p role="status" className="rounded-xl bg-info-tint px-3.5 py-2.5 text-[13px] text-info">{fetchNote}</p>}
       {list.isPending && <ListSkeleton />}
       {list.data?.items.length === 0 && (
         <EmptyState
@@ -113,6 +128,7 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
                   <p className="break-words text-[14.5px] font-bold">{c.title}</p>
                   <Badge tone={TONE[c.status]}>{c.status === "LIVE" ? "Live now" : c.status.charAt(0) + c.status.slice(1).toLowerCase()}</Badge>
                   {c.seriesId && <Badge tone="gray">Weekly</Badge>}
+                  {!!c.recordings?.length && <Badge tone="green">Recording saved{c.recordings.length > 1 ? ` (${c.recordings.length} parts)` : ""}</Badge>}
                 </div>
                 <p className="mt-1 text-[12.5px] text-sub">
                   {format(new Date(c.startAt), "EEE d MMM, h:mm a")} – {format(new Date(c.endAt), "h:mm a")} · {c.batch.name}
@@ -124,6 +140,12 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
                   <a href={c.joinUrl} target="_blank" rel="noopener noreferrer" className={btnGhost + " !h-8 !px-3"}>
                     <ExternalLink size={14} /> Open link
                   </a>
+                )}
+                {c.type === "ZOOM" && c.status === "ENDED" && !c.recordings?.length && (
+                  <button className={btnGhost + " !h-8 !px-3"} disabled={fetchRecording.isPending}
+                    onClick={() => { setFetchNote(null); fetchRecording.mutate(c.id); }}>
+                    <CloudDownload size={14} /> {fetchRecording.isPending && fetchRecording.variables === c.id ? "Asking Zoom…" : "Fetch recording"}
+                  </button>
                 )}
                 <button className={btnGhost + " !h-8 !px-3"} onClick={() => setDialog({ kind: "attendance", row: c })}>
                   <Users size={14} /> Attendance

@@ -1,5 +1,5 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { resolve } from 'node:path';
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
@@ -7,9 +7,9 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 
 /** Keys we generate ourselves; anything else is rejected before touching the disk (no path traversal). */
-const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|apk|png|jpg|webp)$/;
+const KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|apk|png|jpg|webp|mp4)$/;
 
-export type StoredExt = 'pdf' | 'apk' | 'png' | 'jpg' | 'webp';
+export type StoredExt = 'pdf' | 'apk' | 'png' | 'jpg' | 'webp' | 'mp4';
 
 /** Content-Type by stored extension (we choose the extension from the file's own bytes, never from its name). */
 export const CONTENT_TYPES: Record<StoredExt, string> = {
@@ -18,6 +18,7 @@ export const CONTENT_TYPES: Record<StoredExt, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
   webp: 'image/webp',
+  mp4: 'video/mp4',
 };
 
 export type Disposition = 'inline' | 'attachment';
@@ -43,6 +44,7 @@ export class StorageService implements OnModuleInit {
 
   async onModuleInit() {
     await mkdir(this.root, { recursive: true });
+    await mkdir(resolve(this.root, 'tmp'), { recursive: true });
     this.logger.log(`File storage: ${this.root}`);
   }
 
@@ -50,6 +52,18 @@ export class StorageService implements OnModuleInit {
   async put(buffer: Buffer, ext: StoredExt): Promise<string> {
     const key = `${randomUUID()}.${ext}`;
     await writeFile(this.pathOf(key), buffer, { flag: 'wx' });
+    return key;
+  }
+
+  /** A scratch path inside the storage root (same disk, so `putFile` is a cheap rename). */
+  tmpPath(): string {
+    return resolve(this.root, 'tmp', `${randomUUID()}.part`);
+  }
+
+  /** Moves a finished file (from `tmpPath`) in under a fresh random key. */
+  async putFile(path: string, ext: StoredExt): Promise<string> {
+    const key = `${randomUUID()}.${ext}`;
+    await rename(path, this.pathOf(key));
     return key;
   }
 
@@ -61,10 +75,15 @@ export class StorageService implements OnModuleInit {
     return readFile(this.pathOf(key));
   }
 
-  async open(key: string) {
+  async size(key: string): Promise<number> {
+    return (await stat(this.pathOf(key))).size; // throws ENOENT if missing
+  }
+
+  /** `range` is inclusive, as in an HTTP Range header (videos seek with it). */
+  async open(key: string, range?: { start: number; end: number }) {
     const path = this.pathOf(key);
     const info = await stat(path); // throws ENOENT if missing
-    return { stream: createReadStream(path), size: info.size };
+    return { stream: createReadStream(path, range), size: info.size };
   }
 
   /** Relative URL (`/api/files/...`); clients prepend the API base. Valid for `ttlSeconds`. */

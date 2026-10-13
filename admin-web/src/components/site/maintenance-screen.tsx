@@ -8,7 +8,7 @@ export function MaintenanceScreen({ message }: { message: string }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-16">
       <div className="w-full max-w-lg rounded-3xl border border-line bg-surface p-8 text-center shadow-sm sm:p-10">
-        <img src="/logo.png" alt={SITE.name} className="mx-auto h-16 w-16 rounded-2xl" />
+        <img src="/logo-96.webp" alt={SITE.name} className="mx-auto h-16 w-16 rounded-2xl" />
         <span className="mx-auto mt-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-tint text-accent-ink">
           <Wrench size={26} aria-hidden="true" />
         </span>

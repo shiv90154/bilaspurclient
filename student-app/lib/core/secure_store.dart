@@ -17,6 +17,7 @@ class SecureStore {
   static const _kAccess = 'access_token';
   static const _kRefresh = 'refresh_token';
   static const _kDevice = 'device_id';
+  static const _kProfile = 'profile_json';
 
   Future<Tokens?> readTokens() async {
     final access = await _s.read(key: _kAccess);
@@ -33,7 +34,12 @@ class SecureStore {
   Future<void> clearTokens() async {
     await _s.delete(key: _kAccess);
     await _s.delete(key: _kRefresh);
+    await _s.delete(key: _kProfile);
   }
+
+  /// Last /auth/me answer (raw JSON), so the app opens without internet (offline notes).
+  Future<String?> readProfile() => _s.read(key: _kProfile);
+  Future<void> writeProfile(String json) => _s.write(key: _kProfile, value: json);
 
   /// Random id generated once per install; the backend binds the student to it.
   Future<String> deviceId() async {

@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ExternalLink, Plus, Trash2, Video } from "lucide-react";
+import { CloudDownload, ExternalLink, Play, Plus, RotateCw, Trash2, Users, Video } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { api, qs, type Batch, type Paginated } from "@/lib/api";
+import { api, fileHref, qs, type Batch, type Paginated } from "@/lib/api";
 import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal, PageHeader } from "@/components/ui";
 
 interface VideoRow {
@@ -12,14 +12,22 @@ interface VideoRow {
   title: string;
   description: string | null;
   externalUrl: string | null;
+  /** file = our own mp4 (an imported Zoom recording), played through /videos/:id/play. */
+  source: "file" | "link";
+  durationSec: number | null;
   isDemo: boolean;
   createdAt: string;
   batches: { batch: { id: string; name: string } }[];
 }
 
-export function VideosView() {
+const duration = (sec: number) =>
+  sec >= 3600 ? `${Math.floor(sec / 3600)} h ${Math.round((sec % 3600) / 60)} min` : `${Math.max(1, Math.round(sec / 60))} min`;
+
+export function VideosView({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
+  const [playing, setPlaying] = useState<VideoRow | null>(null);
+  const [editing, setEditing] = useState<VideoRow | null>(null);
   const list = useQuery({ queryKey: ["videos"], queryFn: () => api<Paginated<VideoRow>>(`/videos${qs({ limit: 100 })}`) });
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) => api(`/videos/${id}`, { method: "PATCH", body }),
@@ -34,9 +42,10 @@ export function VideosView() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title="Recorded videos"
-        subtitle="Add a lecture by its link (YouTube unlisted, Google Drive …). Free demo videos are open to students waiting for approval too."
+        subtitle="Zoom cloud recordings of your classes arrive here by themselves, for the class's batch. You can also add a lecture by its link (YouTube unlisted, Google Drive …)."
         action={<button className={btnPrimary} onClick={() => setAdding(true)}><Plus size={16} /> Add video</button>}
       />
+      {isAdmin && <ZoomPanel />}
       <ErrorNote error={list.error ?? patch.error ?? remove.error} />
       {list.isPending && <ListSkeleton />}
       {list.data?.items.length === 0 && (
@@ -49,8 +58,12 @@ export function VideosView() {
               <div className="min-w-0">
                 <p className="break-words text-[14.5px] font-bold">{v.title}</p>
                 {v.description && <p className="mt-0.5 text-[12.5px] text-sub">{v.description}</p>}
-                <p className="mt-0.5 text-[12px] text-sub">Added {format(new Date(v.createdAt), "d MMM yyyy")}</p>
+                <p className="mt-0.5 text-[12px] text-sub">
+                  Added {format(new Date(v.createdAt), "d MMM yyyy")}
+                  {v.durationSec ? ` · ${duration(v.durationSec)}` : ""}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  {v.source === "file" && <Badge tone="amber">Plays inside the app</Badge>}
                   {v.isDemo && <Badge tone="green">Free demo: every student</Badge>}
                   {v.batches.map((b) => <Badge key={b.batch.id} tone="blue">{b.batch.name}</Badge>)}
                   {!v.isDemo && v.batches.length === 0 && <Badge tone="red">No batch: nobody can see it</Badge>}
@@ -61,9 +74,14 @@ export function VideosView() {
                   <input type="checkbox" checked={v.isDemo} disabled={patch.isPending} onChange={(e) => patch.mutate({ id: v.id, body: { isDemo: e.target.checked } })} />
                   Free demo
                 </label>
-                {v.externalUrl && (
-                  <a className={btnGhost + " !h-8 !px-3"} href={v.externalUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> Open</a>
+                {v.source === "file" ? (
+                  <button className={btnGhost + " !h-8 !px-3"} onClick={() => setPlaying(v)}><Play size={14} /> Play</button>
+                ) : (
+                  v.externalUrl && (
+                    <a className={btnGhost + " !h-8 !px-3"} href={v.externalUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> Open</a>
+                  )
                 )}
+                <button className={btnGhost + " !h-8 !px-3"} onClick={() => setEditing(v)}><Users size={14} /> Batches</button>
                 <button aria-label={`Delete ${v.title}`} className="rounded-lg p-1.5 text-danger hover:bg-bg" onClick={() => window.confirm(`Delete "${v.title}"?`) && remove.mutate(v.id)}>
                   <Trash2 size={16} />
                 </button>
@@ -73,13 +91,30 @@ export function VideosView() {
         ))}
       </ul>
       {adding && <AddVideo onClose={() => setAdding(false)} />}
+      {playing && <PlayVideo video={playing} onClose={() => setPlaying(null)} />}
+      {editing && <EditBatches video={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function BatchChecklist({ selected }: { selected?: string[] }) {
+  const batches = useQuery({ queryKey: ["batches", "all"], queryFn: () => api<Paginated<Batch>>(`/batches${qs({ limit: 100, active: true })}`) });
+  return (
+    <fieldset>
+      <legend className="text-[12px] font-semibold text-sub">Batches that can watch it</legend>
+      <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto rounded-[10px] border border-line p-3">
+        {batches.data?.items.map((b) => (
+          <label key={b.id} className="flex items-center gap-2 text-[13px]">
+            <input type="checkbox" name="batchIds" value={b.id} defaultChecked={selected?.includes(b.id)} /> {b.course?.name} · {b.name}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
 function AddVideo({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
-  const batches = useQuery({ queryKey: ["batches", "all"], queryFn: () => api<Paginated<Batch>>(`/batches${qs({ limit: 100, active: true })}`) });
   const create = useMutation({
     mutationFn: (body: Record<string, unknown>) => api("/videos", { method: "POST", body }),
     onSuccess: () => {
@@ -108,16 +143,7 @@ function AddVideo({ onClose }: { onClose: () => void }) {
         <Field label="Video link (https)">{(i) => <input id={i} name="url" type="url" required placeholder="https://youtu.be/…" className={inputCls} />}</Field>
         <Field label="Description (optional)">{(i) => <textarea id={i} name="description" rows={2} maxLength={2000} className={inputCls + " h-auto py-2"} />}</Field>
         <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="isDemo" /> Free demo (also for students waiting for approval)</label>
-        <fieldset>
-          <legend className="text-[12px] font-semibold text-sub">Batches that can watch it</legend>
-          <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto rounded-[10px] border border-line p-3">
-            {batches.data?.items.map((b) => (
-              <label key={b.id} className="flex items-center gap-2 text-[13px]">
-                <input type="checkbox" name="batchIds" value={b.id} /> {b.course?.name} · {b.name}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <BatchChecklist />
         <p className="text-[12px] text-sub">Tip: on YouTube choose “Unlisted” so only people with the link can find it.</p>
         <ErrorNote error={create.error} />
         <div className="flex justify-end gap-2">
@@ -126,5 +152,169 @@ function AddVideo({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+function EditBatches({ video, onClose }: { video: VideoRow; onClose: () => void }) {
+  const qc = useQueryClient();
+  const save = useMutation({
+    mutationFn: (batchIds: string[]) => api(`/videos/${video.id}`, { method: "PATCH", body: { batchIds } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["videos"] });
+      onClose();
+    },
+  });
+  return (
+    <Modal title="Who can watch it" onClose={onClose}>
+      <form
+        className="flex flex-col gap-3.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate(new FormData(e.currentTarget).getAll("batchIds").map(String));
+        }}
+      >
+        <p className="break-words text-[13px] font-semibold">{video.title}</p>
+        <BatchChecklist selected={video.batches.map((b) => b.batch.id)} />
+        <ErrorNote error={save.error} />
+        <div className="flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
+          <button className={btnPrimary} disabled={save.isPending}>{save.isPending ? "Saving…" : "Save"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function PlayVideo({ video, onClose }: { video: VideoRow; onClose: () => void }) {
+  const link = useQuery({
+    queryKey: ["video-play", video.id],
+    queryFn: () => api<{ url: string }>(`/videos/${video.id}/play`),
+    staleTime: 3600_000,
+  });
+  // Our own files come back as /api/files/... (through the proxy); R2 links are absolute.
+  const src = link.data && (link.data.url.startsWith("/") ? fileHref(link.data.url) : link.data.url);
+  return (
+    <Modal title={video.title} onClose={onClose}>
+      <ErrorNote error={link.error} />
+      {src ? (
+        <video src={src} controls autoPlay controlsList="nodownload" className="aspect-video w-full rounded-xl bg-black" />
+      ) : (
+        !link.error && <div className="aspect-video w-full animate-pulse rounded-xl bg-bg" />
+      )}
+    </Modal>
+  );
+}
+
+// ───────────── Zoom recordings (admin) ─────────────
+
+type ImportStatus = "PENDING" | "DOWNLOADING" | "DONE" | "FAILED" | "SKIPPED";
+interface ZoomStatus {
+  apiConnected: boolean;
+  webhookConnected: boolean;
+  trashAfterImport: boolean;
+  videoStore: "local" | "r2";
+  r2Configured: boolean;
+  counts: Partial<Record<ImportStatus, number>>;
+}
+interface ImportRow {
+  id: string;
+  meetingId: string;
+  topic: string | null;
+  startedAt: string | null;
+  status: ImportStatus;
+  attempts: number;
+  error: string | null;
+  createdAt: string;
+  class: { id: string; title: string; batch: { id: string; name: string } } | null;
+  video: { id: string; title: string } | null;
+}
+const IMPORT_TONE: Record<ImportStatus, "blue" | "green" | "gray" | "red" | "amber"> = {
+  PENDING: "blue",
+  DOWNLOADING: "amber",
+  DONE: "green",
+  FAILED: "red",
+  SKIPPED: "gray",
+};
+const IMPORT_LABEL: Record<ImportStatus, string> = {
+  PENDING: "Waiting",
+  DOWNLOADING: "Copying…",
+  DONE: "Saved",
+  FAILED: "Failed",
+  SKIPPED: "No video",
+};
+
+function ZoomPanel() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const status = useQuery({ queryKey: ["zoom-status"], queryFn: () => api<ZoomStatus>("/integrations/zoom/status"), refetchInterval: 30_000 });
+  const imports = useQuery({
+    queryKey: ["zoom-imports"],
+    queryFn: () => api<Paginated<ImportRow>>(`/integrations/zoom/imports${qs({ limit: 20 })}`),
+    enabled: open,
+    refetchInterval: open ? 10_000 : false,
+  });
+  const retry = useMutation({
+    mutationFn: (id: string) => api(`/integrations/zoom/imports/${id}/retry`, { method: "POST" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["zoom-imports"] });
+      void qc.invalidateQueries({ queryKey: ["zoom-status"] });
+    },
+  });
+  const s = status.data;
+  if (!s) return null;
+  const connected = s.apiConnected || s.webhookConnected;
+  const busy = (s.counts.PENDING ?? 0) + (s.counts.DOWNLOADING ?? 0);
+
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="rounded-xl bg-primary-tint p-2 text-primary"><CloudDownload size={18} /></span>
+          <div className="min-w-0">
+            <p className="text-[14px] font-bold">Zoom recordings</p>
+            <p className="text-[12px] text-sub">
+              {connected
+                ? `Connected · saved on ${s.videoStore === "r2" ? "Cloudflare R2" : "this server"}${s.trashAfterImport ? " · removed from Zoom after copying" : ""}`
+                : "Not connected yet. The Zoom keys go in the server settings (docs/14-zoom-recordings.md)."}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge tone={s.webhookConnected ? "green" : "gray"}>Auto {s.webhookConnected ? "on" : "off"}</Badge>
+          <Badge tone={s.apiConnected ? "green" : "gray"}>Zoom API {s.apiConnected ? "on" : "off"}</Badge>
+          {busy > 0 && <Badge tone="amber">{busy} copying</Badge>}
+          {(s.counts.FAILED ?? 0) > 0 && <Badge tone="red">{s.counts.FAILED} failed</Badge>}
+          <button className={btnGhost + " !h-8 !px-3"} onClick={() => setOpen(!open)}>{open ? "Hide" : "Recent imports"}</button>
+        </div>
+      </div>
+      {open && (
+        <div className="mt-3 border-t border-line pt-3">
+          <ErrorNote error={imports.error ?? retry.error} />
+          {imports.data?.items.length === 0 && <p className="text-[13px] text-sub">No Zoom recording has come in yet.</p>}
+          <ul className="flex flex-col">
+            {imports.data?.items.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-start justify-between gap-2 border-b border-line py-2.5 last:border-b-0">
+                <div className="min-w-0">
+                  <p className="break-words text-[13px] font-semibold">{r.video?.title ?? r.class?.title ?? r.topic ?? `Meeting ${r.meetingId}`}</p>
+                  <p className="text-[12px] text-sub">
+                    {format(new Date(r.startedAt ?? r.createdAt), "d MMM yyyy, h:mm a")}
+                    {r.class ? ` · ${r.class.batch.name}` : " · no matching class: choose its batches below"}
+                  </p>
+                  {r.error && r.status !== "DONE" && <p className="mt-0.5 break-words text-[12px] text-danger">{r.error}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tone={IMPORT_TONE[r.status]}>{IMPORT_LABEL[r.status]}</Badge>
+                  {(r.status === "FAILED" || r.status === "SKIPPED") && (
+                    <button className={btnGhost + " !h-8 !px-3"} disabled={retry.isPending} onClick={() => retry.mutate(r.id)}>
+                      <RotateCw size={14} /> Retry
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }

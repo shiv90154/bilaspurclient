@@ -193,4 +193,13 @@ class ContentApi {
         final res = await _dio.get<Map<String, dynamic>>('/videos', queryParameters: {'limit': 100});
         return [for (final v in res.data!['items'] as List) VideoItem.fromJson(v as Map<String, dynamic>)];
       });
+
+  /// A streaming link for our own videos, signed for a few hours (seeking keeps using it).
+  Future<Uri> videoPlayUrl(String id) => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/videos/$id/play');
+        final url = res.data!['url'] as String;
+        // "/api/files/..." is relative to the server origin; cloud storage links are absolute.
+        if (url.startsWith('http')) return Uri.parse(url);
+        return Uri.parse(apiUrl).replace(path: '', query: '').resolve(url);
+      });
 }

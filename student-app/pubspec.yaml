@@ -47,6 +47,9 @@ dependencies:
   url_launcher: ^6.3.3
   package_info_plus: ^10.2.2
   image_picker: ^1.2.4
+  video_player: ^2.14.1
+  cryptography: ^2.9.0
+  path_provider: ^2.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

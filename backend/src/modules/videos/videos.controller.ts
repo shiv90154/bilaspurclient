@@ -18,6 +18,12 @@ export class VideosController {
     return this.videos.list(user, q);
   }
 
+  /** A link to play now (own files: signed for a few hours). */
+  @Get(':id/play')
+  play(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.videos.play(user, id);
+  }
+
   @Roles(Role.ADMIN, Role.FACULTY)
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateVideoDto) {

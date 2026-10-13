@@ -53,6 +53,18 @@ services:
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      # Zoom cloud recordings → Recorded videos (docs/14-zoom-recordings.md). Empty = Zoom import off.
+      ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
+      ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
+      ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET:-}
+      ZOOM_WEBHOOK_SECRET: ${ZOOM_WEBHOOK_SECRET:-}
+      ZOOM_TRASH_AFTER_IMPORT: ${ZOOM_TRASH_AFTER_IMPORT:-false}
+      # Where recordings are kept: local (the storage volume) or r2 (Cloudflare R2).
+      VIDEO_STORE: ${VIDEO_STORE:-local}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
       SEED_ADMIN_PHONE: ${SEED_ADMIN_PHONE}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}

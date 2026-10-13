@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../../config/env.js';
+import { OtpService } from '../account/otp.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 
@@ -21,7 +22,8 @@ import { AuthService } from './auth.service.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  // OtpService is stateless (rows live in the database), so a second instance here is fine.
+  providers: [AuthService, OtpService],
   exports: [AuthService],
 })
 export class AuthModule {}

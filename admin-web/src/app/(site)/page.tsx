@@ -66,6 +66,7 @@ export default async function HomePage() {
             </ul>
           </div>
           <FounderPhoto
+            priority
             src="/founder-portrait.jpg"
             alt={`${SITE.founder}, founder of DHĪ`}
             caption={

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Plus } from "lucide-react";
+import { Download, FileSpreadsheet, Plus } from "lucide-react";
+import { StudentImport } from "@/components/admin/student-import";
 import Link from "next/link";
 import { useDeferredValue, useState, type FormEvent } from "react";
 import {
@@ -40,6 +41,7 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
   const [batchId, setBatchId] = useState("");
   const [page, setPage] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
   const batches = useQuery({
@@ -71,6 +73,11 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
             <a className={btnGhost} href={csvHref("/students/export", { search: deferredSearch, status, batchId })} download>
               <Download size={16} /> Export CSV
             </a>
+            {canEdit && (
+              <button className={btnGhost} onClick={() => setImporting(true)}>
+                <FileSpreadsheet size={16} /> Import Excel
+              </button>
+            )}
             {canEdit && (
               <button className={btnPrimary} onClick={() => setAdding(true)}>
                 <Plus size={16} /> Add student
@@ -145,6 +152,7 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
       )}
 
       {adding && <AddStudent batches={batches.data?.items ?? []} onClose={() => setAdding(false)} />}
+      {importing && <StudentImport batches={batches.data?.items ?? []} onClose={() => setImporting(false)} />}
     </div>
   );
 }

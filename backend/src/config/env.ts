@@ -37,6 +37,31 @@ export const envSchema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   RAZORPAY_API_URL: z.string().url().default('https://api.razorpay.com/v1'), // overridden only by smoke tests
 
+  // Zoom cloud recordings → our storage → the class's batch (docs/14-zoom-recordings.md).
+  // marketplace.zoom.us > Build App > Server-to-Server OAuth: Account ID, Client ID, Client Secret.
+  // Its "Event Subscriptions" > Secret Token goes in ZOOM_WEBHOOK_SECRET. Empty = Zoom import off.
+  ZOOM_ACCOUNT_ID: z.string().optional(),
+  ZOOM_CLIENT_ID: z.string().optional(),
+  ZOOM_CLIENT_SECRET: z.string().optional(),
+  ZOOM_WEBHOOK_SECRET: z.string().optional(),
+  // After a successful copy, move the recording to Zoom's trash (kept there 30 days) to free the 5GB.
+  ZOOM_TRASH_AFTER_IMPORT: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  ZOOM_API_URL: z.string().url().default('https://api.zoom.us/v2'), // overridden only by smoke tests
+  ZOOM_OAUTH_URL: z.string().url().default('https://zoom.us/oauth/token'),
+
+  // Where imported videos live: "local" = STORAGE_DIR on this server, "r2" = Cloudflare R2
+  // (10GB free, no bandwidth charges). Switching later keeps old videos where they are.
+  VIDEO_STORE: z.enum(['local', 'r2']).default('local'),
+  // Cloudflare dashboard > R2 > Manage API tokens (Object Read & Write on the bucket).
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_ENDPOINT: z.string().url().optional(), // default https://<account>.r2.cloudflarestorage.com
+
   DEVICE_CHANGE_LIMIT_30D: z.coerce.number().int().positive().default(3),
   LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),

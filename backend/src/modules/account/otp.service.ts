@@ -16,14 +16,20 @@ const MAX_TRIES = 5;
 const SUBJECT: Record<OtpPurpose, string> = {
   REGISTER: 'Your sign-up code',
   RESET_PASSWORD: 'Your password reset code',
+  LOGIN_2FA: 'Your login code',
+  ENABLE_2FA: 'Confirm two-step login',
 };
 const HEADING: Record<OtpPurpose, string> = {
   REGISTER: 'Confirm your email',
   RESET_PASSWORD: 'Reset your password',
+  LOGIN_2FA: 'Your login code',
+  ENABLE_2FA: 'Turn on two-step login',
 };
 const LINE: Record<OtpPurpose, string> = {
   REGISTER: 'Use this code to confirm your email and finish creating your account.',
   RESET_PASSWORD: 'Use this code to set a new password. If you did not ask for this, ignore this email; your password stays the same.',
+  LOGIN_2FA: 'Someone (hopefully you) signed in to the admin panel with your password. Enter this code to finish signing in. If it was not you, change your password now.',
+  ENABLE_2FA: 'Enter this code in the admin panel to turn on two-step login. From then on, every login also asks for a code sent to this email.',
 };
 
 /** 6-digit email codes: 10 minutes, 5 tries, one resend a minute, 5 an hour per email. */

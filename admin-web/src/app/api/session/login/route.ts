@@ -13,6 +13,8 @@ const loginSchema = z.object({
   password: z.string().min(6).max(128),
   deviceId: z.string().max(128).optional(),
   deviceName: z.string().max(100).optional(),
+  // Two-step login: the code from the email, sent with the password again.
+  otp: z.string().trim().max(10).optional(),
 });
 
 export async function POST(request: NextRequest) {

@@ -25,6 +25,8 @@
     "smoke:privacy": "node scripts/smoke-privacy.mjs",
     "smoke:register": "node scripts/smoke-register.mjs",
     "smoke:payments": "node scripts/smoke-payments.mjs",
+    "smoke:zoom": "node scripts/smoke-zoom.mjs",
+    "smoke:security": "node scripts/smoke-security.mjs",
     "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -39,6 +41,9 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1150.0",
+    "@aws-sdk/lib-storage": "^3.1150.0",
+    "@aws-sdk/s3-request-presigner": "^3.1150.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",

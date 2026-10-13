@@ -40,7 +40,7 @@ export function SiteFooter() {
     <footer className="border-t border-line bg-surface px-4 pt-12 sm:px-6">
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr_1.3fr]">
         <div className="max-w-xs">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="DHĪ home">
+          <Link href="/" className="flex items-center gap-2.5">
             <BrandMark size={40} />
             <span className="leading-tight">
               <span className="block text-[18px] font-bold text-primary">DHĪ</span>

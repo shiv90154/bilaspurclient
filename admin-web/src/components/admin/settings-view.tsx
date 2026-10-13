@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { btnPrimary, ErrorNote, Field, inputCls, PageHeader } from "@/components/ui";
 import { ChangePasswordForm } from "@/components/password";
+import { TwoFactorSettings } from "@/components/admin/two-factor";
 
 export function SettingsView({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex max-w-3xl flex-col gap-5">
-      <PageHeader title="Settings" subtitle={isAdmin ? "App switches and your password" : "Your password"} />
+      <PageHeader title="Settings" subtitle={isAdmin ? "App switches, your password and two-step login" : "Your password and two-step login"} />
       {isAdmin && <Maintenance />}
       {isAdmin && <AppSwitches />}
       {isAdmin && <InstituteInfo />}
@@ -20,6 +21,7 @@ export function SettingsView({ isAdmin }: { isAdmin: boolean }) {
           <ChangePasswordForm />
         </div>
       </section>
+      <TwoFactorSettings />
     </div>
   );
 }

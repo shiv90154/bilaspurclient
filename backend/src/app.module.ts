@@ -34,6 +34,8 @@ import { MailModule } from './modules/mail/mail.module.js';
 import { PrivacyModule } from './modules/privacy/privacy.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { ZoomModule } from './modules/zoom/zoom.module.js';
+import { SystemModule } from './modules/system/system.module.js';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { SettingsModule } from './modules/settings/settings.module.js';
     PrivacyModule,
     MailModule,
     AccountModule,
+    ZoomModule,
+    SystemModule,
   ],
   providers: [
     // Order matters: rate limit → authenticate → authorize by role.

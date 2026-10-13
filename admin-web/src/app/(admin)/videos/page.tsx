@@ -5,6 +5,6 @@ import { requireUser } from "@/lib/server/session";
 export const metadata: Metadata = { title: "Recorded videos" };
 
 export default async function Page() {
-  await requireUser(["ADMIN", "FACULTY"]);
-  return <VideosView />;
+  const user = await requireUser(["ADMIN", "FACULTY"]);
+  return <VideosView isAdmin={user.role === "ADMIN"} />;
 }

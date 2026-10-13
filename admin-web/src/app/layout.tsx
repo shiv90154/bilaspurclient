@@ -3,12 +3,13 @@ import { Poppins } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-// Same family as the mobile app. Not a variable font, so the weights are listed; Devanagari is
-// included so Hindi names and notes render in the same face.
+// Same family as the mobile app. Not a variable font, so the weights are listed. Only Latin is
+// preloaded (8 files → 4 on every first visit); the Devanagari faces stay in the CSS with their
+// unicode-range, so a page with Hindi text still fetches and uses them when it needs them.
 const poppins = Poppins({
   variable: "--font-poppins",
   weight: ["400", "500", "600", "700"],
-  subsets: ["latin", "devanagari"],
+  subsets: ["latin"],
 });
 
 // Link previews (WhatsApp, Facebook, Telegram) need absolute URLs for the share image.

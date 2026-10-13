@@ -74,22 +74,38 @@ export class NotificationsService {
   async sendToUsers(userIds: string[], message: PushMessage): Promise<void> {
     if (!this.messaging || userIds.length === 0) return;
     try {
-      const devices = await this.prisma.device.findMany({
-        where: {
-          userId: { in: userIds },
-          fcmToken: { not: null },
-          // Only devices that are still signed in; a logged-out phone must not get pushes.
-          sessions: { some: { revokedAt: null, expiresAt: { gt: new Date() } } },
-        },
-        select: { fcmToken: true },
-      });
-      const tokens = [...new Set(devices.map((d) => d.fcmToken!))];
-      for (let i = 0; i < tokens.length; i += BATCH) {
-        await this.sendBatch(tokens.slice(i, i + BATCH), message);
-      }
+      await this.deliver(userIds, message);
     } catch (err) {
       this.logger.error('push failed', err as Error);
     }
+  }
+
+  /** Same as sendToUsers, but reports what happened (admin "send a test notification"). */
+  async sendWithReport(userIds: string[], message: PushMessage) {
+    if (!this.messaging) return { enabled: false, devices: 0, sent: 0, failed: 0, errors: [] as string[] };
+    return { enabled: true, ...(await this.deliver(userIds, message)) };
+  }
+
+  private async deliver(userIds: string[], message: PushMessage) {
+    const devices = await this.prisma.device.findMany({
+      where: {
+        userId: { in: userIds },
+        fcmToken: { not: null },
+        // Only devices that are still signed in; a logged-out phone must not get pushes.
+        sessions: { some: { revokedAt: null, expiresAt: { gt: new Date() } } },
+      },
+      select: { fcmToken: true },
+    });
+    const tokens = [...new Set(devices.map((d) => d.fcmToken!))];
+    const total = { devices: tokens.length, sent: 0, failed: 0, errors: [] as string[] };
+    for (let i = 0; i < tokens.length; i += BATCH) {
+      const r = await this.sendBatch(tokens.slice(i, i + BATCH), message);
+      total.sent += r.sent;
+      total.failed += r.failed;
+      total.errors.push(...r.errors);
+    }
+    total.errors = [...new Set(total.errors)];
+    return total;
   }
 
   private async sendBatch(tokens: string[], message: PushMessage) {
@@ -107,5 +123,10 @@ export class NotificationsService {
       await this.prisma.device.updateMany({ where: { fcmToken: { in: stale } }, data: { fcmToken: null } });
     }
     if (res.failureCount) this.logger.warn(`${res.failureCount}/${tokens.length} pushes failed (${stale.length} stale)`);
+    return {
+      sent: res.successCount,
+      failed: res.failureCount,
+      errors: res.responses.flatMap((r) => (r.error ? [r.error.code] : [])),
+    };
   }
 }

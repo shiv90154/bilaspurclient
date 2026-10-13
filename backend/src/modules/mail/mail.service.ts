@@ -53,6 +53,11 @@ export class MailService {
     return !!this.transport;
   }
 
+  /** Mail reaches someone: really sent, or (development without SMTP) printed to the log. */
+  get canDeliver(): boolean {
+    return !!this.transport || !this.isProd;
+  }
+
   /** Sends `content` in the institute's email layout (HTML + plain text). */
   sendBranded(
     to: string,

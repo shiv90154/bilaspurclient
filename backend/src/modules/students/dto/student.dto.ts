@@ -9,6 +9,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -23,6 +24,16 @@ import { PaginationQueryDto } from '../../../common/dto/pagination.dto.js';
 import { DocumentType, Gender, StudentStatus } from '../../../generated/prisma/enums.js';
 
 const PHONE_RE = /^[6-9]\d{9}$/;
+
+/** Bulk add: rows parsed from the admin's Excel/CSV; each is checked as a CreateStudentDto on the server. */
+export class ImportStudentsDto {
+  @ApiProperty({ description: 'Up to 200 rows per request, each shaped like a single create' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @IsObject({ each: true })
+  rows!: Record<string, unknown>[];
+}
 
 export class AcademicDto {
   @ApiPropertyOptional()

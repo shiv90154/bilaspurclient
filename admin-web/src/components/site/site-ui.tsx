@@ -120,7 +120,7 @@ export function Section({ id, children, className = "" }: { id?: string; childre
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-accent">
+    <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-accent-text">
       <span className="h-px w-6 bg-accent" aria-hidden="true" />
       {children}
     </p>
@@ -299,12 +299,28 @@ export function ContactCard({ icon, label, value, href, external }: { icon: Reac
   );
 }
 
-export function FounderPhoto({ src, alt, caption }: { src: string; alt: string; caption?: ReactNode }) {
+/**
+ * `src` is the original .jpg; the 480/900 px WebP copies next to it (public/) are what phones and
+ * desktops actually download. `priority` = the page's main image: fetched first, never lazy.
+ */
+export function FounderPhoto({ src, alt, caption, priority }: { src: string; alt: string; caption?: ReactNode; priority?: boolean }) {
+  const base = src.replace(/\.jpg$/, "");
   return (
     <div className="relative mx-auto w-full max-w-[400px]">
       <div className="absolute -inset-2 rounded-[2.2rem] border border-accent/40 sm:-inset-3" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-[2rem] bg-surface shadow-xl shadow-primary/10">
-        <img src={src} alt={alt} width={900} height={1200} className="aspect-[4/5] w-full object-cover object-top" />
+        <img
+          src={`${base}-900.webp`}
+          srcSet={`${base}-480.webp 480w, ${base}-900.webp 900w`}
+          sizes="(max-width: 440px) 100vw, 400px"
+          alt={alt}
+          width={900}
+          height={1200}
+          fetchPriority={priority ? "high" : "auto"}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          className="aspect-[4/5] w-full object-cover object-top"
+        />
         {caption && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-dark/90 via-primary-dark/50 to-transparent px-5 pb-5 pt-16 text-white">
             {caption}

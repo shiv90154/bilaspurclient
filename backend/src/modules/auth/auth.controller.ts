@@ -7,6 +7,7 @@ import { Public } from '../../common/decorators/public.decorator.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import { AuthService } from './auth.service.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { TwoFactorCodeDto, TwoFactorPasswordDto } from './dto/two-factor.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshDto } from './dto/refresh.dto.js';
 
@@ -58,5 +59,31 @@ export class AuthController {
     @Req() req: Request,
   ) {
     await this.auth.changePassword(user, dto, { ip: req.ip });
+  }
+
+  // ── two-step login (admins and teachers) ──
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('two-factor/start')
+  twoFactorStart(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorPasswordDto) {
+    return this.auth.twoFactorStart(user, dto.password);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('two-factor/enable')
+  twoFactorEnable(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorCodeDto, @Req() req: Request) {
+    return this.auth.twoFactorEnable(user, dto.code, { ip: req.ip });
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('two-factor/disable')
+  twoFactorDisable(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorPasswordDto, @Req() req: Request) {
+    return this.auth.twoFactorDisable(user, dto.password, { ip: req.ip });
   }
 }

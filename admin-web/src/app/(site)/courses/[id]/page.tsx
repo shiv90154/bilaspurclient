@@ -127,7 +127,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             {course.tagline && <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-white/85">{course.tagline}</p>}
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px] text-white/85">
               <span className="flex items-center gap-2">
-                <img src="/founder-portrait.jpg" alt="" width={28} height={28} className="h-7 w-7 rounded-full object-cover object-top" />
+                <img src="/founder-portrait-160.webp" alt="" width={28} height={28} className="h-7 w-7 rounded-full object-cover object-top" />
                 By <Link href="/about" className="font-semibold text-white underline-offset-2 hover:underline">{SITE.founder}</Link>
               </span>
               {c.batch.startDate && <span className="flex items-center gap-1.5"><CalendarDays size={15} /> Starts {date(c.batch.startDate)}</span>}
@@ -229,7 +229,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
               <h2 className="text-[20px] font-bold">Your teacher</h2>
               <div className="mt-4 rounded-2xl border border-line bg-surface p-6">
                 <div className="flex items-center gap-4">
-                  <img src="/founder-portrait.jpg" alt={SITE.founder} width={80} height={80} className="h-20 w-20 rounded-full object-cover object-top" />
+                  <img src="/founder-portrait-160.webp" alt={SITE.founder} width={80} height={80} loading="lazy" className="h-20 w-20 rounded-full object-cover object-top" />
                   <div>
                     <Link href="/about" className="text-[18px] font-bold text-primary hover:underline">{SITE.founder}</Link>
                     <p className="text-[13.5px] text-sub">{FOUNDER.degrees}</p>

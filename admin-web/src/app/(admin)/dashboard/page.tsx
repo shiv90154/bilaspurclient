@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { CalendarPlus, ClipboardCheck, FileText, MessageCircleQuestion, UserPlus } from "lucide-react";
 import { DashboardStats } from "@/components/admin/dashboard-stats";
 import { SystemStatus } from "@/components/admin/system-status";
+import { ServerHealth } from "@/components/admin/server-health";
 import { requireUser } from "@/lib/server/session";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -48,8 +49,9 @@ export default async function DashboardPage() {
       </section>
 
       <DashboardStats />
-      <div className="w-full max-w-md">
+      <div className="grid w-full items-start gap-4 lg:grid-cols-2">
         <SystemStatus />
+        {user.role === "ADMIN" && <ServerHealth />}
       </div>
     </div>
   );

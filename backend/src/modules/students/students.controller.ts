@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -27,6 +28,7 @@ import {
   RejectStudentDto,
   CreateStudentDto,
   ExportStudentsQueryDto,
+  ImportStudentsDto,
   ListStudentsQueryDto,
   UpdateStudentDto,
   UploadDocumentDto,
@@ -92,6 +94,14 @@ export class StudentsController {
   @Post()
   create(@CurrentUser() admin: AuthUser, @Body() dto: CreateStudentDto) {
     return this.students.create(admin, dto);
+  }
+
+  /** Bulk add from Excel/CSV. Per-row results; one bad row never blocks the others. */
+  @Roles(Role.ADMIN)
+  @HttpCode(200)
+  @Post('import')
+  importMany(@CurrentUser() admin: AuthUser, @Body() dto: ImportStudentsDto) {
+    return this.students.importMany(admin, dto.rows);
   }
 
   @Roles(Role.ADMIN)

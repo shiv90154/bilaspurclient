@@ -25,6 +25,10 @@ const PASS_THROUGH_HEADERS = [
   "cache-control",
   "etag",
   "last-modified",
+  // Video seeking: the browser asks for byte ranges and needs the answer's range headers.
+  "content-range",
+  "accept-ranges",
+  "content-length",
 ];
 
 async function handle(request: NextRequest, ctx: Ctx) {
@@ -84,12 +88,16 @@ async function handle(request: NextRequest, ctx: Ctx) {
       : undefined;
   const target = `/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
   const contentType = request.headers.get("content-type");
+  const range = request.method === "GET" ? request.headers.get("range") : null;
 
   const send = () =>
     backendRequest(target, {
       method: request.method,
       accessToken: access,
-      headers: contentType ? { "content-type": contentType } : undefined,
+      headers: {
+        ...(contentType && { "content-type": contentType }),
+        ...(range && { range }),
+      },
       body,
       // Node's fetch requires this when the request body is a stream.
       ...(streaming ? { duplex: "half" } : {}),

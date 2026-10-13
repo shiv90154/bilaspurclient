@@ -585,20 +585,36 @@ class MyProfile {
 
 /// A recorded lecture (opened by its link for now).
 class VideoItem {
-  const VideoItem({required this.id, required this.title, this.description, this.url, required this.isDemo});
+  const VideoItem({
+    required this.id,
+    required this.title,
+    this.description,
+    this.url,
+    required this.isFile,
+    this.durationSec,
+    required this.isDemo,
+  });
 
   factory VideoItem.fromJson(Map<String, dynamic> j) => VideoItem(
         id: j['id'] as String,
         title: j['title'] as String,
         description: j['description'] as String?,
         url: j['externalUrl'] as String?,
+        isFile: j['source'] == 'file',
+        durationSec: (j['durationSec'] as num?)?.toInt(),
         isDemo: j['isDemo'] == true,
       );
 
   final String id;
   final String title;
   final String? description;
+
+  /// External link (YouTube / Drive), opened outside the app.
   final String? url;
+
+  /// Our own file (a class's Zoom recording): played inside the app, where screen recording is blocked.
+  final bool isFile;
+  final int? durationSec;
   final bool isDemo;
 }
 

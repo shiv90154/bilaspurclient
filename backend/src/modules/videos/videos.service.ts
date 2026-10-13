@@ -1,10 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Paginated } from '../../common/dto/pagination.dto.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { EnrollmentStatus, Role, VideoStatus } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { VideoStoreService } from '../storage/video-store.service.js';
 import type { CreateVideoDto, ListVideosQueryDto, UpdateVideoDto } from './dto/video.dto.js';
 
 const SELECT = {
@@ -12,21 +13,34 @@ const SELECT = {
   title: true,
   description: true,
   externalUrl: true,
+  sourceKey: true,
+  durationSec: true,
   isDemo: true,
   createdAt: true,
   subject: { select: { id: true, name: true } },
   batches: { select: { batch: { select: { id: true, name: true } } } },
 } satisfies Prisma.VideoSelect;
 
+type VideoRow = Prisma.VideoGetPayload<{ select: typeof SELECT }>;
+
+/** The storage key stays on the server: clients get `source` and ask `play` for a short-lived link. */
+function present({ sourceKey, ...v }: VideoRow) {
+  return { ...v, source: sourceKey ? ('file' as const) : ('link' as const) };
+}
+
 /**
- * Recorded lectures, link based for now (YouTube unlisted / Drive). Free demo videos are open to
- * every student; others only to their batches. Uploads + encrypted HLS come later (doc 11).
+ * Recorded lectures: a link (YouTube unlisted / Drive) or our own mp4 (Zoom recordings imported by
+ * the zoom module, played in the app where screen recording is blocked). Free demo videos are open
+ * to every student; others only to their batches. Encrypted HLS comes later (doc 11).
  */
 @Injectable()
 export class VideosService {
+  private readonly logger = new Logger(VideosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly store: VideoStoreService,
   ) {}
 
   private scope(user: AuthUser): Prisma.VideoWhereInput {
@@ -53,7 +67,22 @@ export class VideosService {
       this.prisma.video.findMany({ where, orderBy: { createdAt: 'desc' }, skip: q.skip, take: q.limit, select: SELECT }),
       this.prisma.video.count({ where }),
     ]);
-    return { items, page: q.page, limit: q.limit, total };
+    return { items: items.map(present), page: q.page, limit: q.limit, total };
+  }
+
+  /** What the player opens: our file (signed link, hours long so seeking keeps working) or the external link. */
+  async play(user: AuthUser, id: string) {
+    const v = await this.prisma.video.findFirst({
+      where: { id, ...this.scope(user) },
+      select: { title: true, externalUrl: true, sourceKey: true, sourceStore: true, durationSec: true },
+    });
+    if (!v) throw new NotFoundException('Video not found');
+    if (v.sourceKey) {
+      const url = await this.store.playUrl(v.sourceStore, v.sourceKey, `${v.title.replace(/[^\w\- ]+/g, '_').slice(0, 80)}.mp4`);
+      return { source: 'file' as const, url, title: v.title, durationSec: v.durationSec };
+    }
+    if (!v.externalUrl) throw new NotFoundException('This video has no file or link yet');
+    return { source: 'link' as const, url: v.externalUrl, title: v.title, durationSec: v.durationSec };
   }
 
   async create(user: AuthUser, dto: CreateVideoDto) {
@@ -72,7 +101,7 @@ export class VideosService {
       select: SELECT,
     });
     await this.log(user, 'video.create', video.id);
-    return video;
+    return present(video);
   }
 
   async update(user: AuthUser, id: string, dto: UpdateVideoDto) {
@@ -87,12 +116,15 @@ export class VideosService {
       return tx.video.update({ where: { id }, data: { ...fields, ...(url && { externalUrl: url }) }, select: SELECT });
     });
     await this.log(user, 'video.update', id);
-    return video;
+    return present(video);
   }
 
   async remove(user: AuthUser, id: string) {
     await this.manageable(user, id);
-    await this.prisma.video.delete({ where: { id } });
+    const v = await this.prisma.video.delete({ where: { id }, select: { sourceKey: true, sourceStore: true } });
+    if (v.sourceKey) {
+      await this.store.remove(v.sourceStore, v.sourceKey).catch((err) => this.logger.warn(`video file not removed: ${(err as Error).message}`));
+    }
     await this.log(user, 'video.delete', id);
     return { id, deleted: true };
   }

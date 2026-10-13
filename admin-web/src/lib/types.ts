@@ -14,6 +14,8 @@ export interface AuthProfile {
   /** Self-registered, waiting for approval: demo content only. */
   demo: boolean;
   requestedCourse: { id: string; name: string } | null;
+  /** Staff only: every login also needs a code emailed to them. */
+  twoFactorEnabled?: boolean;
 }
 
 export interface TokenPair {
@@ -28,4 +30,6 @@ export interface ApiErrorBody {
   statusCode?: number;
   code?: string;
   message?: string | string[];
+  /** OTP_REQUIRED: the masked address the code went to. */
+  email?: string;
 }

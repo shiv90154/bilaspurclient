@@ -2,7 +2,7 @@ export function BrandMark({ size = 34 }: { size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/logo.png"
+      src="/logo-96.webp"
       alt=""
       aria-hidden="true"
       width={size}

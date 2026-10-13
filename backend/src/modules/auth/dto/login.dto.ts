@@ -36,6 +36,12 @@ export class LoginDto {
   @MaxLength(100)
   deviceName?: string;
 
+  @ApiPropertyOptional({ description: 'Two-step login: the 6-digit code from the email (after OTP_REQUIRED)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  otp?: string;
+
   @ApiPropertyOptional({ enum: Platform, default: Platform.WEB })
   @IsOptional()
   @IsEnum(Platform)

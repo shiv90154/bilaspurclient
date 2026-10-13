@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
@@ -9,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/maintenance.dart';
 import '../../core/push_service.dart';
 import '../../core/secure_store.dart';
+import '../../data/offline_notes.dart';
 
 class AppUser {
   const AppUser({
@@ -96,6 +98,7 @@ class AuthController extends Notifier<AuthState> {
       final res = await _dio.get<Map<String, dynamic>>('/auth/me');
       if (state.status == AuthStatus.loggedIn) {
         state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(res.data!));
+        await _store.writeProfile(jsonEncode(res.data));
       }
     } catch (_) {}
   }
@@ -117,8 +120,17 @@ class AuthController extends Notifier<AuthState> {
         return;
       }
       state = AuthState(status: AuthStatus.loggedIn, user: user);
+      await _store.writeProfile(jsonEncode(res.data));
+      unawaited(ref.read(offlineNotesProvider).bindUser(user.id));
       unawaited(_registerPush());
     } catch (e) {
+      // No internet (no answer at all): open with the last profile so saved notes can be read.
+      // A real "session is gone" answer went through sessionLost() and logs out as before.
+      final cached = e is DioException && e.response == null ? await _store.readProfile() : null;
+      if (cached != null && state.status != AuthStatus.loggedOut) {
+        state = AuthState(status: AuthStatus.loggedIn, user: AppUser.fromJson(jsonDecode(cached) as Map<String, dynamic>));
+        return;
+      }
       // sessionLost() may already have set a notice; keep it.
       if (state.status != AuthStatus.loggedOut) {
         state = const AuthState(status: AuthStatus.loggedOut);
@@ -143,10 +155,10 @@ class AuthController extends Notifier<AuthState> {
       );
       final d = res.data!;
       await _store.writeTokens(Tokens(d['accessToken'] as String, d['refreshToken'] as String));
-      state = AuthState(
-        status: AuthStatus.loggedIn,
-        user: AppUser.fromJson(d['user'] as Map<String, dynamic>),
-      );
+      await _store.writeProfile(jsonEncode(d['user']));
+      final user = AppUser.fromJson(d['user'] as Map<String, dynamic>);
+      await ref.read(offlineNotesProvider).bindUser(user.id);
+      state = AuthState(status: AuthStatus.loggedIn, user: user);
       unawaited(_registerPush());
     } catch (e) {
       throw ApiException.from(e);
@@ -164,10 +176,13 @@ class AuthController extends Notifier<AuthState> {
       // Even if the server is unreachable we still drop the local session.
     }
     await _store.clearTokens();
+    await ref.read(offlineNotesProvider).clear();
     state = const AuthState(status: AuthStatus.loggedOut);
   }
 
   void sessionLost(String code) {
+    unawaited(_store.clearTokens());
+    unawaited(ref.read(offlineNotesProvider).clear());
     state = AuthState(
       status: AuthStatus.loggedOut,
       notice: friendlyMessage(code, null),

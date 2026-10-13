@@ -16,6 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import { classAudience, formatClassTime } from '../notifications/class-reminders.service.js';
 import { NotificationsService, type PushMessage } from '../notifications/notifications.service.js';
+import { zoomMeetingId } from '../zoom/zoom-api.service.js';
 import type { CreateClassDto, ListClassesQueryDto, UpdateClassDto } from './dto/class.dto.js';
 
 /** Students may enter this long before the start time. */
@@ -27,6 +28,8 @@ const INCLUDE = {
   batch: { select: { id: true, name: true } },
   faculty: { select: { id: true, user: { select: { name: true } } } },
   video: { select: { id: true, title: true } },
+  // Zoom cloud recordings imported for this class (docs/14): students watch them under Videos.
+  recordings: { where: { videoId: { not: null } }, select: { videoId: true, durationSec: true }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.LiveClassInclude;
 
 type ClassRow = Prisma.LiveClassGetPayload<{ include: typeof INCLUDE }>;
@@ -187,6 +190,7 @@ export class ClassesService {
             startAt: s,
             endAt: new Date(s.getTime() + length),
             joinUrl: dto.joinUrl,
+            meetingId: zoomMeetingId(dto.joinUrl),
             videoId: dto.videoId,
             seriesId,
             recurrenceRule: rule,
@@ -226,6 +230,7 @@ export class ClassesService {
         startAt: start,
         endAt: end,
         joinUrl: dto.joinUrl,
+        ...(dto.joinUrl && { meetingId: zoomMeetingId(dto.joinUrl) }),
         facultyId,
         // A moved class gets a fresh reminder for its new time.
         ...(start.getTime() !== c.startAt.getTime() && { reminderSentAt: null }),

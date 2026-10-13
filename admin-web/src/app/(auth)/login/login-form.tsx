@@ -24,6 +24,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BACKEND_UNREACHABLE: "The server is not reachable. Please try again shortly.",
 };
 
+/** These carry their own clear message from the server (wrong code, wait a minute ...). */
+const SERVER_MESSAGE_CODES = new Set(["OTP_INVALID", "OTP_TOO_SOON", "EMAIL_NOT_CONFIGURED", "EMAIL_FAILED"]);
+
 /** One stable id per browser, so the backend's one-device rule works on the web too. */
 function getDeviceId(): string {
   try {
@@ -41,6 +44,9 @@ function getDeviceId(): string {
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // Two-step login: after the password, the server emails a code and we ask for it here.
+  const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
   const {
     register,
     handleSubmit,
@@ -58,6 +64,7 @@ export function LoginForm({ next }: { next?: string }) {
           ...values,
           deviceId: getDeviceId(),
           deviceName: navigator.userAgent.slice(0, 100),
+          ...(otpSentTo && { otp }),
         }),
       });
     } catch {
@@ -67,10 +74,17 @@ export function LoginForm({ next }: { next?: string }) {
 
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as ApiErrorBody;
+      if (body.code === "OTP_REQUIRED") {
+        setOtpSentTo(body.email ?? "your email");
+        setOtp("");
+        return;
+      }
+      const serverMessage = body.code && SERVER_MESSAGE_CODES.has(body.code) && typeof body.message === "string" ? body.message : null;
       setError(
-        res.status === 429
-          ? "Too many attempts. Please wait a minute and try again."
-          : (body.code && ERROR_MESSAGES[body.code]) || "Could not log in. Please try again.",
+        serverMessage ??
+          (res.status === 429
+            ? "Too many attempts. Please wait a minute and try again."
+            : (body.code && ERROR_MESSAGES[body.code]) || "Could not log in. Please try again."),
       );
       return;
     }
@@ -129,12 +143,45 @@ export function LoginForm({ next }: { next?: string }) {
         )}
       </div>
 
+      {otpSentTo && (
+        <div className="flex flex-col gap-1.5 rounded-[12px] border border-primary/40 bg-primary-tint p-3.5">
+          <label htmlFor="otp" className="text-[13px] font-semibold">
+            Code from your email
+          </label>
+          <p className="text-[12px] text-sub">Two-step login is on. We sent a 6-digit code to {otpSentTo}. It works for 10 minutes.</p>
+          <input
+            id="otp"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            required
+            autoFocus
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+            className="h-11 rounded-[10px] border border-line bg-surface px-3.5 text-[18px] tracking-[0.3em] outline-none focus:border-primary"
+          />
+          <button
+            type="button"
+            className="self-start text-[12px] font-semibold text-primary underline"
+            onClick={() => {
+              setOtpSentTo(null);
+              setOtp("");
+              void handleSubmit(onSubmit)();
+            }}
+          >
+            Send a new code
+          </button>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={isSubmitting}
         className="mt-1 h-11 rounded-[10px] bg-primary text-[14px] font-bold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
       >
-        {isSubmitting ? "Logging in…" : "Log in"}
+        {isSubmitting ? "Logging in…" : otpSentTo ? "Verify and log in" : "Log in"}
       </button>
     </form>
   );
