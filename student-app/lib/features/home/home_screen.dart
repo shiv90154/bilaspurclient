@@ -130,30 +130,6 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              // One tap to every part of the app.
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.05,
-                children: [
-                  _QuickTile(icon: Icons.menu_book, label: 'Notes', background: scheme.primaryContainer,
-                      foreground: scheme.onPrimaryContainer, onTap: () => context.go('/notes')),
-                  _QuickTile(icon: Icons.quiz, label: 'Tests', background: scheme.tertiaryContainer,
-                      foreground: scheme.onTertiaryContainer, onTap: () => context.go('/tests')),
-                  _QuickTile(icon: Icons.videocam, label: 'Live classes', background: scheme.errorContainer,
-                      foreground: scheme.onErrorContainer, onTap: () => context.push('/classes')),
-                  _QuickTile(icon: Icons.play_circle, label: 'Videos', background: scheme.secondaryContainer,
-                      foreground: scheme.onSecondaryContainer, onTap: () => context.push('/videos')),
-                  _QuickTile(icon: Icons.help, label: 'Doubts', background: scheme.surfaceContainerHighest,
-                      foreground: scheme.onSurface, onTap: () => context.go('/doubts')),
-                  _QuickTile(icon: Icons.person, label: 'Profile', background: scheme.surfaceContainerHighest,
-                      foreground: scheme.onSurface, onTap: () => context.go('/profile')),
-                ],
-              ),
-              const SizedBox(height: 14),
               MeetTeacherCard(onTap: () => context.push('/about')),
               const SizedBox(height: 22),
               const HomeCoursesSection(),
@@ -169,6 +145,17 @@ class HomeScreen extends ConsumerWidget {
                 )
               else
                 for (final c in classes) ClassTile(item: c),
+              const SizedBox(height: 16),
+              _SectionTitle(
+                'Recorded lectures',
+                actionLabel: 'See all',
+                onAction: () => context.push('/videos'),
+              ),
+              _InfoCard(
+                icon: Icons.play_circle_outline,
+                text: 'Watch past classes and video lessons anytime.',
+                onTap: () => context.push('/videos'),
+              ),
               const SizedBox(height: 16),
               _SectionTitle(
                 'Tests for you',
@@ -231,53 +218,6 @@ class HomeScreen extends ConsumerWidget {
         ? 'Open now'
         : 'Open until ${DateFormat('d MMM, h:mm a').format(end)}';
     return '${t.durationMin} min · $when';
-  }
-}
-
-class _QuickTile extends StatelessWidget {
-  const _QuickTile({
-    required this.icon,
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String label;
-  final Color background;
-  final Color foreground;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 30, color: foreground),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: foreground,
-                  height: 1.15,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

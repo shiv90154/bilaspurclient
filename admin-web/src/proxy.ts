@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REFRESH_COOKIE } from "./lib/constants";
+import { publicUrl } from "./lib/request-origin";
 
 /**
  * Runs before every page request (not /api, not static files).
@@ -17,7 +18,7 @@ export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has(REFRESH_COOKIE);
 
   if (!hasSession && !isPublic) {
-    const login = new URL("/login", request.url);
+    const login = publicUrl("/login", request);
     // Come back here after login (e.g. "Join now" on the website → /learn/fees?plan=…).
     if (pathname.startsWith("/learn")) login.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(login);

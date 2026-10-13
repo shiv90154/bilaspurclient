@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REFRESH_COOKIE } from "@/lib/constants";
+import { publicUrl } from "@/lib/request-origin";
 import {
   clearSessionCookies,
   refreshTokens,
@@ -17,19 +18,19 @@ export async function GET(request: NextRequest) {
 
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
   if (!refresh) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(publicUrl("/login", request));
   }
 
   const result = await refreshTokens(refresh);
   if (!result.ok) {
     const response = NextResponse.redirect(
-      new URL(`/login?reason=${encodeURIComponent(result.code)}`, request.url),
+      publicUrl(`/login?reason=${encodeURIComponent(result.code)}`, request),
     );
     clearSessionCookies(response);
     return response;
   }
 
-  const response = NextResponse.redirect(new URL(next, request.url));
+  const response = NextResponse.redirect(publicUrl(next, request));
   setSessionCookies(response, result.tokens);
   return response;
 }

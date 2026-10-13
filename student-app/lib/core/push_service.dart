@@ -1,9 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+/// Class reminders, doubt replies, results: shown as heads-up with sound.
+const _channel = AndroidNotificationChannel(
+  'dhi_alerts',
+  'Classes and updates',
+  description: 'Class reminders, doubt replies, results and new recordings',
+  importance: Importance.high,
+);
 
 /// FCM push: registers this device's token with the backend and reports notification taps.
 ///
@@ -17,6 +27,7 @@ class PushService {
   StreamSubscription<String>? _refreshSub;
 
   final _taps = StreamController<Map<String, dynamic>>.broadcast();
+  final _local = FlutterLocalNotificationsPlugin();
 
   /// `data` of a notification the user tapped (app in background or launched from it).
   Stream<Map<String, dynamic>> get taps => _taps.stream;
@@ -26,10 +37,51 @@ class PushService {
       await Firebase.initializeApp();
       _ready = true;
       FirebaseMessaging.onMessageOpenedApp.listen((m) => _taps.add(m.data));
+      await _initLocal();
+      // Android shows nothing for a push that arrives while the app is open: show it ourselves.
+      FirebaseMessaging.onMessage.listen(_showForeground);
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _taps.add(initial.data);
     } catch (e) {
       debugPrint('Push disabled (Firebase not configured): $e');
+    }
+  }
+
+  Future<void> _initLocal() async {
+    await _local.initialize(
+      settings: const InitializationSettings(android: AndroidInitializationSettings('@drawable/ic_stat_notify')),
+      onDidReceiveNotificationResponse: (r) {
+        final p = r.payload;
+        if (p != null) _taps.add(Map<String, dynamic>.from(jsonDecode(p) as Map));
+      },
+    );
+    await _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
+  }
+
+  Future<void> _showForeground(RemoteMessage m) async {
+    final n = m.notification;
+    if (n == null) return;
+    try {
+      await _local.show(
+        id: m.messageId.hashCode,
+        title: n.title,
+        body: n.body,
+        payload: jsonEncode(m.data),
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channel.id,
+            _channel.name,
+            channelDescription: _channel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_notify',
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Foreground push not shown: $e');
     }
   }
 
