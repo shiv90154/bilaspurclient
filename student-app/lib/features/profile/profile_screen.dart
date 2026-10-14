@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../data/content_api.dart';
 import '../../data/models.dart';
 import '../auth/auth_controller.dart';
+import 'profile_edit.dart';
 
 final myProfileProvider = FutureProvider.autoDispose<MyProfile>((ref) => ref.watch(contentApiProvider).myProfile());
 final pendingDeletionProvider =
@@ -76,6 +77,52 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               _ => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
             },
+            const _SectionTitle('My account'),
+            Card(
+              child: Column(
+                children: [
+                  if (!user.demo) ...[
+                    ListTile(
+                      leading: const Icon(Icons.badge_outlined),
+                      title: const Text('Student ID card'),
+                      subtitle: const Text('With your photo and a QR code'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/profile/id-card'),
+                    ),
+                    const Divider(height: 1),
+                  ],
+                  ListTile(
+                    leading: const Icon(Icons.folder_outlined),
+                    title: const Text('My documents'),
+                    subtitle: const Text('ID proof, marksheet'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/profile/documents'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.receipt_long_outlined),
+                    title: const Text('Fees paid'),
+                    subtitle: const Text('Payments and receipts'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/profile/fees'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notifications'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/profile/notifications'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.devices_outlined),
+                    title: const Text('My devices'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/profile/devices'),
+                  ),
+                ],
+              ),
+            ),
             const _SectionTitle('Account & app'),
             Card(
               child: Column(
@@ -142,13 +189,13 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 /// Green card at the top: photo, name and the two things a student is known by here.
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.user, required this.profile});
   final AppUser user;
   final MyProfile? profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final initial = user.name.trim().isEmpty ? '?' : user.name.trim()[0].toUpperCase();
     final photo = profile?.photoUrl;
@@ -186,15 +233,38 @@ class _Header extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppTheme.gold, width: 2.5)),
-            child: CircleAvatar(
-              radius: 44,
-              backgroundColor: AppTheme.cream,
-              foregroundImage: photo == null ? null : NetworkImage(photo),
-              child: Text(initial,
-                  style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: AppTheme.forest)),
+          GestureDetector(
+            // Needs the profile loaded (to know whether there is a photo to remove).
+            onTap: profile == null ? null : () => changeProfilePhoto(context, ref, hasPhoto: photo != null),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppTheme.gold, width: 2.5)),
+                  child: CircleAvatar(
+                    radius: 44,
+                    backgroundColor: AppTheme.cream,
+                    foregroundImage: photo == null ? null : NetworkImage(photo),
+                    child: Text(initial,
+                        style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: AppTheme.forest)),
+                  ),
+                ),
+                if (profile != null)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AppTheme.gold,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.forestDeep, width: 2),
+                      ),
+                      child: const Icon(Icons.photo_camera, size: 16, color: Colors.white),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -224,21 +294,25 @@ class _Header extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
+  const _SectionTitle(this.label, {this.action});
   final String label;
+  final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-        child: Text(
-          label.toUpperCase(),
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final title = Text(
+      label.toUpperCase(),
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+    );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, 20, 4, action == null ? 8 : 0),
+      child: action == null ? title : Row(children: [Expanded(child: title), action!]),
+    );
+  }
 }
 
 class _StatTile extends StatelessWidget {
@@ -448,8 +522,32 @@ class _ProfileBody extends StatelessWidget {
             ],
           ),
         ),
-        const _SectionTitle('Contact'),
+        _SectionTitle(
+          'Contact',
+          action: TextButton.icon(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => EditDetailsSheet(profile: p),
+            ),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit'),
+          ),
+        ),
         _detailsCard(context, contact),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.alternate_email),
+            title: Text(user.email == null ? 'Add email' : 'Change email'),
+            subtitle: const Text('Confirmed with a code sent to the new email'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ChangeEmailSheet(current: user.email),
+            ),
+          ),
+        ),
         if (hasPersonal) ...[
           const _SectionTitle('Personal & guardian'),
           _detailsCard(context, personal),
@@ -461,7 +559,9 @@ class _ProfileBody extends StatelessWidget {
               Icon(Icons.info_outline, size: 14, color: scheme.onSurfaceVariant),
               const SizedBox(width: 6),
               Expanded(
-                child: Text('Something wrong? Ask the institute office to correct it. Long-press a detail to copy it.',
+                child: Text(
+                    'Name, phone or date of birth wrong? Ask the institute office to correct it. '
+                    'Long-press a detail to copy it.',
                     style: text.bodySmall),
               ),
             ],

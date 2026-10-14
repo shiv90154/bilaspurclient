@@ -32,6 +32,13 @@ class ApiException implements Exception {
       if (error.response == null) {
         return ApiException('NETWORK', 'Cannot reach the server. Check your internet.');
       }
+      // Plain 4xx from the server ("Photo is larger than 3 MB", a form check): its message is
+      // written for people, so show it. 5xx messages are not.
+      final status = error.response!.statusCode ?? 0;
+      final msg = data is Map ? data['message'] : null;
+      if (status >= 400 && status < 500 && status != 401 && (msg is String || msg is List)) {
+        return ApiException('HTTP_$status', msg is List ? msg.join('\n') : msg as String, status: status);
+      }
       return ApiException('HTTP_${error.response!.statusCode}', 'Something went wrong. Try again.',
           status: error.response!.statusCode);
     }

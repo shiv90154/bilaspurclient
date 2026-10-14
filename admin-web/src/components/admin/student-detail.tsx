@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Camera, Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Camera, Check, Download, ExternalLink, FileText, Trash2, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
@@ -12,6 +12,7 @@ import {
   fileHref,
   qs,
   type Batch,
+  type DocumentStatus,
   type DocumentType,
   type Paginated,
   type StudentDocument,
@@ -63,15 +64,21 @@ const DOC_TYPES: { value: DocumentType; label: string }[] = [
 ];
 const DOC_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.value, d.label.replace(/ \(.*/, "")]));
 
+const DOC_STATUS: Record<DocumentStatus, { label: string; tone: "green" | "amber" | "red" }> = {
+  APPROVED: { label: "Approved", tone: "green" },
+  PENDING: { label: "Needs review", tone: "amber" },
+  REJECTED: { label: "Rejected", tone: "red" },
+};
+
 const val = (f: FormData, k: string) => String(f.get(k) ?? "").trim() || undefined;
 const day = (d: string | null) => (d ? format(new Date(d), "d MMM yyyy") : "—");
 const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 type Tab = "profile" | "records" | "documents" | "batches";
 
-export function StudentDetail({ id, isAdmin }: { id: string; isAdmin: boolean }) {
+export function StudentDetail({ id, isAdmin, initialTab }: { id: string; isAdmin: boolean; initialTab?: Tab }) {
   const key = ["student", id];
-  const [tab, setTab] = useState<Tab>("profile");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "profile");
   const { data: s, error, isPending } = useQuery({
     queryKey: key,
     queryFn: () => api<StudentDetailData>(`/students/${id}`),
@@ -487,12 +494,16 @@ function DocumentsPanel({ studentId }: { studentId: string }) {
     mutationFn: (docId: string) => api(`/students/${studentId}/documents/${docId}`, { method: "DELETE" }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
   });
+  const review = useReviewDocument(studentId, key);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
       <section className="min-w-0 rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <h2 className="text-[15px] font-bold">Documents</h2>
-        <p className="mt-1 text-[12px] text-sub">Private: only admins can open these, and every open is logged.</p>
+        <p className="mt-1 text-[12px] text-sub">
+          Private: only admins and the student can open these, and every open is logged. Students can upload from the
+          app; their files wait here for your approval.
+        </p>
         <ul className="mt-3 divide-y divide-line text-[13px]">
           {docs.data?.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
@@ -500,10 +511,27 @@ function DocumentsPanel({ studentId }: { studentId: string }) {
                 <span className="shrink-0 rounded-xl bg-primary-tint p-2 text-primary"><FileText size={16} aria-hidden="true" /></span>
                 <span className="min-w-0">
                   <span className="block break-all font-semibold">{d.fileName}</span>
-                  <span className="block text-[12px] text-sub">{DOC_LABEL[d.type]} · {size(d.size)} · {day(d.createdAt)}</span>
+                  <span className="block text-[12px] text-sub">
+                    {DOC_LABEL[d.type]} · {size(d.size)} · {day(d.createdAt)}
+                    {d.byStudent ? " · uploaded by the student" : ""}
+                  </span>
+                  <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Badge tone={DOC_STATUS[d.status].tone}>{DOC_STATUS[d.status].label}</Badge>
+                    {d.status === "REJECTED" && d.reviewNote && <span className="text-[12px] text-sub">“{d.reviewNote}”</span>}
+                  </span>
                 </span>
               </span>
-              <span className="flex gap-1.5">
+              <span className="flex flex-wrap gap-1.5">
+                {d.status !== "APPROVED" && (
+                  <button className={btnGhost + " !h-8 !px-3 text-primary"} disabled={review.isPending} onClick={() => review.approve(d.id)}>
+                    <Check size={14} /> Approve
+                  </button>
+                )}
+                {d.status === "PENDING" && (
+                  <button className={btnGhost + " !h-8 !px-3 text-danger"} disabled={review.isPending} onClick={() => review.reject(d.id, d.fileName)}>
+                    <X size={14} /> Reject
+                  </button>
+                )}
                 <button className={btnGhost + " !h-8 !px-3"} disabled={open.isPending} onClick={() => open.mutate({ docId: d.id, download: false })}>
                   <ExternalLink size={14} /> Open
                 </button>
@@ -529,7 +557,7 @@ function DocumentsPanel({ studentId }: { studentId: string }) {
           {docs.data?.length === 0 && <li className="py-3 text-sub">No documents uploaded yet.</li>}
           {docs.isPending && <li className="py-3 text-sub">Loading…</li>}
         </ul>
-        <div className="mt-3"><ErrorNote error={docs.error ?? open.error ?? remove.error} /></div>
+        <div className="mt-3"><ErrorNote error={docs.error ?? open.error ?? remove.error ?? review.error} /></div>
       </section>
 
       <section className="h-fit rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -561,6 +589,31 @@ function DocumentsPanel({ studentId }: { studentId: string }) {
       </section>
     </div>
   );
+}
+
+/** Approve / reject a student's upload. Rejecting asks for a reason the student sees. */
+export function useReviewDocument(studentId: string, invalidate: unknown[]) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: ({ docId, approve, note }: { docId: string; approve: boolean; note?: string }) =>
+      api(`/students/${studentId}/documents/${docId}/${approve ? "approve" : "reject"}`, {
+        method: "POST",
+        body: approve ? {} : { note },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: invalidate });
+      void qc.invalidateQueries({ queryKey: ["pending-documents"] });
+    },
+  });
+  return {
+    isPending: m.isPending,
+    error: m.error,
+    approve: (docId: string) => m.mutate({ docId, approve: true }),
+    reject: (docId: string, fileName: string) => {
+      const note = window.prompt(`Why is "${fileName}" not accepted? The student sees this.`, "Not clear, please upload again");
+      if (note !== null) m.mutate({ docId, approve: false, note: note.trim() || undefined });
+    },
+  };
 }
 
 function BatchesCard({ s, isAdmin, queryKey }: { s: StudentDetailData; isAdmin: boolean; queryKey: unknown[] }) {

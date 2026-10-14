@@ -2,9 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { api, fileHref } from "@/lib/api";
-import { ErrorNote } from "@/components/ui";
+import { Pencil } from "lucide-react";
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { btnGhost, ErrorNote } from "@/components/ui";
 import { ChangePasswordForm } from "@/components/password";
+import { DetailsForm, EmailForm, MyDocuments, PhotoPicker } from "@/components/student/my-account";
 
 interface MyProfile {
   admissionNo: string | null;
@@ -32,6 +35,7 @@ interface MyProfile {
 
 export function StudentProfile() {
   const { data: p, error, isPending } = useQuery({ queryKey: ["my-profile"], queryFn: () => api<MyProfile>("/students/me") });
+  const [editing, setEditing] = useState(false);
   if (error) return <ErrorNote error={error} />;
   if (isPending) return <p className="text-[13px] text-sub">Loading…</p>;
 
@@ -57,14 +61,7 @@ export function StudentProfile() {
   return (
     <div className="flex flex-col gap-4">
       <section className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        {p.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link
-          <img src={fileHref(p.photoUrl)} alt="" className="size-16 rounded-full border border-line object-cover" />
-        ) : (
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary-tint font-display text-[22px] font-bold text-primary">
-            {p.user.name.trim().charAt(0).toUpperCase()}
-          </span>
-        )}
+        <PhotoPicker name={p.user.name} photoUrl={p.photoUrl} />
         <div className="min-w-0">
           <h1 className="break-words text-[18px] font-bold">{p.user.name}</h1>
           <p className="text-[12.5px] text-sub">Student since {format(new Date(p.createdAt), "MMMM yyyy")}</p>
@@ -94,16 +91,40 @@ export function StudentProfile() {
       </section>
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        <h2 className="text-[15px] font-bold">Details</h2>
-        <dl className="mt-2 flex flex-col divide-y divide-line">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 py-2.5 text-[13.5px]">
-              <dt className="text-sub">{label}</dt>
-              <dd className="break-words font-semibold">{value || "—"}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-3 text-[12px] text-sub">Something wrong here? Ask the institute office to correct it.</p>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[15px] font-bold">Details</h2>
+          {!editing && (
+            <button className={btnGhost + " !h-8 !px-3"} onClick={() => setEditing(true)}>
+              <Pencil size={14} /> Edit
+            </button>
+          )}
+        </div>
+        {editing ? (
+          <DetailsForm p={p} onDone={() => setEditing(false)} />
+        ) : (
+          <dl className="mt-2 flex flex-col divide-y divide-line">
+            {rows.map(([label, value]) => (
+              <div key={label} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 py-2.5 text-[13.5px]">
+                <dt className="text-sub">{label}</dt>
+                <dd className="break-words font-semibold">{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        <p className="mt-3 text-[12px] text-sub">
+          You can change your address, city and guardian. Name, phone or date of birth wrong? Ask the institute office.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <h2 className="text-[15px] font-bold">{p.user.email ? "Change email" : "Add email"}</h2>
+        <EmailForm current={p.user.email} />
+      </section>
+
+      <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <h2 className="text-[15px] font-bold">My documents</h2>
+        <p className="mt-1 text-[12px] text-sub">The institute checks each upload. You can delete one until it is approved.</p>
+        <MyDocuments />
       </section>
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">

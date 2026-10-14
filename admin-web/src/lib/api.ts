@@ -354,13 +354,25 @@ export interface DeletionRequestRow {
 }
 
 export type DocumentType = "PHOTO" | "ID_PROOF" | "MARKSHEET" | "OTHER";
+export type DocumentStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export interface StudentDocument {
   id: string;
   type: DocumentType;
   fileName: string;
   mimeType: string;
   size: number;
+  /** Uploads by the institute are APPROVED; ones the student uploads wait as PENDING. */
+  status: DocumentStatus;
+  byStudent: boolean;
+  reviewNote: string | null;
+  reviewedAt: string | null;
   createdAt: string;
+}
+
+/** Admin: a student upload waiting for review, with whose it is. */
+export interface PendingDocument extends StudentDocument {
+  student: { id: string; admissionNo: string | null; user: { name: string; phone: string } };
 }
 
 export interface StudentRecords {

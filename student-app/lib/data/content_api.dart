@@ -153,6 +153,89 @@ class ContentApi {
         return MyProfile.fromJson(res.data!, origin);
       });
 
+  String get _origin => Uri.parse(apiUrl).replace(path: '', query: '').toString();
+
+  /// Address, city and guardian. An empty string clears the field.
+  Future<void> updateProfile(Map<String, String> fields) => _run(() async {
+        await _dio.patch<void>('/students/me', data: fields);
+      });
+
+  Future<void> uploadPhoto(String path) => _run(() async {
+        await _dio.post<void>(
+          '/students/me/photo',
+          data: FormData.fromMap({'file': await MultipartFile.fromFile(path, filename: 'photo.jpg')}),
+          options: Options(sendTimeout: const Duration(minutes: 2), receiveTimeout: const Duration(minutes: 2)),
+        );
+      });
+
+  Future<void> removePhoto() => _run(() async {
+        await _dio.delete<void>('/students/me/photo');
+      });
+
+  /// Emails a 6-digit code to the new address; returns it masked.
+  Future<String> changeEmailStart(String email) => _run(() async {
+        final res = await _dio.post<Map<String, dynamic>>('/students/me/email/start', data: {'email': email});
+        return res.data!['email'] as String;
+      });
+
+  Future<void> changeEmailVerify(String email, String code) => _run(() async {
+        await _dio.post<void>('/students/me/email/verify', data: {'email': email, 'code': code});
+      });
+
+  Future<List<MyDocument>> myDocuments() => _run(() async {
+        final res = await _dio.get<List<dynamic>>('/students/me/documents');
+        return [for (final d in res.data!) MyDocument.fromJson(d as Map<String, dynamic>)];
+      });
+
+  Future<void> uploadDocument({required Uint8List bytes, required String fileName, required String type, String? label}) =>
+      _run(() async {
+        await _dio.post<void>(
+          '/students/me/documents',
+          data: FormData.fromMap({
+            'file': MultipartFile.fromBytes(bytes, filename: fileName),
+            'type': type,
+            if (label != null && label.isNotEmpty) 'label': label,
+          }),
+          options: Options(sendTimeout: const Duration(minutes: 3), receiveTimeout: const Duration(minutes: 2)),
+        );
+      });
+
+  /// A 5-minute link to open the file in the browser.
+  Future<Uri> documentUrl(String id) => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/students/me/documents/$id/url');
+        return Uri.parse(_origin).resolve(res.data!['url'] as String);
+      });
+
+  Future<void> removeDocument(String id) => _run(() async {
+        await _dio.delete<void>('/students/me/documents/$id');
+      });
+
+  Future<MyDevices> myDevices() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/students/me/devices');
+        return MyDevices.fromJson(res.data!);
+      });
+
+  Future<NotifyPrefs> notifyPrefs() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/students/me/notification-settings');
+        return NotifyPrefs.fromJson(res.data!);
+      });
+
+  Future<NotifyPrefs> setNotifyPref(String key, bool on) => _run(() async {
+        final res = await _dio.put<Map<String, dynamic>>('/students/me/notification-settings', data: {key: on});
+        return NotifyPrefs.fromJson(res.data!);
+      });
+
+  Future<IdCard> idCard() => _run(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/students/me/id-card');
+        return IdCard.fromJson(res.data!, _origin);
+      });
+
+  /// Paid (and refunded) fee payments, newest first.
+  Future<List<FeePayment>> myPayments() => _run(() async {
+        final res = await _dio.get<List<dynamic>>('/payments/mine');
+        return [for (final p in res.data!) FeePayment.fromJson(p as Map<String, dynamic>)];
+      });
+
   /// Other devices are logged out; this one stays signed in.
   Future<void> changePassword(String current, String next) => _run(() async {
         await _dio.post<void>('/auth/change-password', data: {'currentPassword': current, 'newPassword': next});

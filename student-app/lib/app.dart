@@ -19,6 +19,11 @@ import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notes/note_viewer_screen.dart';
 import 'features/notes/notes_screen.dart';
+import 'features/profile/devices_screen.dart';
+import 'features/profile/documents_screen.dart';
+import 'features/profile/fee_payments_screen.dart';
+import 'features/profile/id_card_screen.dart';
+import 'features/profile/notification_settings_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/shell/main_shell.dart';
@@ -45,7 +50,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = _buildRouter(ref, refresh);
   // Tapping a push opens what it is about: a doubt reply opens that thread, a class reminder /
-  // reschedule / cancel opens the classes list, a checked test opens its result.
+  // reschedule / cancel opens the classes list, a checked test opens its result, a reviewed
+  // document opens the documents list.
   final tapSub = PushService.instance.taps.listen((data) {
     if (ref.read(authProvider).status != AuthStatus.loggedIn) return;
     final doubtId = data['doubtId'];
@@ -59,6 +65,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       router.push('/videos');
     } else if (type == 'test_result' && data['attemptId'] is String) {
       router.go('/tests/result/${data['attemptId']}');
+    } else if (type == 'document_review') {
+      router.push('/profile/documents');
     }
   });
   ref.onDispose(tapSub.cancel);
@@ -135,6 +143,11 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         builder: (_, state) => CourseDetailScreen(id: state.pathParameters['id']!, initial: state.extra as CatalogCourse?),
       ),
       GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
+      GoRoute(path: '/profile/id-card', builder: (_, _) => const IdCardScreen()),
+      GoRoute(path: '/profile/documents', builder: (_, _) => const DocumentsScreen()),
+      GoRoute(path: '/profile/fees', builder: (_, _) => const FeePaymentsScreen()),
+      GoRoute(path: '/profile/notifications', builder: (_, _) => const NotificationSettingsScreen()),
+      GoRoute(path: '/profile/devices', builder: (_, _) => const DevicesScreen()),
     ],
   );
 }

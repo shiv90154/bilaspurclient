@@ -18,6 +18,25 @@ const STALE_TOKEN_CODES = new Set([
   'messaging/invalid-registration-token',
 ]);
 
+/**
+ * Push kinds a person can switch off in their profile (User.notifyPrefs), by `data.type`.
+ * Everything else (class cancelled / rescheduled, document review, test pushes) always arrives.
+ */
+export const NOTIFY_PREF_BY_TYPE: Record<string, NotifyPref> = {
+  class_reminder: 'classReminders',
+  video_ready: 'recordings',
+  doubt_reply: 'doubtReplies',
+  test_result: 'testResults',
+};
+export const NOTIFY_PREFS = ['classReminders', 'recordings', 'doubtReplies', 'testResults'] as const;
+export type NotifyPref = (typeof NOTIFY_PREFS)[number];
+
+/** Stored prefs with defaults filled in (missing = on). */
+export function readNotifyPrefs(stored: unknown): Record<NotifyPref, boolean> {
+  const obj = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {};
+  return Object.fromEntries(NOTIFY_PREFS.map((k) => [k, obj[k] !== false])) as Record<NotifyPref, boolean>;
+}
+
 /** FCM allows 500 tokens per multicast call. */
 const BATCH = 500;
 
@@ -74,6 +93,16 @@ export class NotificationsService {
   async sendToUsers(userIds: string[], message: PushMessage): Promise<void> {
     if (!this.messaging || userIds.length === 0) return;
     try {
+      const pref = message.data?.type ? NOTIFY_PREF_BY_TYPE[message.data.type] : undefined;
+      if (pref) {
+        const off = await this.prisma.user.findMany({
+          where: { id: { in: userIds }, notifyPrefs: { path: [pref], equals: false } },
+          select: { id: true },
+        });
+        const muted = new Set(off.map((u) => u.id));
+        userIds = userIds.filter((id) => !muted.has(id));
+        if (userIds.length === 0) return;
+      }
       await this.deliver(userIds, message);
     } catch (err) {
       this.logger.error('push failed', err as Error);

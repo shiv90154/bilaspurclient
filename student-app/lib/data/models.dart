@@ -690,3 +690,217 @@ class CatalogCourse {
   final int notes;
   final int videos;
 }
+
+// ───────────── my account (documents, devices, notifications, ID card, fees) ─────────────
+
+enum DocStatus { pending, approved, rejected }
+
+class MyDocument {
+  const MyDocument({
+    required this.id,
+    required this.type,
+    required this.fileName,
+    required this.size,
+    required this.status,
+    required this.byStudent,
+    required this.reviewNote,
+    required this.createdAt,
+  });
+
+  factory MyDocument.fromJson(Map<String, dynamic> j) => MyDocument(
+        id: j['id'] as String,
+        type: j['type'] as String,
+        fileName: j['fileName'] as String,
+        size: (j['size'] as num?)?.toInt() ?? 0,
+        status: switch (j['status']) {
+          'PENDING' => DocStatus.pending,
+          'REJECTED' => DocStatus.rejected,
+          _ => DocStatus.approved,
+        },
+        byStudent: j['byStudent'] == true,
+        reviewNote: j['reviewNote'] as String?,
+        createdAt: _date(j['createdAt'])!,
+      );
+
+  final String id;
+  final String type; // PHOTO | ID_PROOF | MARKSHEET | OTHER
+  final String fileName;
+  final int size;
+  final DocStatus status;
+  final bool byStudent;
+  final String? reviewNote;
+  final DateTime createdAt;
+
+  String get typeLabel => switch (type) {
+        'ID_PROOF' => 'ID proof',
+        'MARKSHEET' => 'Marksheet',
+        'PHOTO' => 'Photo',
+        _ => 'Other',
+      };
+
+  /// The student may delete their own uploads until the institute approves them.
+  bool get canDelete => byStudent && status != DocStatus.approved;
+}
+
+class MyDevice {
+  const MyDevice({
+    required this.name,
+    required this.platform,
+    required this.blocked,
+    required this.current,
+    required this.firstSeenAt,
+    required this.lastSeenAt,
+  });
+
+  factory MyDevice.fromJson(Map<String, dynamic> j) => MyDevice(
+        name: j['name'] as String?,
+        platform: j['platform'] as String? ?? 'ANDROID',
+        blocked: j['status'] == 'BLOCKED',
+        current: j['current'] == true,
+        firstSeenAt: _date(j['firstSeenAt'])!,
+        lastSeenAt: _date(j['lastSeenAt'])!,
+      );
+
+  final String? name;
+  final String platform; // ANDROID | WEB
+  final bool blocked;
+  final bool current;
+  final DateTime firstSeenAt;
+  final DateTime lastSeenAt;
+}
+
+class MyDevices {
+  const MyDevices({required this.devices, required this.limit, required this.remaining});
+
+  factory MyDevices.fromJson(Map<String, dynamic> j) => MyDevices(
+        devices: [for (final d in j['devices'] as List) MyDevice.fromJson(d as Map<String, dynamic>)],
+        limit: (j['limit'] as num).toInt(),
+        remaining: (j['remaining'] as num).toInt(),
+      );
+
+  final List<MyDevice> devices;
+  final int limit; // new devices allowed in 30 days
+  final int remaining;
+}
+
+/// Push kinds the student can switch off. Class cancelled / rescheduled always arrive.
+class NotifyPrefs {
+  const NotifyPrefs({
+    required this.classReminders,
+    required this.recordings,
+    required this.doubtReplies,
+    required this.testResults,
+  });
+
+  factory NotifyPrefs.fromJson(Map<String, dynamic> j) => NotifyPrefs(
+        classReminders: j['classReminders'] != false,
+        recordings: j['recordings'] != false,
+        doubtReplies: j['doubtReplies'] != false,
+        testResults: j['testResults'] != false,
+      );
+
+  final bool classReminders;
+  final bool recordings;
+  final bool doubtReplies;
+  final bool testResults;
+}
+
+class IdCard {
+  const IdCard({
+    required this.instituteName,
+    required this.contactPhone,
+    required this.name,
+    required this.phone,
+    required this.admissionNo,
+    required this.photoUrl,
+    required this.memberSince,
+    required this.courses,
+    required this.validTill,
+    required this.verifyCode,
+  });
+
+  factory IdCard.fromJson(Map<String, dynamic> j, String origin) {
+    final photo = j['photoUrl'] as String?;
+    final phone = j['contactPhone'] as String?;
+    return IdCard(
+      instituteName: j['instituteName'] as String? ?? 'DHĪ',
+      contactPhone: phone == null || phone.isEmpty ? null : phone,
+      name: j['name'] as String,
+      phone: j['phone'] as String? ?? '',
+      admissionNo: j['admissionNo'] as String?,
+      photoUrl: photo == null ? null : '$origin$photo',
+      memberSince: _date(j['memberSince'])!,
+      courses: [for (final c in j['courses'] as List? ?? const []) c as String],
+      validTill: _date(j['validTill']),
+      verifyCode: j['verifyCode'] as String,
+    );
+  }
+
+  final String instituteName;
+  final String? contactPhone;
+  final String name;
+  final String phone;
+  final String? admissionNo;
+  final String? photoUrl;
+  final DateTime memberSince;
+  final List<String> courses;
+  final DateTime? validTill;
+  final String verifyCode;
+}
+
+class FeePayment {
+  const FeePayment({
+    required this.id,
+    required this.amount,
+    required this.mode,
+    required this.refunded,
+    required this.receiptNo,
+    required this.paymentRef,
+    required this.paidAt,
+    required this.planName,
+    required this.course,
+    required this.total,
+    required this.discount,
+  });
+
+  factory FeePayment.fromJson(Map<String, dynamic> j) {
+    final fee = j['studentFee'] as Map<String, dynamic>? ?? const {};
+    final plan = fee['plan'] as Map<String, dynamic>? ?? const {};
+    final batch = (plan['batch'] as Map?)?['name'] as String?;
+    final course = (plan['course'] as Map?)?['name'] as String?;
+    return FeePayment(
+      id: j['id'] as String,
+      amount: _num(j['amount']),
+      mode: j['mode'] as String? ?? '',
+      refunded: j['status'] == 'REFUNDED',
+      receiptNo: j['receiptNo'] as String?,
+      paymentRef: j['razorpayPaymentId'] as String?,
+      paidAt: _date(j['approvedAt']) ?? _date(j['createdAt'])!,
+      planName: plan['name'] as String? ?? 'Fee',
+      course: [?course, ?batch].join(' · '),
+      total: _num(fee['total']),
+      discount: _num(fee['discount']),
+    );
+  }
+
+  final String id;
+  final double amount;
+  final String mode; // RAZORPAY | CASH | UPI | ...
+  final bool refunded;
+  final String? receiptNo;
+  final String? paymentRef;
+  final DateTime paidAt;
+  final String planName;
+  final String course;
+  final double total;
+  final double discount;
+
+  String get modeLabel => switch (mode) {
+        'RAZORPAY' => 'Online',
+        'CASH' => 'Cash',
+        'UPI' => 'UPI',
+        'BANK_TRANSFER' => 'Bank transfer',
+        'CHEQUE' => 'Cheque',
+        _ => mode.isEmpty ? '' : mode[0] + mode.substring(1).toLowerCase(),
+      };
+}

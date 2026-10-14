@@ -9,6 +9,8 @@ import {
 import type { AuthUser } from '../../common/types/auth-user.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
+import { DocumentStatus } from '../../generated/prisma/enums.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { imageExt } from '../questions/questions.service.js';
 import { CONTENT_TYPES, StorageService, type StoredExt } from '../storage/storage.service.js';
 import type { UploadDocumentDto } from './dto/student.dto.js';
@@ -17,6 +19,19 @@ export const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 const PDF_MAGIC = Buffer.from('%PDF-');
+
+const DOC_SELECT = {
+  id: true,
+  type: true,
+  fileName: true,
+  mimeType: true,
+  size: true,
+  status: true,
+  byStudent: true,
+  reviewNote: true,
+  reviewedAt: true,
+  createdAt: true,
+} as const;
 
 /** The bits of a multer file we use (no @types/multer in this project). */
 export interface UploadedFile {
@@ -27,8 +42,9 @@ export interface UploadedFile {
 
 /**
  * Student photo and documents (ID proof, marksheet, ...). Personal data: files live in private
- * storage, only admins reach the documents, and each one is opened through a short-lived link
- * whose issue is written to the activity log.
+ * storage, only admins and the student themself reach the documents, and each one is opened
+ * through a short-lived link whose issue is written to the activity log. A document the student
+ * uploads waits (PENDING) until an admin approves or rejects it.
  */
 @Injectable()
 export class StudentFilesService {
@@ -38,9 +54,11 @@ export class StudentFilesService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly activity: ActivityService,
+    private readonly notifications: NotificationsService,
   ) {}
 
-  async setPhoto(admin: AuthUser, studentId: string, file: UploadedFile | undefined) {
+  /** By an admin or by the student themself (`actor`). */
+  async setPhoto(actor: AuthUser, studentId: string, file: UploadedFile | undefined) {
     const student = await this.student(studentId);
     if (!file?.buffer?.length) throw new BadRequestException('Attach a picture in the "file" field');
     if (file.size > MAX_PHOTO_BYTES) throw new PayloadTooLargeException('Photo is larger than 3 MB');
@@ -50,16 +68,16 @@ export class StudentFilesService {
     const key = await this.storage.put(file.buffer, ext);
     await this.prisma.student.update({ where: { id: studentId }, data: { photoKey: key } });
     if (student.photoKey) await this.removeQuietly(student.photoKey);
-    await this.log(admin, 'student.photo-set', studentId);
+    await this.log(actor, 'student.photo-set', studentId);
     return { photoUrl: this.storage.signedUrl(key, 'photo', 'inline', 3600) };
   }
 
-  async removePhoto(admin: AuthUser, studentId: string) {
+  async removePhoto(actor: AuthUser, studentId: string) {
     const student = await this.student(studentId);
     if (!student.photoKey) return { photoUrl: null };
     await this.prisma.student.update({ where: { id: studentId }, data: { photoKey: null } });
     await this.removeQuietly(student.photoKey);
-    await this.log(admin, 'student.photo-remove', studentId);
+    await this.log(actor, 'student.photo-remove', studentId);
     return { photoUrl: null };
   }
 
@@ -68,15 +86,29 @@ export class StudentFilesService {
     return this.prisma.studentDocument.findMany({
       where: { studentId },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, type: true, fileName: true, mimeType: true, size: true, createdAt: true },
+      select: DOC_SELECT,
+    });
+  }
+
+  /** Admin: documents students uploaded that nobody has looked at yet, oldest first. */
+  pendingDocuments() {
+    return this.prisma.studentDocument.findMany({
+      where: { status: DocumentStatus.PENDING, student: { deletedAt: null } },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+      select: {
+        ...DOC_SELECT,
+        student: { select: { id: true, admissionNo: true, user: { select: { name: true, phone: true } } } },
+      },
     });
   }
 
   async addDocument(
-    admin: AuthUser,
+    actor: AuthUser,
     studentId: string,
     file: UploadedFile | undefined,
-    dto: UploadDocumentDto,
+    dto: Pick<UploadDocumentDto, 'type' | 'label'>,
+    byStudent = false,
   ) {
     await this.student(studentId);
     if (!file?.buffer?.length) throw new BadRequestException('Attach the document in the "file" field');
@@ -97,17 +129,46 @@ export class StudentFilesService {
         fileName: `${base}.${ext}`,
         mimeType: CONTENT_TYPES[ext],
         size: file.size,
+        byStudent,
+        status: byStudent ? DocumentStatus.PENDING : DocumentStatus.APPROVED,
       },
-      select: { id: true, type: true, fileName: true, mimeType: true, size: true, createdAt: true },
+      select: DOC_SELECT,
     });
-    await this.log(admin, 'student.document-add', studentId, { documentId: doc.id, type: dto.type });
+    await this.log(actor, 'student.document-add', studentId, { documentId: doc.id, type: dto.type });
     return doc;
   }
 
-  /** A 5-minute link to open the document. Opening personal documents is logged. */
-  async documentUrl(admin: AuthUser, studentId: string, docId: string, download: boolean) {
+  /** Admin approves or rejects a document the student uploaded; the student gets a push. */
+  async reviewDocument(admin: AuthUser, studentId: string, docId: string, approve: boolean, note?: string) {
     const doc = await this.document(studentId, docId);
-    await this.log(admin, 'student.document-view', studentId, { documentId: doc.id, type: doc.type });
+    const updated = await this.prisma.studentDocument.update({
+      where: { id: doc.id },
+      data: {
+        status: approve ? DocumentStatus.APPROVED : DocumentStatus.REJECTED,
+        reviewNote: approve ? null : note || null,
+        reviewedAt: new Date(),
+      },
+      select: DOC_SELECT,
+    });
+    await this.log(admin, approve ? 'student.document-approve' : 'student.document-reject', studentId, {
+      documentId: doc.id,
+      type: doc.type,
+    });
+    const student = await this.prisma.student.findUnique({ where: { id: studentId }, select: { userId: true } });
+    if (student && doc.byStudent) {
+      void this.notifications.sendToUsers([student.userId], {
+        title: approve ? 'Document approved' : 'Document not accepted',
+        body: approve ? doc.fileName : `${doc.fileName}${note ? `: ${note}` : '. Please upload it again.'}`,
+        data: { type: 'document_review', documentId: doc.id },
+      });
+    }
+    return updated;
+  }
+
+  /** A 5-minute link to open the document. Opening personal documents is logged. */
+  async documentUrl(actor: AuthUser, studentId: string, docId: string, download: boolean) {
+    const doc = await this.document(studentId, docId);
+    await this.log(actor, 'student.document-view', studentId, { documentId: doc.id, type: doc.type });
     return {
       url: this.storage.signedUrl(doc.fileKey, doc.fileName, download ? 'attachment' : 'inline', 300),
       fileName: doc.fileName,
@@ -115,11 +176,15 @@ export class StudentFilesService {
     };
   }
 
-  async removeDocument(admin: AuthUser, studentId: string, docId: string) {
+  /** `ownOnly`: the student may delete only their own uploads that were not approved yet. */
+  async removeDocument(actor: AuthUser, studentId: string, docId: string, ownOnly = false) {
     const doc = await this.document(studentId, docId);
+    if (ownOnly && (!doc.byStudent || doc.status === DocumentStatus.APPROVED)) {
+      throw new BadRequestException('An approved document can only be removed by the institute');
+    }
     await this.prisma.studentDocument.delete({ where: { id: doc.id } });
     await this.removeQuietly(doc.fileKey);
-    await this.log(admin, 'student.document-remove', studentId, { documentId: doc.id, type: doc.type });
+    await this.log(actor, 'student.document-remove', studentId, { documentId: doc.id, type: doc.type });
     return { id: doc.id, deleted: true };
   }
 
@@ -147,7 +212,7 @@ export class StudentFilesService {
     }
   }
 
-  private log(admin: AuthUser, action: string, studentId: string, meta?: Record<string, string>) {
-    return this.activity.log({ actorId: admin.id, action, entity: 'student', entityId: studentId, meta });
+  private log(actor: AuthUser, action: string, studentId: string, meta?: Record<string, string>) {
+    return this.activity.log({ actorId: actor.id, action, entity: 'student', entityId: studentId, meta });
   }
 }

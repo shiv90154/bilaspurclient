@@ -80,6 +80,13 @@ enum DocumentType {
   OTHER
 }
 
+// Documents the institute adds are APPROVED; ones a student uploads wait for an admin.
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum QuestionType {
   SINGLE
   MULTIPLE
@@ -182,6 +189,8 @@ model User {
   lastLoginAt      DateTime?
   emailVerifiedAt  DateTime? // set when an email OTP was confirmed (self-registration)
   twoFactorEnabled Boolean    @default(false) // staff: login also needs a code sent to their email
+  // Push kinds this person switched off, e.g. {"recordings": false}. Missing key = on.
+  notifyPrefs      Json?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   deletedAt        DateTime?
@@ -399,18 +408,23 @@ model StudentBatch {
 }
 
 model StudentDocument {
-  id        String       @id @default(uuid())
-  studentId String
-  type      DocumentType
-  fileKey   String
-  fileName  String
-  mimeType  String
-  size      Int
-  createdAt DateTime     @default(now())
+  id         String         @id @default(uuid())
+  studentId  String
+  type       DocumentType
+  fileKey    String
+  fileName   String
+  mimeType   String
+  size       Int
+  status     DocumentStatus @default(APPROVED)
+  byStudent  Boolean        @default(false) // uploaded by the student from the app / web
+  reviewNote String? // admin's reason when rejected
+  reviewedAt DateTime?
+  createdAt  DateTime       @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+  @@index([status])
   @@map("student_documents")
 }
 
@@ -1074,6 +1088,7 @@ enum OtpPurpose {
   RESET_PASSWORD
   LOGIN_2FA
   ENABLE_2FA
+  CHANGE_EMAIL
 }
 
 model EmailOtp {

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileSpreadsheet, Plus } from "lucide-react";
+import { PendingDocuments } from "@/components/admin/pending-documents";
 import { StudentImport } from "@/components/admin/student-import";
 import Link from "next/link";
 import { useDeferredValue, useState, type FormEvent } from "react";
@@ -86,6 +87,8 @@ export function StudentsView({ canEdit }: { canEdit: boolean }) {
           </div>
         }
       />
+
+      {canEdit && <PendingDocuments />}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <input

@@ -7,5 +7,6 @@ import { OtpService } from './otp.service.js';
 @Module({
   controllers: [AccountController],
   providers: [AccountService, OtpService],
+  exports: [OtpService],
 })
 export class AccountModule {}

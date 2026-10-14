@@ -13,8 +13,8 @@ const PUBLIC_PATHS = new Set(["/", "/about", "/courses", "/features", "/app", "/
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // The public website, login and the legal pages (Play Store needs the privacy policy and the account deletion
-  // page reachable without an account).
-  const isPublic = PUBLIC_PATHS.has(pathname) || pathname.startsWith("/courses/");
+  // page reachable without an account), and the ID card check behind the QR on a student's card.
+  const isPublic = PUBLIC_PATHS.has(pathname) || pathname.startsWith("/courses/") || pathname.startsWith("/verify/");
   const hasSession = request.cookies.has(REFRESH_COOKIE);
 
   if (!hasSession && !isPublic) {
