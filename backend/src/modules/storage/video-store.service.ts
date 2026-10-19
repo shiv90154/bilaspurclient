@@ -68,6 +68,11 @@ export class VideoStoreService {
     return this.files.tmpPath();
   }
 
+  /** Where a chunked admin upload collects its bytes (`part`) and remembers its expected size (`json`). */
+  uploadPath(id: string, ext: 'part' | 'json'): string {
+    return this.files.uploadPath(id, ext);
+  }
+
   /** Moves a finished mp4 from `tmpPath()` into the current store. The temp file is gone afterwards. */
   async save(tmp: string): Promise<{ store: VideoStoreName; key: string }> {
     if (this.target === 'local') return { store: 'local', key: await this.files.putFile(tmp, 'mp4') };

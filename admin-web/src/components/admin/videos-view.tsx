@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CloudDownload, ExternalLink, Play, Plus, RotateCw, Trash2, Users, Video } from "lucide-react";
+import { CloudDownload, ExternalLink, Play, Plus, RotateCw, Trash2, Upload, Users, Video } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { api, fileHref, qs, type Batch, type Paginated } from "@/lib/api";
+import { api, ApiError, fileHref, qs, type Batch, type Paginated } from "@/lib/api";
 import { Badge, btnGhost, btnPrimary, EmptyState, ErrorNote, Field, inputCls, ListSkeleton, Modal, PageHeader } from "@/components/ui";
 
 interface VideoRow {
@@ -15,6 +15,7 @@ interface VideoRow {
   /** file = our own mp4 (an imported Zoom recording), played through /videos/:id/play. */
   source: "file" | "link";
   durationSec: number | null;
+  status: "UPLOADING" | "PROCESSING" | "READY" | "FAILED";
   isDemo: boolean;
   createdAt: string;
   batches: { batch: { id: string; name: string } }[];
@@ -26,6 +27,7 @@ const duration = (sec: number) =>
 export function VideosView({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [playing, setPlaying] = useState<VideoRow | null>(null);
   const [editing, setEditing] = useState<VideoRow | null>(null);
   const list = useQuery({ queryKey: ["videos"], queryFn: () => api<Paginated<VideoRow>>(`/videos${qs({ limit: 100 })}`) });
@@ -42,8 +44,13 @@ export function VideosView({ isAdmin }: { isAdmin: boolean }) {
     <div className="flex flex-col gap-5">
       <PageHeader
         title="Recorded videos"
-        subtitle="Zoom cloud recordings of your classes arrive here by themselves, for the class's batch. You can also add a lecture by its link (YouTube unlisted, Google Drive …)."
-        action={<button className={btnPrimary} onClick={() => setAdding(true)}><Plus size={16} /> Add video</button>}
+        subtitle="Zoom cloud recordings of your classes arrive here by themselves, for the class's batch. You can also upload an mp4 from this computer, or add a lecture by its link (YouTube unlisted, Google Drive …)."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button className={btnPrimary} onClick={() => setUploading(true)}><Upload size={16} /> Upload file</button>
+            <button className={btnGhost} onClick={() => setAdding(true)}><Plus size={16} /> Add a link</button>
+          </div>
+        }
       />
       {isAdmin && <ZoomPanel />}
       <ErrorNote error={list.error ?? patch.error ?? remove.error} />
@@ -63,6 +70,7 @@ export function VideosView({ isAdmin }: { isAdmin: boolean }) {
                   {v.durationSec ? ` · ${duration(v.durationSec)}` : ""}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  {v.status === "UPLOADING" && <Badge tone="red">Upload not finished: delete it and upload again</Badge>}
                   {v.source === "file" && <Badge tone="amber">Plays inside the app</Badge>}
                   {v.isDemo && <Badge tone="green">Free demo: every student</Badge>}
                   {v.batches.map((b) => <Badge key={b.batch.id} tone="blue">{b.batch.name}</Badge>)}
@@ -91,6 +99,7 @@ export function VideosView({ isAdmin }: { isAdmin: boolean }) {
         ))}
       </ul>
       {adding && <AddVideo onClose={() => setAdding(false)} />}
+      {uploading && <UploadVideo onClose={() => setUploading(false)} />}
       {playing && <PlayVideo video={playing} onClose={() => setPlaying(null)} />}
       {editing && <EditBatches video={editing} onClose={() => setEditing(null)} />}
     </div>
@@ -149,6 +158,96 @@ function AddVideo({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Cancel</button>
           <button className={btnPrimary} disabled={create.isPending}>{create.isPending ? "Saving…" : "Add video"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** Sends one chunk; a 409 answer says how many bytes the server already has (resume from there). */
+async function putChunk(id: string, offset: number, chunk: Blob): Promise<number> {
+  const res = await fetch(`/api/backend/videos/uploads/${id}${qs({ offset })}`, {
+    method: "PUT",
+    headers: { "content-type": "application/octet-stream" },
+    body: chunk,
+  });
+  const body = (await res.json().catch(() => ({}))) as { received?: number; message?: string };
+  if (res.ok || (res.status === 409 && typeof body.received === "number")) return body.received!;
+  throw new ApiError(res.status, undefined, body.message ?? `Upload failed (${res.status})`);
+}
+
+/**
+ * Uploads an mp4 from this computer to our server in chunks (one request is capped at 160 MB),
+ * retrying a failed chunk a few times. The video stays hidden from students until it is complete.
+ */
+function UploadVideo({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!file) return;
+    const f = new FormData(e.currentTarget);
+    setError(null);
+    setProgress(0);
+    try {
+      const start = await api<{ id: string; chunkBytes: number }>("/videos/uploads", {
+        method: "POST",
+        body: {
+          title: String(f.get("title") ?? "").trim(),
+          size: file.size,
+          isDemo: f.get("isDemo") === "on",
+          batchIds: f.getAll("batchIds").map(String),
+        },
+      });
+      let sent = 0;
+      let failures = 0;
+      while (sent < file.size) {
+        try {
+          sent = await putChunk(start.id, sent, file.slice(sent, sent + start.chunkBytes));
+          failures = 0;
+          setProgress(sent / file.size);
+        } catch (err) {
+          if (++failures > 4) throw err;
+          await new Promise((r) => setTimeout(r, 3000 * failures));
+        }
+      }
+      await api(`/videos/uploads/${start.id}/complete`, { method: "POST" });
+      void qc.invalidateQueries({ queryKey: ["videos"] });
+      onClose();
+    } catch (err) {
+      setError(err);
+      setProgress(null);
+      void qc.invalidateQueries({ queryKey: ["videos"] });
+    }
+  }
+
+  const busy = progress !== null;
+  return (
+    <Modal title="Upload a video file" onClose={busy ? () => undefined : onClose}>
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        <Field label="Title">{(i) => <input id={i} name="title" required maxLength={200} className={inputCls} disabled={busy} />}</Field>
+        <Field label="Video file (mp4)">
+          {(i) => (
+            <input id={i} type="file" accept="video/mp4" required disabled={busy} className="text-[13px]"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          )}
+        </Field>
+        <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="isDemo" disabled={busy} /> Free demo (also for students waiting for approval)</label>
+        <BatchChecklist />
+        <p className="text-[12px] text-sub">The video is kept on our server and plays only inside the app. Keep this page open until the upload finishes.</p>
+        {busy && (
+          <div role="status" className="flex flex-col gap-1">
+            <div className="h-2 overflow-hidden rounded-full bg-bg"><div className="h-full bg-primary" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+            <p className="text-[12px] text-sub">Uploading… {Math.round(progress * 100)}% of {(file!.size / 1e6).toFixed(0)} MB</p>
+          </div>
+        )}
+        <ErrorNote error={error} />
+        <div className="flex justify-end gap-2">
+          <button type="button" className={btnGhost} onClick={onClose} disabled={busy}>Cancel</button>
+          <button className={btnPrimary} disabled={busy || !file}>{busy ? "Uploading…" : "Upload"}</button>
         </div>
       </form>
     </Modal>

@@ -162,6 +162,7 @@ class EduManageApp extends ConsumerWidget {
     final problem = ref.watch(deviceProblemProvider).value;
     if (problem != null) {
       return MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: theme,
         home: _Blocked(reason: problem, onRetry: () => ref.invalidate(deviceProblemProvider)),
       );
@@ -169,12 +170,14 @@ class EduManageApp extends ConsumerWidget {
     final maintenance = ref.watch(maintenanceProvider);
     if (maintenance != null) {
       return MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'DHĪ',
         theme: theme,
         home: MaintenanceScreen(message: maintenance, onRetry: ref.read(maintenanceProvider.notifier).check),
       );
     }
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'DHĪ',
       theme: theme,
       routerConfig: ref.watch(routerProvider),

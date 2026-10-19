@@ -11,6 +11,7 @@ Play Console me jo bharna hai, uske answers aur graphics yahan hain. Inhe consol
 | [app-content.md](app-content.md) | Ads, content rating, target audience (18+), news/govt/financial/health | App content |
 | [app-access.md](app-access.md) | Reviewer ka login, aur review mode switch | App content → App access |
 | [RELEASE.md](RELEASE.md) | Firebase, upload key, AAB build, upload | Test and release |
+| [closed-testing.md](closed-testing.md) | 12 testers × 14 din: list, release notes, WhatsApp message | Test and release → Closed testing |
 
 ## Order
 

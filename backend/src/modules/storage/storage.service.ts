@@ -60,6 +60,12 @@ export class StorageService implements OnModuleInit {
     return resolve(this.root, 'tmp', `${randomUUID()}.part`);
   }
 
+  /** A named scratch file for an upload that arrives over several requests (so it can resume). */
+  uploadPath(id: string, ext: 'part' | 'json'): string {
+    if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error('Invalid upload id');
+    return resolve(this.root, 'tmp', `upload-${id}.${ext}`);
+  }
+
   /** Moves a finished file (from `tmpPath`) in under a fresh random key. */
   async putFile(path: string, ext: StoredExt): Promise<string> {
     const key = `${randomUUID()}.${ext}`;

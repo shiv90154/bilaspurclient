@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { createWriteStream } from 'node:fs';
+import { readFile, rm, stat, truncate, writeFile } from 'node:fs/promises';
+import { Transform, type Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Paginated } from '../../common/dto/pagination.dto.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -6,11 +10,16 @@ import { EnrollmentStatus, Role, VideoStatus } from '../../generated/prisma/enum
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import { VideoStoreService } from '../storage/video-store.service.js';
-import type { CreateVideoDto, ListVideosQueryDto, UpdateVideoDto } from './dto/video.dto.js';
+import type { CreateVideoDto, ListVideosQueryDto, StartVideoUploadDto, UpdateVideoDto } from './dto/video.dto.js';
+import { mp4Info } from './mp4.js';
+
+/** One upload request; well under Nginx's 160 MB body limit. */
+export const UPLOAD_CHUNK_BYTES = 32 * 1024 * 1024;
 
 const SELECT = {
   id: true,
   title: true,
+  status: true,
   description: true,
   externalUrl: true,
   sourceKey: true,
@@ -104,6 +113,87 @@ export class VideosService {
     return present(video);
   }
 
+  /**
+   * Our own mp4, sent in chunks (Nginx caps one request at 160 MB). The row stays UPLOADING (hidden from
+   * students) until every byte arrived; a chunk sent at the wrong offset is refused with the right one,
+   * so a dropped connection resumes instead of starting over.
+   */
+  async startUpload(user: AuthUser, dto: StartVideoUploadDto) {
+    await this.assertBatches(dto.batchIds);
+    const video = await this.prisma.video.create({
+      data: {
+        title: dto.title,
+        description: dto.description,
+        subjectId: dto.subjectId,
+        isDemo: dto.isDemo ?? false,
+        status: VideoStatus.UPLOADING,
+        uploadedById: user.id,
+        batches: { create: [...new Set(dto.batchIds ?? [])].map((batchId) => ({ batchId })) },
+      },
+      select: SELECT,
+    });
+    await writeFile(this.store.uploadPath(video.id, 'json'), JSON.stringify({ size: dto.size }));
+    await writeFile(this.store.uploadPath(video.id, 'part'), Buffer.alloc(0));
+    return { ...present(video), chunkBytes: UPLOAD_CHUNK_BYTES, received: 0, size: dto.size };
+  }
+
+  async appendChunk(user: AuthUser, id: string, offset: number, body: Readable) {
+    const { size, part } = await this.pendingUpload(user, id);
+    const received = (await stat(part)).size;
+    if (offset !== received) {
+      body.resume(); // drain what was sent; the client resends from `received`
+      throw new ConflictException({ code: 'WRONG_OFFSET', message: `Send the file from byte ${received}`, received });
+    }
+    let bytes = 0;
+    const limit = new Transform({
+      transform(chunk: Buffer, _enc, done) {
+        bytes += chunk.length;
+        if (bytes > UPLOAD_CHUNK_BYTES || received + bytes > size) return done(new BadRequestException('Chunk too big'));
+        done(null, chunk);
+      },
+    });
+    try {
+      await pipeline(body, limit, createWriteStream(part, { flags: 'a' }));
+    } catch (err) {
+      await truncate(part, received); // keep the file at a clean chunk boundary
+      throw err instanceof BadRequestException ? err : new BadRequestException('The upload was interrupted. Send this chunk again.');
+    }
+    return { id, received: received + bytes, size };
+  }
+
+  async completeUpload(user: AuthUser, id: string) {
+    const { size, part, meta } = await this.pendingUpload(user, id);
+    const received = (await stat(part)).size;
+    if (received !== size) throw new BadRequestException(`Only ${received} of ${size} bytes arrived`);
+    const info = await mp4Info(part);
+    if (!info.isMp4) {
+      await rm(part, { force: true });
+      await rm(meta, { force: true });
+      await this.prisma.video.update({ where: { id }, data: { status: VideoStatus.FAILED } });
+      throw new BadRequestException('This file is not an mp4 video');
+    }
+    const saved = await this.store.save(part);
+    await rm(meta, { force: true });
+    const video = await this.prisma.video.update({
+      where: { id },
+      data: { sourceKey: saved.key, sourceStore: saved.store, durationSec: info.durationSec, status: VideoStatus.READY },
+      select: SELECT,
+    });
+    await this.log(user, 'video.upload', id);
+    return present(video);
+  }
+
+  private async pendingUpload(user: AuthUser, id: string) {
+    await this.manageable(user, id);
+    const v = await this.prisma.video.findUnique({ where: { id }, select: { status: true } });
+    if (v?.status !== VideoStatus.UPLOADING) throw new ConflictException('This video is not waiting for an upload');
+    const meta = this.store.uploadPath(id, 'json');
+    const part = this.store.uploadPath(id, 'part');
+    const { size } = JSON.parse(await readFile(meta, 'utf8').catch(() => '{}')) as { size?: number };
+    if (!size) throw new ConflictException('This upload has expired. Start it again.');
+    return { size, part, meta };
+  }
+
   async update(user: AuthUser, id: string, dto: UpdateVideoDto) {
     await this.manageable(user, id);
     await this.assertBatches(dto.batchIds);
@@ -125,6 +215,9 @@ export class VideosService {
     if (v.sourceKey) {
       await this.store.remove(v.sourceStore, v.sourceKey).catch((err) => this.logger.warn(`video file not removed: ${(err as Error).message}`));
     }
+    // An upload that never finished leaves its chunks in tmp.
+    await rm(this.store.uploadPath(id, 'part'), { force: true });
+    await rm(this.store.uploadPath(id, 'json'), { force: true });
     await this.log(user, 'video.delete', id);
     return { id, deleted: true };
   }
