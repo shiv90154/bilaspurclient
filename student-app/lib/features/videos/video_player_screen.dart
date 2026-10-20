@@ -26,6 +26,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   VideoPlayerController? _controller;
   String? _error;
   bool _fullscreen = false;
+  // Whether the status and navigation bars are hidden right now (fullscreen button or phone turned sideways).
+  bool _immersive = false;
   bool _controlsVisible = true;
   Timer? _hideTimer;
 
@@ -66,7 +68,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     _hideTimer?.cancel();
     _controller?.removeListener(_onTick);
     _controller?.dispose();
-    if (_fullscreen) _exitFullscreen();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
   }
 
@@ -89,33 +92,47 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     _scheduleHide();
   }
 
+  bool get _landscape => MediaQuery.orientationOf(context) == Orientation.landscape;
+
+  /// Fullscreen when the button was pressed or the phone is turned sideways. In landscape the normal
+  /// page has no room, so the controls would end up below the screen.
+  bool get _isFull => _fullscreen || _landscape;
+
   Future<void> _toggleFullscreen() async {
-    setState(() => _fullscreen = !_fullscreen);
-    if (_fullscreen) {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    if (_isFull) {
+      // Back to portrait. Stay there while this screen is open, otherwise a phone held sideways
+      // would flip straight back into fullscreen.
+      setState(() => _fullscreen = false);
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     } else {
-      await _exitFullscreen();
+      setState(() => _fullscreen = true);
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
     }
+    _scheduleHide();
   }
 
-  Future<void> _exitFullscreen() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  void _syncSystemBars(bool full) {
+    if (full == _immersive) return;
+    _immersive = full;
+    SystemChrome.setEnabledSystemUIMode(full ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
   }
 
   @override
   Widget build(BuildContext context) {
+    final full = _isFull;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncSystemBars(full);
+    });
     final player = _buildPlayer();
     return PopScope(
-      canPop: !_fullscreen,
+      canPop: !full,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _fullscreen) _toggleFullscreen();
+        if (!didPop && full) _toggleFullscreen();
       },
       child: Scaffold(
-        backgroundColor: _fullscreen ? Colors.black : null,
-        appBar: _fullscreen ? null : AppBar(title: Text(widget.video.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
-        body: _fullscreen
+        backgroundColor: full ? Colors.black : null,
+        appBar: full ? null : AppBar(title: Text(widget.video.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        body: full
             ? Center(child: player)
             : ListView(
                 children: [
@@ -258,8 +275,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                 ),
                 IconButton(
                   color: white,
-                  tooltip: _fullscreen ? 'Exit full screen' : 'Full screen',
-                  icon: Icon(_fullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+                  tooltip: _isFull ? 'Exit full screen' : 'Full screen',
+                  icon: Icon(_isFull ? Icons.fullscreen_exit : Icons.fullscreen),
                   onPressed: _toggleFullscreen,
                 ),
               ],
