@@ -51,13 +51,15 @@ class _Card extends StatelessWidget {
     final initial = c.name.trim().isEmpty ? '?' : c.name.trim()[0].toUpperCase();
     final date = DateFormat('d MMM yyyy');
 
+    // Label above the value: next to the photo there is no room for both on one line, and a
+    // phone or admission number split over two lines is hard to read.
     Widget row(String label, String value) => Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Row(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(width: 92, child: Text(label, style: text.bodySmall?.copyWith(color: Colors.black54))),
-              Expanded(child: Text(value, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+              Text(label, style: text.bodySmall?.copyWith(color: Colors.black54)),
+              Text(value, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
         );

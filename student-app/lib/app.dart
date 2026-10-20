@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/api_client.dart';
 import 'core/maintenance.dart';
 import 'core/push_service.dart';
 import 'core/security.dart';
 import 'core/theme.dart';
+import 'data/content_api.dart';
 import 'data/models.dart';
 import 'features/about/about_screen.dart';
 import 'features/auth/auth_controller.dart';
@@ -32,6 +34,7 @@ import 'features/tests/take_test_screen.dart';
 import 'features/tests/tests_screen.dart';
 import 'features/videos/video_player_screen.dart';
 import 'features/videos/videos_screen.dart';
+import 'widgets/async_view.dart';
 import 'widgets/watermark.dart';
 
 /// Null = device OK, otherwise the reason it is refused.
@@ -43,9 +46,11 @@ final deviceProblemProvider = FutureProvider<String?>((ref) {
 });
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Re-evaluate redirects whenever login state changes.
+  // Re-evaluate redirects when the login state or the consent requirement changes. Not on every
+  // profile refresh (each time the app comes back to the front): a refresh re-parses the open
+  // route, and screens opened with `extra` (video, note, test) used to lose it and go grey.
   final refresh = ValueNotifier<int>(0);
-  ref.listen(authProvider, (_, _) => refresh.value++);
+  ref.listen(authProvider.select((s) => (s.status, s.user?.consentRequired)), (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   final router = _buildRouter(ref, refresh);
@@ -116,11 +121,19 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
       ),
       GoRoute(
         path: '/notes/:id',
-        builder: (_, state) => NoteViewerScreen(note: state.extra! as Note),
+        builder: (_, state) => _OpenById<Note>(
+          initial: state.extra as Note?,
+          load: (ref) async => _byId<Note>(await ref.read(contentApiProvider).notes(), state.pathParameters['id']!, (n) => n.id),
+          builder: (note) => NoteViewerScreen(note: note),
+        ),
       ),
       GoRoute(
-        path: '/tests/take',
-        builder: (_, state) => TakeTestScreen(paper: state.extra! as Paper),
+        path: '/tests/take/:attemptId',
+        builder: (_, state) => _OpenById<Paper>(
+          initial: state.extra as Paper?,
+          load: (ref) => ref.read(contentApiProvider).resumeAttempt(state.pathParameters['attemptId']!),
+          builder: (paper) => TakeTestScreen(paper: paper),
+        ),
       ),
       GoRoute(
         path: '/tests/result/:attemptId',
@@ -135,7 +148,11 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
       GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
       GoRoute(
         path: '/videos/:id',
-        builder: (_, state) => VideoPlayerScreen(video: state.extra! as VideoItem),
+        builder: (_, state) => _OpenById<VideoItem>(
+          initial: state.extra as VideoItem?,
+          load: (ref) async => _byId<VideoItem>(await ref.read(contentApiProvider).videos(), state.pathParameters['id']!, (v) => v.id),
+          builder: (video) => VideoPlayerScreen(video: video),
+        ),
       ),
       GoRoute(path: '/courses', builder: (_, _) => const CoursesScreen()),
       GoRoute(
@@ -192,6 +209,57 @@ class EduManageApp extends ConsumerWidget {
               ? content
               : Watermark(text: '${user.name} · ${user.phone}', child: content);
         },
+      ),
+    );
+  }
+}
+
+T _byId<T>(List<T> items, String id, String Function(T) idOf) {
+  for (final item in items) {
+    if (idOf(item) == id) return item;
+  }
+  throw ApiException('NOT_FOUND', 'This is no longer available.');
+}
+
+/// A screen that needs an object (video, note, test paper). It normally comes along with the
+/// navigation (`extra`); when it does not (the route was rebuilt or restored without it), it is
+/// loaded by id instead of crashing into a grey screen. Once shown, the screen keeps its object,
+/// so a later rebuild without `extra` never restarts a video or a test.
+class _OpenById<T extends Object> extends ConsumerStatefulWidget {
+  const _OpenById({required this.initial, required this.load, required this.builder, super.key});
+  final T? initial;
+  final Future<T> Function(WidgetRef ref) load;
+  final Widget Function(T value) builder;
+
+  @override
+  ConsumerState<_OpenById<T>> createState() => _OpenByIdState<T>();
+}
+
+class _OpenByIdState<T extends Object> extends ConsumerState<_OpenById<T>> {
+  late T? _value = widget.initial;
+  Future<T>? _loading;
+
+  @override
+  void didUpdateWidget(_OpenById<T> old) {
+    super.didUpdateWidget(old);
+    if (widget.initial != null) _value = widget.initial;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = _value;
+    if (value != null) return widget.builder(value);
+    final loading = _loading ??= widget.load(ref).then((v) {
+      if (mounted) setState(() => _value = v);
+      return v;
+    });
+    return FutureBuilder<T>(
+      future: loading,
+      builder: (context, snap) => Scaffold(
+        appBar: AppBar(),
+        body: snap.hasError
+            ? ErrorRetry(message: snap.error.toString(), onRetry: () => setState(() => _loading = null))
+            : const Center(child: CircularProgressIndicator()),
       ),
     );
   }

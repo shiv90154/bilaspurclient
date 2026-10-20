@@ -6,8 +6,9 @@ const apiUrl = String.fromEnvironment(
   defaultValue: 'http://10.0.2.2:3000/api',
 );
 
-/// Turns a server-relative path ("/api/files/...") into a full URL on the API host.
-String absoluteUrl(String path) => Uri.parse(apiUrl).replace(path: path, query: null).toString();
+/// Turns a server-relative link (`/api/files/KEY?exp=...&sig=...`) into a full URL on the API
+/// host, keeping its query (the signature). Absolute links (e.g. a CDN) come back unchanged.
+String absoluteUrl(String path) => Uri.parse(apiUrl).resolve(path).toString();
 
 /// Public website with the privacy policy, terms and account deletion pages. Override with
 /// --dart-define=WEB_URL=https://example.com; otherwise `api.<domain>` becomes `<domain>`

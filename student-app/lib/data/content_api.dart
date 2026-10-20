@@ -39,9 +39,8 @@ class ContentApi {
   Future<Uint8List> noteBytes(String id) => _run(() async {
         final link = await _dio.get<Map<String, dynamic>>('/materials/$id/view-url');
         final url = link.data!['url'] as String; // "/api/files/...": relative to the server origin
-        final origin = Uri.parse(apiUrl).replace(path: '', query: '').toString();
         final res = await Dio().get<List<int>>(
-          '$origin$url',
+          absoluteUrl(url),
           options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 2)),
         );
         return Uint8List.fromList(res.data!);
@@ -149,11 +148,8 @@ class ContentApi {
   // ── profile ──
   Future<MyProfile> myProfile() => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/students/me');
-        final origin = Uri.parse(apiUrl).replace(path: '', query: '').toString();
-        return MyProfile.fromJson(res.data!, origin);
+        return MyProfile.fromJson(res.data!);
       });
-
-  String get _origin => Uri.parse(apiUrl).replace(path: '', query: '').toString();
 
   /// Address, city and guardian. An empty string clears the field.
   Future<void> updateProfile(Map<String, String> fields) => _run(() async {
@@ -203,7 +199,7 @@ class ContentApi {
   /// A 5-minute link to open the file in the browser.
   Future<Uri> documentUrl(String id) => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/students/me/documents/$id/url');
-        return Uri.parse(_origin).resolve(res.data!['url'] as String);
+        return Uri.parse(absoluteUrl(res.data!['url'] as String));
       });
 
   Future<void> removeDocument(String id) => _run(() async {
@@ -227,7 +223,7 @@ class ContentApi {
 
   Future<IdCard> idCard() => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/students/me/id-card');
-        return IdCard.fromJson(res.data!, _origin);
+        return IdCard.fromJson(res.data!);
       });
 
   /// Paid (and refunded) fee payments, newest first.
@@ -282,7 +278,6 @@ class ContentApi {
         final res = await _dio.get<Map<String, dynamic>>('/videos/$id/play');
         final url = res.data!['url'] as String;
         // "/api/files/..." is relative to the server origin; cloud storage links are absolute.
-        if (url.startsWith('http')) return Uri.parse(url);
-        return Uri.parse(apiUrl).replace(path: '', query: '').resolve(url);
+        return Uri.parse(absoluteUrl(url));
       });
 }

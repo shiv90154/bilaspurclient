@@ -136,7 +136,7 @@ class _TestCard extends ConsumerWidget {
     try {
       final paper = await ref.read(contentApiProvider).startTest(test.id);
       if (!context.mounted) return;
-      await context.push<void>('/tests/take', extra: paper);
+      await context.push<void>('/tests/take/${paper.attemptId}', extra: paper);
     } on ApiException catch (e) {
       if (!context.mounted) return;
       // Coming back after closing the app counts as leaving it; past the limit the test was submitted.

@@ -30,6 +30,13 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   bool _immersive = false;
   bool _controlsVisible = true;
   Timer? _hideTimer;
+  bool _screenKeptOn = false;
+  // Where playback was, so a reload after a network or decoder hiccup carries on from there.
+  Duration _lastPosition = Duration.zero;
+  // Quiet reloads used up since the video last played fine; after that the student sees "Try again".
+  int _autoRetries = 0;
+
+  static const _screen = MethodChannel('dhi/screen');
 
   @override
   void initState() {
@@ -37,15 +44,19 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({Duration? startAt}) async {
     setState(() => _error = null);
     try {
+      // A fresh signed link every time: the old one may have expired during a long class.
       final url = await ref.read(contentApiProvider).videoPlayUrl(widget.video.id);
       final controller = VideoPlayerController.networkUrl(url);
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
         return;
+      }
+      if (startAt != null && startAt > Duration.zero && startAt < controller.value.duration) {
+        await controller.seekTo(startAt);
       }
       controller.addListener(_onTick);
       setState(() => _controller = controller);
@@ -58,14 +69,45 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
 
   void _onTick() {
     final c = _controller;
-    if (c != null && c.value.hasError && _error == null) {
-      setState(() => _error = 'Playback stopped. Check your internet and try again.');
+    if (c == null || !mounted) return;
+    final v = c.value;
+    _keepScreenOn(v.isPlaying);
+    if (v.hasError) {
+      if (_error != null) return;
+      _keepScreenOn(false);
+      if (_autoRetries < 2) {
+        _autoRetries++;
+        _reload();
+      } else {
+        setState(() => _error = 'Playback stopped. Check your internet and try again.');
+      }
+      return;
     }
+    if (v.isPlaying && v.position > _lastPosition + const Duration(seconds: 30)) _autoRetries = 0;
+    if (v.position > Duration.zero) _lastPosition = v.position;
+  }
+
+  /// Throws the broken player away and starts a new one where the student was.
+  void _reload() {
+    final old = _controller;
+    old?.removeListener(_onTick);
+    setState(() => _controller = null);
+    // Dispose after this frame, once the old VideoPlayer widget is out of the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+    _load(startAt: _lastPosition);
+  }
+
+  /// Stops the phone dimming and locking while a lecture plays (FLAG_KEEP_SCREEN_ON, MainActivity.kt).
+  void _keepScreenOn(bool on) {
+    if (on == _screenKeptOn) return;
+    _screenKeptOn = on;
+    _screen.invokeMethod<void>('keepOn', on).catchError((Object _) {});
   }
 
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _keepScreenOn(false);
     _controller?.removeListener(_onTick);
     _controller?.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -174,10 +216,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                 const SizedBox(height: 12),
                 FilledButton.tonal(
                   onPressed: () {
-                    _controller?.removeListener(_onTick);
-                    _controller?.dispose();
-                    _controller = null;
-                    _load();
+                    _autoRetries = 0;
+                    _reload();
                   },
                   child: const Text('Try again'),
                 ),

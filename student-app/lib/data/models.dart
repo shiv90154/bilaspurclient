@@ -1,5 +1,7 @@
 // Plain data classes mirroring the backend responses. No logic beyond parsing.
 
+import '../core/config.dart';
+
 DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String).toLocal();
 double _num(Object? v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
 
@@ -539,7 +541,7 @@ class MyProfile {
     required this.doubtsAsked,
   });
 
-  factory MyProfile.fromJson(Map<String, dynamic> j, String origin) {
+  factory MyProfile.fromJson(Map<String, dynamic> j) {
     final stats = j['stats'] as Map<String, dynamic>? ?? const {};
     final photo = j['photoUrl'] as String?;
     double? pct(Object? v) => v == null ? null : _num(v);
@@ -552,7 +554,7 @@ class MyProfile {
       guardianPhone: j['guardianPhone'] as String?,
       targetExam: (j['academic'] as Map?)?['targetExam'] as String?,
       // Signed link, valid for an hour, relative to the server origin.
-      photoUrl: photo == null ? null : '$origin$photo',
+      photoUrl: photo == null ? null : absoluteUrl(photo),
       batches: [
         for (final b in (j['batches'] as List? ?? const []))
           '${(b as Map)['batch']['course']['name']} · ${b['batch']['name']}',
@@ -819,7 +821,7 @@ class IdCard {
     required this.verifyCode,
   });
 
-  factory IdCard.fromJson(Map<String, dynamic> j, String origin) {
+  factory IdCard.fromJson(Map<String, dynamic> j) {
     final photo = j['photoUrl'] as String?;
     final phone = j['contactPhone'] as String?;
     return IdCard(
@@ -828,7 +830,7 @@ class IdCard {
       name: j['name'] as String,
       phone: j['phone'] as String? ?? '',
       admissionNo: j['admissionNo'] as String?,
-      photoUrl: photo == null ? null : '$origin$photo',
+      photoUrl: photo == null ? null : absoluteUrl(photo),
       memberSince: _date(j['memberSince'])!,
       courses: [for (final c in j['courses'] as List? ?? const []) c as String],
       validTill: _date(j['validTill']),
