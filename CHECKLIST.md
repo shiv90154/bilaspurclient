@@ -91,7 +91,7 @@ Server par git, docker + compose v2, openssl, nginx, certbot hone chahiye. Poori
   cd student-app
   C:\src\flutter\bin\flutter.bat build apk --release --dart-define=API_URL=https://api.DOMAIN/api
   ```
-  APK `student-app\build\app\outputs\flutter-apk\app-release.apk` mein banega → admin web ke **Mobile App** page par upload karo.
+  Ab app sirf Play Store par hai (10 Nov 2026 se): naya version **AAB** banakar Play Console mein upload karo. Admin panel ka Mobile App (APK) page hata diya gaya hai.
 - [ ] Demo passwords (`ChangeMe@123`, `Demo@12345`) server par kabhi nahi — `SEED_DEMO=false` hi rakho (deploy.sh ka default yahi hai).
 - [ ] Play Store ki list: [docs/13-play-store-compliance.md](docs/13-play-store-compliance.md) (privacy policy URL, data safety form, screenshots, 512×512 icon).
 

@@ -12,7 +12,7 @@ const PLATFORMS = [
   {
     icon: Smartphone,
     title: "Android app",
-    points: ["Live classes, notes, tests, videos and doubts", "Content is protected: no screenshots or recording", "Works on one phone at a time"],
+    points: ["Free on Google Play, with automatic updates", "Live classes, notes, tests, videos and doubts", "Content is protected: no screenshots or recording", "Works on one phone at a time"],
   },
   {
     icon: Laptop,

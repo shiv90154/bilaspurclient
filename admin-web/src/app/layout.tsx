@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import "./globals.css";
 
 // Same family as the mobile app. Not a variable font, so the weights are listed. Only Latin is
@@ -22,6 +23,8 @@ export const metadata: Metadata = {
   title: { default: "DHĪ Ayurveda Classroom", template: "%s · DHĪ Ayurveda Classroom" },
   description: DESCRIPTION,
   applicationName: "DHĪ",
+  // Installed from Safari (Share → Add to Home Screen): opens full screen with this name under the icon.
+  appleWebApp: { capable: true, title: "DHĪ", statusBarStyle: "default" },
   keywords: [
     "DHI Ayurveda", "DHI Ayurved", "Ayurveda classroom", "Dr. Pardeuman Singh", "AIAPGET coaching", "AIAPGET preparation",
     "AMO exam preparation", "Ayurveda Medical Officer exam", "BAMS coaching", "online Ayurveda classes", "Ayurveda test series",
@@ -46,11 +49,15 @@ export const metadata: Metadata = {
   },
 };
 
+/** Colours the phone's status bar and the installed app's title bar. */
+export const viewport: Viewport = { themeColor: "#1f4d2c" };
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${poppins.variable} h-full antialiased`}>
       <body className="min-h-full">
         <Providers>{children}</Providers>
+        <InstallPrompt />
       </body>
     </html>
   );

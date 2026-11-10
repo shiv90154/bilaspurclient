@@ -29,7 +29,7 @@ export function siteJsonLd() {
         address: { "@type": "PostalAddress", addressRegion: "Himachal Pradesh", addressCountry: "IN" },
         areaServed: "IN",
         founder: { "@id": FOUNDER_ID },
-        sameAs: [SITE.youtube, SITE.instagram, SITE.facebook],
+        sameAs: [SITE.youtube, SITE.instagram, SITE.facebook, SITE.playStore],
         knowsAbout: ["Ayurveda", "AIAPGET", "AMO exam", "BAMS", "Shalya Tantra"],
       },
       {
@@ -52,6 +52,18 @@ export function siteJsonLd() {
         url: SITE_URL,
         inLanguage: "en-IN",
         publisher: { "@id": ORG_ID },
+      },
+      {
+        "@type": "MobileApplication",
+        "@id": `${SITE_URL}/app#android`,
+        name: "DHĪ Ayurveda Classroom",
+        operatingSystem: "Android",
+        applicationCategory: "EducationalApplication",
+        installUrl: SITE.playStore,
+        url: `${SITE_URL}/app`,
+        image: `${SITE_URL}/logo.png`,
+        publisher: { "@id": ORG_ID },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
       },
     ],
   };

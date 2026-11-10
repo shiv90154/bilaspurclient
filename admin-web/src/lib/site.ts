@@ -8,9 +8,8 @@ export const SITE = {
   whatsappHref: "https://wa.me/918091334667",
   email: "dr.pardeuman@gmail.com",
   location: "Himachal Pradesh, India",
+  /** The Android app is only on Google Play (live since 10 Nov 2026); the website no longer offers an APK. */
   playStore: "https://play.google.com/store/apps/details?id=com.dhiayurved.app",
-  /** Flip to true once the Play Store listing is public; until then the app buttons download the APK. */
-  playStoreLive: false,
   youtube: "https://youtube.com/@ayurveda-classroom",
   facebook: "https://www.facebook.com/share/1AoyiXEE2W/",
   instagram: "https://www.instagram.com/dhiayurved",

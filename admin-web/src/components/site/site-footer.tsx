@@ -100,7 +100,13 @@ export function SiteFooter() {
 
       <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-2 border-t border-line py-6 text-[12.5px] text-sub sm:flex-row sm:justify-between">
         <p>© {year} DHĪ Ayurveda Classroom. All rights reserved.</p>
-        <p>Made in India</p>
+        <p>
+          Made in India by{" "}
+          {/* Developer credit: a normal (followed) link on purpose, it is the developer's backlink. */}
+          <a href="https://shivapphub.in" target="_blank" rel="noopener" className="font-semibold text-primary hover:underline">
+            shivapphub.in
+          </a>
+        </p>
       </div>
     </footer>
   );

@@ -101,7 +101,7 @@ export const FEATURES = [
 ];
 
 export const STEPS = [
-  { icon: Download, title: "Download the app", text: SITE.playStoreLive ? "Get the DHĪ app from the Google Play Store." : "Download the DHĪ app for Android from this website." },
+  { icon: Download, title: "Download the app", text: "Get the DHĪ app from the Google Play Store." },
   { icon: UserPlus, title: "Register", text: "Sign up with your name, phone and email. Verify with a one-time code." },
   { icon: BadgeCheck, title: "Start learning", text: "Press Buy now on a course to message us on WhatsApp. Once the fee is paid, your batch’s classes, notes and tests open up." },
 ];
@@ -158,21 +158,21 @@ export function PageHero({ eyebrow, title, text, children }: { eyebrow: string; 
   );
 }
 
-/** "Get it on Google Play" button, styled like the official badge. Downloads the APK until the listing is live. */
+/** "Get it on Google Play" button, styled like the official badge. */
 export function PlayStoreButton({ light = false }: { light?: boolean }) {
-  const live = SITE.playStoreLive;
   return (
     <a
-      href={live ? SITE.playStore : "/download"}
-      {...(live ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
+      href={SITE.playStore}
+      target="_blank"
+      rel="noopener noreferrer"
       className={`inline-flex h-14 items-center justify-center gap-3 rounded-xl px-5 transition ${
         light ? "bg-white text-ink hover:bg-white/90" : "bg-ink text-white hover:bg-black"
       }`}
     >
-      {live ? <GooglePlayIcon size={26} /> : <Download size={24} />}
+      <GooglePlayIcon size={26} />
       <span className="flex flex-col text-left leading-none">
-        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">{live ? "Get it on" : "Download for"}</span>
-        <span className="mt-1 text-[18px] font-semibold">{live ? "Google Play" : "Android"}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider opacity-80">Get it on</span>
+        <span className="mt-1 text-[18px] font-semibold">Google Play</span>
       </span>
     </a>
   );
@@ -263,10 +263,10 @@ export function CtaBand({ title = "Your classroom, in your pocket", text }: { ti
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[40px] border-accent/15" aria-hidden="true" />
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-accent-tint">DHĪ for Android</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-accent-tint">Free on Google Play</p>
             <h2 className="mt-3 text-[26px] font-bold leading-tight sm:text-[34px]">{title}</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-white/80">
-              {text ?? "Download the app, register and start learning. On an iPhone or a computer, log in on this website."}
+              {text ?? "Install the app from Google Play, register and start learning. On an iPhone or a computer, log in on this website."}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

@@ -11,7 +11,7 @@ On 2026-10-12 DHĪ moved to its own new server and started again with an empty d
 | Public website + admin / faculty / student web panel | https://dhiayurved.com |
 | API (the Android app talks to this) | https://api.dhiayurved.com/api |
 | API health check | https://api.dhiayurved.com/api/health |
-| Android app (newest APK, no login) | https://dhiayurved.com/download |
+| Android app (Google Play) | https://play.google.com/store/apps/details?id=com.dhiayurved.app (`/download` redirects there) |
 
 - `https://api.dhiayurved.com/` (without `/api`) shows "Cannot GET /". That is normal: every endpoint lives under `/api`.
 - The domain is registered at GoDaddy. GoDaddy DNS: `A @` and `A api` point to `147.93.29.9`, and `www` is a CNAME to the root (Nginx redirects it to the root).
@@ -72,10 +72,12 @@ After changing production.env: `./deploy/deploy.sh up`.
 
 ## Android app
 
-Build against the live API, then upload the APK in the admin panel under **Mobile App**:
+Live on Google Play since 2026-11-10: https://play.google.com/store/apps/details?id=com.dhiayurved.app
+
+The website and admin panel no longer offer an APK; `https://dhiayurved.com/download` only redirects to the Play listing. Build an **AAB** against the live API and upload it in Play Console (signing steps: [play-store/RELEASE.md](play-store/RELEASE.md)):
 
 ```bash
-flutter build apk --release --no-tree-shake-icons --build-name=1.0.1 --build-number=13 --dart-define=API_URL=https://api.dhiayurved.com/api
+flutter build appbundle --release --no-tree-shake-icons --build-name=1.0.1 --build-number=13 --dart-define=API_URL=https://api.dhiayurved.com/api
 ```
 
 Versions started again at 1.0.0 (build 12) on the new server. The build number must keep going up (the last app on the old server was build 11), or Android refuses the update.
