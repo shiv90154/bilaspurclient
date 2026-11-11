@@ -55,7 +55,7 @@ If Nginx runs in Docker: add the content of `deploy/nginx/edumanage.conf` to its
 | `./deploy/deploy.sh backup` | Database dump + uploaded files into `deploy/backups/` (14 days kept) |
 | `./deploy/deploy.sh down` | Stop the stack (data is kept in volumes) |
 
-Daily backup at 03:00: `0 3 * * * cd /path/to/bilaspurclient && ./deploy/deploy.sh backup >> deploy/backups/backup.log 2>&1`
+Weekly backup, Sunday 03:00: `0 3 * * 0 cd /path/to/bilaspurclient && ./deploy/deploy.sh backup >> deploy/backups/backup.log 2>&1`
 and copy `deploy/backups/` off the server (a VPS disk failure would take the backups with it).
 
 ## Settings

@@ -41,7 +41,7 @@ Internet -> host Nginx (80/443) -+-> 127.0.0.1:18480  web      (Next.js)
 | Uploaded files (PDF notes, APKs) | Docker volume `edumanage-prod_storage` |
 | Database | Docker volume `edumanage-prod_pgdata` |
 | Restart | `restart: unless-stopped`, Docker starts on boot, so the stack returns after a reboot |
-| Backup | cron, every day at 03:00, into `/opt/dhi/deploy/backups` (encrypted, 14 days kept) |
+| Backup | cron, every Sunday at 03:00, into `/opt/dhi/deploy/backups` (encrypted, 14 days kept, so at most 3 copies; each files copy is as big as all uploads) |
 | HTTPS | Let's Encrypt certificate `dhiayurved.com` (root, `www`, `api`), renewed by the certbot timer |
 | Firewall | `ufw` on: only SSH (22) and Nginx (80, 443) are open |
 

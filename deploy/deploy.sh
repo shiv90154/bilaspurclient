@@ -250,7 +250,7 @@ cmd_logs()   { preflight; "${COMPOSE[@]}" logs -f --tail 100 "$@"; }
 cmd_down()   { preflight; "${COMPOSE[@]}" down; }   # keeps the database and uploaded files (volumes)
 
 # Database dump + uploaded files (notes PDFs, APKs, student documents). Run daily from cron:
-#   0 3 * * *  cd /path/to/repo && ./deploy/deploy.sh backup >> deploy/backups/backup.log 2>&1
+#   0 3 * * 0  cd /path/to/repo && ./deploy/deploy.sh backup >> deploy/backups/backup.log 2>&1
 # With BACKUP_PASSPHRASE set in production.env the files are AES-256 encrypted (.enc), so a copy
 # kept off the server holds no readable personal data. Keep the passphrase somewhere else too:
 # without it the backups cannot be restored.
