@@ -12,6 +12,7 @@ On 2026-10-12 DHĪ moved to its own new server and started again with an empty d
 | API (the Android app talks to this) | https://api.dhiayurved.com/api |
 | API health check | https://api.dhiayurved.com/api/health |
 | Android app (Google Play) | https://play.google.com/store/apps/details?id=com.dhiayurved.app (`/download` redirects there) |
+| Test APK for the client (before a Play release) | https://dhiayurved.com/download/test (upload on the admin panel under **App Test Builds**, version with a suffix such as `1.1.0-test`; students' update check never offers these) |
 
 - `https://api.dhiayurved.com/` (without `/api`) shows "Cannot GET /". That is normal: every endpoint lives under `/api`.
 - The domain is registered at GoDaddy. GoDaddy DNS: `A @` and `A api` point to `147.93.29.9`, and `www` is a CNAME to the root (Nginx redirects it to the root).

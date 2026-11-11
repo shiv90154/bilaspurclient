@@ -26,7 +26,7 @@ const SHOW_AFTER_MS = 4000;
 /** Admin and faculty panel pages: the Play Store app is for students, so staff only get the web version. */
 const STAFF_PREFIXES = [
   "/classes", "/courses-batches", "/dashboard", "/deletion-requests", "/doubts", "/enquiries", "/fees", "/materials",
-  "/question-bank", "/registrations", "/reports", "/roles", "/settings", "/students", "/tests", "/videos",
+  "/question-bank", "/registrations", "/reports", "/roles", "/settings", "/students", "/test-builds", "/tests", "/videos",
 ];
 /** Pages where a popup would get in the way. */
 const QUIET_PREFIXES = ["/receipt", "/verify", "/download", "/delete-account", "/privacy", "/terms"];

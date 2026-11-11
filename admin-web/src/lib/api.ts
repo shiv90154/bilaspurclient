@@ -314,6 +314,9 @@ export interface ClassRow {
   seriesId: string | null;
   /** Only present for staff. Students get it from /classes/:id/join. */
   joinUrl?: string | null;
+  /** PREMIERE: the recorded video that plays as if live. */
+  videoId?: string | null;
+  video?: { id: string; title: string; durationSec: number | null } | null;
   batch: { id: string; name: string };
   faculty: { id: string; user: { name: string } } | null;
   /** Zoom cloud recordings imported for this class (they appear under Recorded videos). */

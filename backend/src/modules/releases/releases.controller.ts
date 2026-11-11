@@ -65,6 +65,14 @@ export class ReleasesController {
     return this.releases.latestDownloadUrl();
   }
 
+  /** The /download/test link on the website: newest test build ("1.7.0-test"), no login. */
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('test/download-url')
+  testDownloadUrl() {
+    return this.releases.testDownloadUrl();
+  }
+
   /** The app's "update available" check: newest version number and its notes, no login. */
   @Public()
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

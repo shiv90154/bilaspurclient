@@ -491,6 +491,7 @@ class LiveClass {
     required this.endAt,
     required this.state,
     required this.teacher,
+    this.isPremiere = false,
   });
 
   factory LiveClass.fromJson(Map<String, dynamic> j) => LiveClass(
@@ -505,6 +506,7 @@ class LiveClass {
           _ => ClassState.scheduled,
         },
         teacher: ((j['faculty'] as Map?)?['user'] as Map?)?['name'] as String?,
+        isPremiere: j['type'] == 'PREMIERE',
       );
 
   final String id;
@@ -513,6 +515,9 @@ class LiveClass {
   final DateTime endAt;
   final ClassState state;
   final String? teacher;
+
+  /// A recorded video played like a live class, inside the app (not a Zoom link).
+  final bool isPremiere;
 
   bool get isLive => state == ClassState.live;
 
@@ -618,6 +623,35 @@ class VideoItem {
   final bool isFile;
   final int? durationSec;
   final bool isDemo;
+}
+
+/// What the premiere player needs (`POST /classes/:id/premiere`).
+class PremiereInfo {
+  const PremiereInfo({
+    required this.title,
+    required this.url,
+    required this.startAt,
+    required this.endAt,
+    required this.clockOffset,
+    this.durationSec,
+  });
+
+  final String title;
+  final Uri url;
+  final DateTime startAt;
+  final DateTime endAt;
+
+  /// Server clock minus this phone's clock, so a phone whose time is off still plays the right moment.
+  final Duration clockOffset;
+  final int? durationSec;
+
+  DateTime get serverNow => DateTime.now().add(clockOffset);
+
+  /// Where everyone is in the video right now (zero before the start).
+  Duration get livePosition {
+    final d = serverNow.difference(startAt);
+    return d.isNegative ? Duration.zero : d;
+  }
 }
 
 // ───────────── course catalog ─────────────

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +25,11 @@ String timeRange(LiveClass c) => '${DateFormat('h:mm a').format(c.startAt)} – 
 
 /// Asks the server to let the student in (which also marks attendance), then opens the Zoom / Meet link.
 Future<void> joinClass(BuildContext context, WidgetRef ref, LiveClass c) async {
+  // A premiere plays inside the app; its screen joins (and marks attendance) by itself.
+  if (c.isPremiere) {
+    context.push('/classes/${c.id}/premiere', extra: c);
+    return;
+  }
   try {
     final url = await ref.read(contentApiProvider).joinClass(c.id);
     final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -52,7 +58,7 @@ class ClassTile extends ConsumerWidget {
             CircleAvatar(
               backgroundColor: c.isLive ? Colors.green.shade100 : scheme.primaryContainer,
               foregroundColor: c.isLive ? Colors.green.shade800 : scheme.onPrimaryContainer,
-              child: Icon(c.isLive ? Icons.sensors : Icons.videocam_outlined),
+              child: Icon(c.isPremiere ? Icons.smart_display_outlined : (c.isLive ? Icons.sensors : Icons.videocam_outlined)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -62,7 +68,7 @@ class ClassTile extends ConsumerWidget {
                   Text(c.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(
-                    '${c.isLive ? 'Live now · ' : '${dayLabel(c.startAt)} · '}${timeRange(c)}${c.teacher == null ? '' : '\n${c.teacher}'}',
+                    '${c.isPremiere ? 'Premiere · ' : ''}${c.isLive ? 'Live now · ': '${dayLabel(c.startAt)} · '}${timeRange(c)}${c.teacher == null ? '' : '\n${c.teacher}'}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -75,7 +81,7 @@ class ClassTile extends ConsumerWidget {
                   ? () => joinClass(context, ref, c)
                   : () => showError(context, 'You can join from 15 minutes before the class starts.'),
               style: c.canJoinNow ? null : FilledButton.styleFrom(backgroundColor: scheme.surfaceContainerHighest, foregroundColor: scheme.onSurfaceVariant),
-              child: Text(c.isLive ? 'Join now' : 'Join'),
+              child: Text(c.isPremiere ? (c.isLive ? 'Watch now' : 'Watch') : (c.isLive ? 'Join now' : 'Join')),
             ),
           ],
         ),

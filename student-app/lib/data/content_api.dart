@@ -122,6 +122,29 @@ class ContentApi {
         return url;
       });
 
+  /// Joins a premiere (marks attendance) and gets a signed stream link plus the server time.
+  Future<PremiereInfo> premiere(String id) => _run(() async {
+        final sent = DateTime.now();
+        final res = await _dio.post<Map<String, dynamic>>('/classes/$id/premiere');
+        final received = DateTime.now();
+        final j = res.data!;
+        // The server read its clock roughly half way through the round trip.
+        final localAtServerNow = sent.add(received.difference(sent) ~/ 2);
+        return PremiereInfo(
+          title: j['title'] as String,
+          url: Uri.parse(absoluteUrl(j['url'] as String)),
+          startAt: DateTime.parse(j['startAt'] as String).toLocal(),
+          endAt: DateTime.parse(j['endAt'] as String).toLocal(),
+          clockOffset: DateTime.parse(j['serverNow'] as String).toLocal().difference(localAtServerNow),
+          durationSec: (j['durationSec'] as num?)?.toInt(),
+        );
+      });
+
+  /// Marks the student as gone (attendance minutes). Failures are ignored by callers.
+  Future<void> leaveClass(String id) => _run(() async {
+        await _dio.post<void>('/classes/$id/leave');
+      });
+
   // ── doubts ──
   Future<List<Doubt>> doubts() => _run(() async {
         final res = await _dio.get<Map<String, dynamic>>('/doubts', queryParameters: {'limit': 50});

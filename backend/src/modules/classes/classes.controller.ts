@@ -67,6 +67,13 @@ export class ClassesController {
     return this.classes.join(user, id);
   }
 
+  /** Premiere player: signed video link + server time (also marks attendance). */
+  @Roles(Role.STUDENT)
+  @Post(':id/premiere')
+  premiere(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.classes.premiere(user, id);
+  }
+
   @Roles(Role.STUDENT)
   @Post(':id/leave')
   leave(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {

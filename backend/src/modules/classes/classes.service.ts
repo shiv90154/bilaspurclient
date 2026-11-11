@@ -11,13 +11,15 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Paginated } from '../../common/dto/pagination.dto.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { ClassStatus, ClassType, EnrollmentStatus, Role } from '../../generated/prisma/enums.js';
+import { ClassStatus, ClassType, EnrollmentStatus, Role, VideoStatus } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import { classAudience, formatClassTime } from '../notifications/class-reminders.service.js';
 import { NotificationsService, type PushMessage } from '../notifications/notifications.service.js';
+import { VideoStoreService } from '../storage/video-store.service.js';
 import { zoomMeetingId } from '../zoom/zoom-api.service.js';
 import type { CreateClassDto, ListClassesQueryDto, UpdateClassDto } from './dto/class.dto.js';
+import { premiereEnd, premierePosition } from './premiere.js';
 
 /** Students may enter this long before the start time. */
 const JOIN_EARLY_MS = 15 * 60_000;
@@ -27,7 +29,7 @@ const WEEK_MS = 7 * 24 * 3600_000;
 const INCLUDE = {
   batch: { select: { id: true, name: true } },
   faculty: { select: { id: true, user: { select: { name: true } } } },
-  video: { select: { id: true, title: true } },
+  video: { select: { id: true, title: true, durationSec: true } },
   // Zoom cloud recordings imported for this class (docs/14): students watch them under Videos.
   recordings: { where: { videoId: { not: null } }, select: { videoId: true, durationSec: true }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.LiveClassInclude;
@@ -53,6 +55,7 @@ export class ClassesService {
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
     private readonly notifications: NotificationsService,
+    private readonly videoStore: VideoStoreService,
   ) {}
 
   private scope(user: AuthUser): Prisma.LiveClassWhereInput {
@@ -150,17 +153,19 @@ export class ClassesService {
   async create(user: AuthUser, dto: CreateClassDto) {
     const type = (dto.type ?? ClassType.ZOOM) as ClassType;
     const start = new Date(dto.startAt);
-    const end = new Date(dto.endAt);
+    let end = new Date(dto.endAt);
+    if (type === ClassType.PREMIERE) {
+      if (!dto.videoId) throw new BadRequestException('A premiere needs a videoId');
+      const video = await this.premiereVideo(dto.videoId);
+      // The premiere runs exactly as long as the video, whatever end time was sent.
+      if (video.durationSec) end = premiereEnd(start, video.durationSec);
+    }
     if (end <= start) throw new BadRequestException('endAt must be after startAt');
     if (end.getTime() - start.getTime() > 12 * 3600_000) throw new BadRequestException('A class cannot be longer than 12 hours');
     if (type === ClassType.ZOOM && !dto.joinUrl) throw new BadRequestException('A Zoom/Meet class needs a joinUrl');
-    if (type === ClassType.PREMIERE && !dto.videoId) throw new BadRequestException('A premiere needs a videoId');
 
     await this.assertBatchAccess(user, dto.batchId);
     const facultyId = await this.resolveFaculty(user, dto.facultyId);
-    if (dto.videoId && !(await this.prisma.video.findUnique({ where: { id: dto.videoId } }))) {
-      throw new BadRequestException('Unknown videoId');
-    }
 
     // Weekly series: same weekday and time each week.
     const starts = [start];
@@ -189,9 +194,9 @@ export class ClassesService {
             type,
             startAt: s,
             endAt: new Date(s.getTime() + length),
-            joinUrl: dto.joinUrl,
-            meetingId: zoomMeetingId(dto.joinUrl),
-            videoId: dto.videoId,
+            joinUrl: type === ClassType.ZOOM ? dto.joinUrl : null,
+            meetingId: type === ClassType.ZOOM ? zoomMeetingId(dto.joinUrl) : null,
+            videoId: type === ClassType.PREMIERE ? dto.videoId : null,
             seriesId,
             recurrenceRule: rule,
             createdById: user.id,
@@ -217,7 +222,13 @@ export class ClassesService {
       throw new ConflictException('A cancelled or finished class cannot be changed');
     }
     const start = dto.startAt ? new Date(dto.startAt) : c.startAt;
-    const end = dto.endAt ? new Date(dto.endAt) : c.endAt;
+    // A premiere keeps the length of its video: moving it moves the end too.
+    const end =
+      c.type === ClassType.PREMIERE
+        ? new Date(start.getTime() + (c.endAt.getTime() - c.startAt.getTime()))
+        : dto.endAt
+          ? new Date(dto.endAt)
+          : c.endAt;
     if (end <= start) throw new BadRequestException('endAt must be after startAt');
     const facultyId = dto.facultyId ?? c.facultyId;
     if (dto.facultyId && user.role !== Role.ADMIN) throw new ForbiddenException('Only an admin can change the teacher');
@@ -229,8 +240,7 @@ export class ClassesService {
         title: dto.title,
         startAt: start,
         endAt: end,
-        joinUrl: dto.joinUrl,
-        ...(dto.joinUrl && { meetingId: zoomMeetingId(dto.joinUrl) }),
+        ...(c.type === ClassType.ZOOM && dto.joinUrl && { joinUrl: dto.joinUrl, meetingId: zoomMeetingId(dto.joinUrl) }),
         facultyId,
         // A moved class gets a fresh reminder for its new time.
         ...(start.getTime() !== c.startAt.getTime() && { reminderSentAt: null }),
@@ -289,6 +299,37 @@ export class ClassesService {
       update: { leftAt: null },
     });
     return { type: c.type, joinUrl: c.type === ClassType.ZOOM ? c.joinUrl : null, videoId: c.videoId, title: c.title };
+  }
+
+  /**
+   * What the app's premiere player needs: a signed stream link and the server clock, so every phone
+   * plays the same moment (position = now - startAt) even when its own clock is off. Joining here
+   * also marks attendance, exactly like tapping Join on a Zoom class.
+   */
+  async premiere(user: AuthUser, id: string) {
+    const joined = await this.join(user, id);
+    if (joined.type !== ClassType.PREMIERE || !joined.videoId) throw new BadRequestException('This class is not a premiere');
+    const c = await this.prisma.liveClass.findUniqueOrThrow({ where: { id }, select: { startAt: true, endAt: true } });
+    const video = await this.prisma.video.findUnique({
+      where: { id: joined.videoId },
+      select: { title: true, sourceKey: true, sourceStore: true, durationSec: true },
+    });
+    if (!video?.sourceKey) throw new NotFoundException({ code: 'PREMIERE_NO_VIDEO', message: 'The video for this premiere is not available' });
+    const url = await this.videoStore.playUrl(
+      video.sourceStore,
+      video.sourceKey,
+      `${video.title.replace(/[^\w\- ]+/g, '_').slice(0, 80)}.mp4`,
+    );
+    const now = new Date();
+    return {
+      title: joined.title,
+      url,
+      startAt: c.startAt,
+      endAt: c.endAt,
+      serverNow: now,
+      positionSec: premierePosition(c.startAt, now),
+      durationSec: video.durationSec,
+    };
   }
 
   async leave(user: AuthUser, id: string) {
@@ -365,6 +406,19 @@ export class ClassesService {
   }
 
   // ───────────── guards ─────────────
+
+  /** Only our own, fully uploaded mp4 can premiere: an outside link cannot be kept in sync or protected. */
+  private async premiereVideo(videoId: string) {
+    const video = await this.prisma.video.findUnique({
+      where: { id: videoId },
+      select: { status: true, sourceKey: true, durationSec: true },
+    });
+    if (!video) throw new BadRequestException('Unknown videoId');
+    if (video.status !== VideoStatus.READY || !video.sourceKey) {
+      throw new BadRequestException('Pick an uploaded video (mp4) that has finished uploading. Links cannot premiere.');
+    }
+    return video;
+  }
 
   /** Admin: any class. Faculty: classes they teach. */
   private async manageable(user: AuthUser, id: string) {

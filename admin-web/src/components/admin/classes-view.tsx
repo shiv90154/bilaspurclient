@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarDays, CalendarPlus, CloudDownload, ExternalLink, Pencil, Users, XCircle } from "lucide-react";
+import { CalendarDays, CalendarPlus, CloudDownload, ExternalLink, Pencil, PlayCircle, Users, XCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   api,
@@ -23,6 +23,19 @@ const TONE: Record<ClassStatus, "blue" | "green" | "gray" | "red"> = {
   CANCELLED: "red",
 };
 const LIMIT = 20;
+
+/** A video that can premiere: our own uploaded mp4 (links cannot be kept in sync). */
+interface PremiereVideo {
+  id: string;
+  title: string;
+  status: string;
+  source: "file" | "link";
+  durationSec: number | null;
+}
+const hm = (sec: number) => {
+  const m = Math.ceil(sec / 60);
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+};
 
 /** <input type="datetime-local"> wants local time without a zone. */
 const toLocalInput = (iso: string) => {
@@ -83,7 +96,7 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
     <div className="flex flex-col gap-5">
       <PageHeader
         title="Online classes"
-        subtitle="Schedule Zoom / Meet classes for a batch. Students get a reminder 10 minutes before and an alert if it moves or is cancelled."
+        subtitle="Schedule Zoom / Meet classes, or a Premiere (a recorded video that plays like a live class). Students get a reminder 10 minutes before and an alert if it moves or is cancelled."
         action={
           <button className={btnPrimary} onClick={() => setDialog({ kind: "create" })}>
             <CalendarPlus size={16} /> Schedule class
@@ -127,6 +140,7 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="break-words text-[14.5px] font-bold">{c.title}</p>
                   <Badge tone={TONE[c.status]}>{c.status === "LIVE" ? "Live now" : c.status.charAt(0) + c.status.slice(1).toLowerCase()}</Badge>
+                  {c.type === "PREMIERE" && <Badge tone="blue">Premiere</Badge>}
                   {c.seriesId && <Badge tone="gray">Weekly</Badge>}
                   {!!c.recordings?.length && <Badge tone="green">Recording saved{c.recordings.length > 1 ? ` (${c.recordings.length} parts)` : ""}</Badge>}
                 </div>
@@ -134,6 +148,11 @@ export function ClassesView({ isAdmin }: { isAdmin: boolean }) {
                   {format(new Date(c.startAt), "EEE d MMM, h:mm a")} – {format(new Date(c.endAt), "h:mm a")} · {c.batch.name}
                   {c.faculty && ` · ${c.faculty.user.name}`}
                 </p>
+                {c.type === "PREMIERE" && c.video && (
+                  <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-sub">
+                    <PlayCircle size={13} /> {c.video.title}
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {c.joinUrl && c.status !== "CANCELLED" && (
@@ -188,6 +207,22 @@ function ClassForm({ row, batches, isAdmin, onClose }: { row?: ClassRow; batches
     enabled: isAdmin,
   });
   const [repeat, setRepeat] = useState(false);
+  const [type, setType] = useState<"ZOOM" | "PREMIERE">(row?.type === "PREMIERE" ? "PREMIERE" : "ZOOM");
+  const [videoId, setVideoId] = useState(row?.videoId ?? "");
+  const [startAt, setStartAt] = useState(row ? toLocalInput(row.startAt) : "");
+  const premiere = type === "PREMIERE";
+  const videos = useQuery({
+    queryKey: ["videos", "premiere"],
+    queryFn: () => api<Paginated<PremiereVideo>>(`/videos${qs({ limit: 100 })}`),
+    enabled: premiere && !row,
+    select: (p) => p.items.filter((v) => v.source === "file" && v.status === "READY"),
+  });
+  const pickedSec = videos.data?.find((v) => v.id === videoId)?.durationSec ?? row?.video?.durationSec ?? null;
+  // A premiere ends when its video ends; the server works it out the same way.
+  const premiereEndLabel =
+    premiere && startAt && pickedSec
+      ? format(new Date(new Date(startAt).getTime() + Math.ceil(pickedSec / 60) * 60_000), "h:mm a")
+      : null;
 
   const save = useMutation({
     mutationFn: (body: unknown) =>
@@ -203,12 +238,13 @@ function ClassForm({ row, batches, isAdmin, onClose }: { row?: ClassRow; batches
     const f = new FormData(e.currentTarget);
     const iso = (k: string) => new Date(String(f.get(k))).toISOString();
     const facultyId = String(f.get("facultyId") ?? "") || undefined;
+    // A premiere's end comes from its video's length (the server sets it); this is only a placeholder.
+    const endAt = premiere ? new Date(new Date(String(f.get("startAt"))).getTime() + 60_000).toISOString() : iso("endAt");
     if (row) {
       save.mutate({
         title: String(f.get("title")).trim(),
         startAt: iso("startAt"),
-        endAt: iso("endAt"),
-        joinUrl: String(f.get("joinUrl")).trim(),
+        ...(!premiere && { endAt, joinUrl: String(f.get("joinUrl")).trim() }),
         ...(isAdmin && facultyId && { facultyId }),
       });
     } else {
@@ -216,10 +252,10 @@ function ClassForm({ row, batches, isAdmin, onClose }: { row?: ClassRow; batches
       save.mutate({
         batchId: String(f.get("batchId")),
         title: String(f.get("title")).trim(),
-        type: "ZOOM",
+        type,
         startAt: iso("startAt"),
-        endAt: iso("endAt"),
-        joinUrl: String(f.get("joinUrl")).trim(),
+        endAt,
+        ...(premiere ? { videoId } : { joinUrl: String(f.get("joinUrl")).trim() }),
         ...(isAdmin && facultyId && { facultyId }),
         ...(repeat && until && { repeatWeeklyUntil: new Date(`${until}T23:59:59`).toISOString() }),
       });
@@ -227,8 +263,22 @@ function ClassForm({ row, batches, isAdmin, onClose }: { row?: ClassRow; batches
   };
 
   return (
-    <Modal title={row ? "Edit class" : "Schedule a class"} onClose={onClose}>
+    <Modal title={row ? (premiere ? "Edit premiere" : "Edit class") : "Schedule a class"} onClose={onClose}>
       <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        {!row && (
+          <div role="radiogroup" aria-label="Class type" className="grid grid-cols-2 gap-2">
+            {([
+              ["ZOOM", "Zoom / Meet", "A live class on a meeting link"],
+              ["PREMIERE", "Premiere", "A recorded video, played like a live class"],
+            ] as const).map(([t, label, hint]) => (
+              <button key={t} type="button" role="radio" aria-checked={type === t} onClick={() => setType(t)}
+                className={`rounded-[10px] border p-3 text-left ${type === t ? "border-primary bg-primary-tint" : "border-line"}`}>
+                <span className="block text-[13px] font-bold">{label}</span>
+                <span className="block text-[11.5px] text-sub">{hint}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {!row && (
           <Field label="Batch *">
             {(id) => (
@@ -244,15 +294,49 @@ function ClassForm({ row, batches, isAdmin, onClose }: { row?: ClassRow; batches
         </Field>
         <div className="grid gap-3.5 sm:grid-cols-2">
           <Field label="Starts *">
-            {(id) => <input id={id} name="startAt" type="datetime-local" required defaultValue={row ? toLocalInput(row.startAt) : ""} className={inputCls} />}
+            {(id) => <input id={id} name="startAt" type="datetime-local" required value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />}
           </Field>
-          <Field label="Ends *">
-            {(id) => <input id={id} name="endAt" type="datetime-local" required defaultValue={row ? toLocalInput(row.endAt) : ""} className={inputCls} />}
-          </Field>
+          {premiere ? (
+            <Field label="Ends">
+              {(id) => (
+                <p id={id} className={inputCls + " flex items-center text-sub"}>
+                  {premiereEndLabel ? `${premiereEndLabel} (when the video ends)` : "When the video ends"}
+                </p>
+              )}
+            </Field>
+          ) : (
+            <Field label="Ends *">
+              {(id) => <input id={id} name="endAt" type="datetime-local" required defaultValue={row ? toLocalInput(row.endAt) : ""} className={inputCls} />}
+            </Field>
+          )}
         </div>
-        <Field label="Zoom / Google Meet link *">
-          {(id) => <input id={id} name="joinUrl" type="url" required maxLength={500} defaultValue={row?.joinUrl ?? ""} placeholder="https://zoom.us/j/…" pattern="https://.*" title="The link must start with https://" className={inputCls} />}
-        </Field>
+        {premiere ? (
+          row ? (
+            <p className="rounded-[10px] bg-bg px-3 py-2 text-[12.5px] text-sub">Video: {row.video?.title ?? "-"}</p>
+          ) : (
+            <Field label="Video *">
+              {(id) => (
+                <div>
+                  <select id={id} required value={videoId} onChange={(e) => setVideoId(e.target.value)} className={inputCls}>
+                    <option value="" disabled>{videos.isPending ? "Loading videos…" : "Select an uploaded video"}</option>
+                    {videos.data?.map((v) => (
+                      <option key={v.id} value={v.id}>{v.title}{v.durationSec ? ` · ${hm(v.durationSec)}` : ""}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-[11.5px] text-sub">
+                    Only mp4 videos uploaded under Recorded Videos can premiere. Everyone watches the same moment; late joiners start mid-way and cannot skip ahead.
+                    To keep it new, add the video to the batch only after the premiere.
+                  </p>
+                  {videos.data?.length === 0 && <p className="mt-1.5 text-[12px] text-danger">No uploaded video yet. Upload an mp4 under Recorded Videos first.</p>}
+                </div>
+              )}
+            </Field>
+          )
+        ) : (
+          <Field label="Zoom / Google Meet link *">
+            {(id) => <input id={id} name="joinUrl" type="url" required maxLength={500} defaultValue={row?.joinUrl ?? ""} placeholder="https://zoom.us/j/…" pattern="https://.*" title="The link must start with https://" className={inputCls} />}
+          </Field>
+        )}
         {isAdmin && (
           <Field label="Teacher">
             {(id) => (

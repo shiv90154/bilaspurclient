@@ -43,9 +43,13 @@ function ClassCard({ c, onJoin, busy }: { c: ClassRow; onJoin: (id: string) => v
           </p>
         </div>
       </div>
-      <button className={btnPrimary} disabled={busy} onClick={() => onJoin(c.id)}>
-        {live ? "Join now" : "Join"}
-      </button>
+      {c.type === "PREMIERE" ? (
+        <span className="rounded-[10px] bg-primary-tint px-3 py-2 text-[12.5px] font-semibold text-primary">Premiere · watch in the DHĪ app</span>
+      ) : (
+        <button className={btnPrimary} disabled={busy} onClick={() => onJoin(c.id)}>
+          {live ? "Join now" : "Join"}
+        </button>
+      )}
     </li>
   );
 }

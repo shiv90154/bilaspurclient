@@ -16,6 +16,7 @@ import 'features/auth/forgot_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/classes/classes_screen.dart';
+import 'features/classes/premiere_screen.dart';
 import 'features/courses/courses_screen.dart';
 import 'features/doubts/doubts_screen.dart';
 import 'features/home/home_screen.dart';
@@ -144,6 +145,13 @@ GoRouter _buildRouter(Ref ref, ValueNotifier<int> refresh) {
         builder: (_, state) => DoubtThreadScreen(id: state.pathParameters['id']!),
       ),
       GoRoute(path: '/classes', builder: (_, _) => const ClassesScreen()),
+      GoRoute(
+        path: '/classes/:id/premiere',
+        builder: (_, state) => PremiereScreen(
+          classId: state.pathParameters['id']!,
+          title: (state.extra as LiveClass?)?.title ?? 'Premiere',
+        ),
+      ),
       GoRoute(path: '/videos', builder: (_, _) => const VideosScreen()),
       GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
       GoRoute(

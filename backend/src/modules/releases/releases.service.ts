@@ -23,6 +23,13 @@ export interface UploadedApk {
   size: number;
 }
 
+/**
+ * A version with a suffix ("1.7.0-test") is a test build for the client to try before it goes to
+ * Google Play. It is only served by the /download/test link: the app's "update available" check and
+ * the normal download never offer it, so students on the Play Store app are not prompted.
+ */
+export const isTestBuild = (version: string) => /[-+]/.test(version);
+
 /** Never expose the storage key: clients only get signed links. */
 const SELECT = {
   id: true,
@@ -85,17 +92,30 @@ export class ReleasesService {
     return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size };
   }
 
+  /** Newest build, test builds included only when asked for. */
+  private async newest(test: boolean) {
+    const rows = await this.prisma.appRelease.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+    return rows.find((r) => isTestBuild(r.version) === test) ?? null;
+  }
+
   async latestDownloadUrl() {
-    const r = await this.prisma.appRelease.findFirst({ orderBy: { createdAt: 'desc' } });
+    const r = await this.newest(false);
     if (!r) throw new NotFoundException('No app build uploaded yet');
     return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size, version: r.version };
   }
 
   /** What the app asks at start-up to decide whether to show "update available". */
   async latestInfo() {
-    const r = await this.prisma.appRelease.findFirst({ orderBy: { createdAt: 'desc' }, select: SELECT });
+    const r = await this.newest(false);
     if (!r) throw new NotFoundException('No app build uploaded yet');
     return { version: r.version, notes: r.notes, size: r.size };
+  }
+
+  /** The /download/test link: newest test build, no login (the link is only shared with the client). */
+  async testDownloadUrl() {
+    const r = await this.newest(true);
+    if (!r) throw new NotFoundException('No test build uploaded yet');
+    return { url: this.storage.signedUrl(r.fileKey, r.fileName, 'attachment', 300), fileName: r.fileName, size: r.size, version: r.version };
   }
 
   async remove(user: AuthUser, id: string) {
